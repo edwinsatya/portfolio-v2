@@ -45,10 +45,24 @@ export const stats = [
  * view the robot switches to that mood and speaks that line. They live here so
  * the tour script is editable without touching component code.
  */
+/**
+ * Every mood is a visibly different face — see `nova.css`, where each one sets
+ * its own eye shape, mouth, tint, and pose. Adding a mood means adding a block
+ * there too, otherwise it falls back to `greeting`.
+ */
+export type NovaMood =
+  | "greeting"
+  | "warm"
+  | "thinking"
+  | "excited"
+  | "proud"
+  | "focused"
+  | "waving";
+
 export type SectionMeta = {
   id: string;
   label: string;
-  mood: "greeting" | "thinking" | "excited" | "proud" | "focused" | "warm";
+  mood: NovaMood;
   line: string;
 };
 
@@ -63,37 +77,37 @@ export const sections: SectionMeta[] = [
     id: "about",
     label: "About",
     mood: "warm",
-    line: "This is the human I work for. Six years of building, and still curious.",
+    line: "Small town, big web. Let me introduce him.",
   },
   {
     id: "skills",
     label: "Skills",
     mood: "thinking",
-    line: "His toolkit. I’ve seen him reach for most of these before breakfast.",
+    line: "His tech arsenal — everything here has shipped something real.",
   },
   {
     id: "projects",
     label: "Projects",
     mood: "excited",
-    line: "My favourite part — things he actually shipped. Ask me which one I like best.",
+    line: "These are my favorites — the top three have my pick badge.",
   },
   {
     id: "experience",
     label: "Experience",
     mood: "proud",
-    line: "Where he’s been. Five teams, one habit: finish what you start.",
+    line: "Six years, five teams. Here’s where they went.",
   },
   {
     id: "services",
     label: "Services",
     mood: "focused",
-    line: "Three ways he can help. Pick the one that sounds like your problem.",
+    line: "Three ways to work with him. Pick your problem.",
   },
   {
     id: "contact",
     label: "Contact",
-    mood: "warm",
-    line: "You made it to the end. Say hello — he usually replies within a day.",
+    mood: "waving",
+    line: "He usually replies within 24 hours. Go on, say hi.",
   },
 ];
 

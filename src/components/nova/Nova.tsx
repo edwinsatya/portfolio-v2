@@ -1,22 +1,27 @@
 "use client";
 
 import { useId } from "react";
-import { useNovaMotion } from "@/hooks/useNovaMotion";
+import type { NovaMood } from "@/content/profile";
 import "./nova.css";
+
+type NovaProps = {
+  /** Drives the whole face. See the mood blocks in nova.css. */
+  mood?: NovaMood;
+  className?: string;
+  ref?: React.Ref<SVGSVGElement>;
+};
 
 /**
  * NOVA — the robot who introduces Edwin.
  *
- * Drawn entirely in SVG so there's no asset to load, nothing to fail, and every
- * part is addressable by CSS. `useNovaMotion` handles the gaze and blinking;
- * the class names here are the handles it moves.
+ * Purely presentational: it draws every facial part it could ever need and lets
+ * CSS decide which are visible for the current `data-mood`. All the motion —
+ * gaze, blinking, docking — is driven from `useNovaStage`, which owns the ref.
  *
- * Anatomy, back to front: bloom, ground shadow, then a float wrapper holding
- * the body and a head group that pivots at the neck.
+ * Anatomy, back to front: bloom, ground glow, then a float wrapper holding the
+ * torso and a head group that pivots at the neck.
  */
-export function Nova({ className = "" }: { className?: string }) {
-  const ref = useNovaMotion();
-
+export function Nova({ mood = "greeting", className = "", ref }: NovaProps) {
   // Namespaced so a second NOVA on the page can't hijack the first one's
   // gradients — SVG ids are global to the document. Stripped down to characters
   // that are safe inside url(#…), since useId's format is React's to change.
@@ -27,6 +32,7 @@ export function Nova({ className = "" }: { className?: string }) {
     <svg
       ref={ref}
       viewBox="0 0 240 264"
+      data-mood={mood}
       className={`nova ${className}`}
       role="img"
       aria-label="NOVA, a small robot character whose eyes follow your cursor"
@@ -65,27 +71,32 @@ export function Nova({ className = "" }: { className?: string }) {
       <g className="nova-float">
         <g className="nova-bob">
           <g className="nova-lean">
-            {/* Detached arms, bobbing out of sync with the body. */}
-            <rect
-              className="nova-arm nova-plate"
-              x="44"
-              y="192"
-              width="15"
-              height="30"
-              rx="7.5"
-              fill={`url(#${id("shell")})`}
-              strokeWidth="1.5"
-            />
-            <rect
-              className="nova-arm nova-arm-right nova-plate"
-              x="181"
-              y="192"
-              width="15"
-              height="30"
-              rx="7.5"
-              fill={`url(#${id("shell")})`}
-              strokeWidth="1.5"
-            />
+            {/* Detached arms. The outer group carries the mood pose, the inner
+                rect keeps its own idle bob, so the two never fight. */}
+            <g className="nova-arm-pose nova-arm-pose-left">
+              <rect
+                className="nova-arm nova-plate"
+                x="44"
+                y="192"
+                width="15"
+                height="30"
+                rx="7.5"
+                fill={`url(#${id("shell")})`}
+                strokeWidth="1.5"
+              />
+            </g>
+            <g className="nova-arm-pose nova-arm-pose-right">
+              <rect
+                className="nova-arm nova-arm-right nova-plate"
+                x="181"
+                y="192"
+                width="15"
+                height="30"
+                rx="7.5"
+                fill={`url(#${id("shell")})`}
+                strokeWidth="1.5"
+              />
+            </g>
 
             {/* Torso. Kept clear of the head rather than almost touching it —
                 everything on NOVA floats, so a visible gap reads deliberate
@@ -113,13 +124,15 @@ export function Nova({ className = "" }: { className?: string }) {
 
             <g className="nova-head">
               {/* Antenna */}
-              <path
-                className="nova-stem"
-                d="M120 50V34"
-                strokeWidth="3"
-                strokeLinecap="round"
-              />
-              <circle className="nova-lamp nova-glowing" cx="120" cy="26" r="7" />
+              <g className="nova-antenna">
+                <path
+                  className="nova-stem"
+                  d="M120 50V34"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
+                <circle className="nova-lamp nova-glowing" cx="120" cy="26" r="7" />
+              </g>
 
               {/* Ears */}
               <rect
@@ -174,13 +187,10 @@ export function Nova({ className = "" }: { className?: string }) {
                 fill={`url(#${id("visor")})`}
               />
               <g clipPath={`url(#${id("visor-clip")})`}>
-                <path
-                  d="M76 62h20L60 154H40z"
-                  fill="#fff"
-                  opacity="0.045"
-                />
+                <path d="M76 62h20L60 154H40z" fill="#fff" opacity="0.045" />
               </g>
 
+              {/* Every expression is drawn; CSS shows the one this mood wants. */}
               <g className="nova-eyes">
                 <rect className="nova-eye" x="88" y="96" width="16" height="26" rx="8" />
                 <rect
@@ -191,15 +201,56 @@ export function Nova({ className = "" }: { className?: string }) {
                   height="26"
                   rx="8"
                 />
+
+                <path
+                  className="nova-eye-happy"
+                  d="M87 114q9-14 18 0"
+                  fill="none"
+                  strokeWidth="5"
+                  strokeLinecap="round"
+                />
+                <path
+                  className="nova-eye-happy"
+                  d="M135 114q9-14 18 0"
+                  fill="none"
+                  strokeWidth="5"
+                  strokeLinecap="round"
+                />
+
+                <path
+                  className="nova-sparkle"
+                  d="M74 78l2.2 5.8 5.8 2.2-5.8 2.2L74 94l-2.2-5.8L66 86l5.8-2.2z"
+                />
+                <path
+                  className="nova-sparkle nova-sparkle-late"
+                  d="M166 82l1.8 4.8 4.8 1.8-4.8 1.8-1.8 4.8-1.8-4.8-4.8-1.8 4.8-1.8z"
+                />
               </g>
 
-              <path
-                className="nova-smile"
-                d="M107 132q13 9 26 0"
-                fill="none"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
+              <g className="nova-mouth">
+                <path
+                  className="nova-mouth-smile"
+                  d="M107 132q13 9 26 0"
+                  fill="none"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                />
+                <path
+                  className="nova-mouth-grin"
+                  d="M103 130q17 15 34 0"
+                  fill="none"
+                  strokeWidth="2.8"
+                  strokeLinecap="round"
+                />
+                <path
+                  className="nova-mouth-flat"
+                  d="M110 134h20"
+                  fill="none"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                />
+                <ellipse className="nova-mouth-open" cx="120" cy="134" rx="7" ry="8.5" />
+              </g>
 
               {/* Chin lamps */}
               <circle className="nova-lamp" cx="88" cy="157" r="2.5" opacity="0.55" />

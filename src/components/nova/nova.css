@@ -1,10 +1,10 @@
 /**
- * NOVA's motion layer.
+ * NOVA's motion and expression layer.
  *
- * The hook writes two numbers onto the root <svg> — `--nova-look-x` and
- * `--nova-look-y`, each roughly -1..1 — and every rule below reads from them.
- * Keeping the maths in JS and the choreography in CSS means the amount each
- * part moves is tunable here without touching the loop.
+ * `useNovaStage` writes a handful of numbers onto the DOM — `--nova-look-x/y`
+ * on the <svg>, and the dock transform on the stage — and every rule below
+ * reads from them. Keeping the maths in JS and the choreography in CSS means
+ * how far each part moves is tunable here without touching the loop.
  *
  * Parts move by different amounts on purpose: eyes most, head less, body least.
  * That parallax is what sells the gaze as depth rather than a flat slide.
@@ -13,10 +13,14 @@
 .nova {
   --nova-look-x: 0;
   --nova-look-y: 0;
+  /* Overridden per mood; everything glowing reads from it. */
+  --nova-tint: var(--color-accent);
+  /* Extra head rotation a mood can add on top of the gaze. */
+  --nova-tilt: 0deg;
 
   width: 100%;
   height: auto;
-  /* The bloom and glows spill well past the viewBox. */
+  /* The bloom and glows spill past the viewBox. */
   overflow: visible;
 }
 
@@ -31,17 +35,16 @@
   );
   transform-box: fill-box;
   transform-origin: center;
+  filter: drop-shadow(0 0 7px color-mix(in oklab, var(--nova-tint) 70%, transparent));
 }
 
 .nova-head {
-  transform: rotate(calc(var(--nova-look-x) * 4.5deg))
-    translate(
-      calc(var(--nova-look-x) * 3px),
-      calc(var(--nova-look-y) * 2.5px)
-    );
+  transform: rotate(calc(var(--nova-look-x) * 4.5deg + var(--nova-tilt)))
+    translate(calc(var(--nova-look-x) * 3px), calc(var(--nova-look-y) * 2.5px));
   /* Pivot on the neck, not the middle of the skull. */
   transform-box: fill-box;
   transform-origin: 50% 100%;
+  transition: transform 400ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .nova-lean {
@@ -51,18 +54,184 @@
 }
 
 /* -------------------------------------------------------------------------- */
+/* Expressions                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/* Both eye styles and all four mouths are always in the DOM; a mood picks. */
+.nova-eye,
+.nova-eye-happy,
+.nova-sparkle,
+.nova-mouth-smile,
+.nova-mouth-grin,
+.nova-mouth-flat,
+.nova-mouth-open {
+  transition:
+    opacity 260ms ease,
+    transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.nova-eye {
+  fill: var(--nova-tint);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.nova-eye-happy {
+  stroke: var(--nova-tint);
+  opacity: 0;
+}
+
+.nova-sparkle {
+  fill: var(--nova-tint);
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.nova-mouth-smile,
+.nova-mouth-grin,
+.nova-mouth-flat {
+  stroke: color-mix(in oklab, var(--nova-tint) 60%, transparent);
+}
+
+.nova-mouth-open {
+  fill: color-mix(in oklab, var(--nova-tint) 45%, transparent);
+}
+
+/* Default face: rounded eyes, small smile. Everything else is hidden. */
+.nova-mouth-grin,
+.nova-mouth-flat,
+.nova-mouth-open {
+  opacity: 0;
+}
+
+/* --- warm: happy arc eyes, wide grin, head cocked ------------------------- */
+
+.nova[data-mood="warm"] {
+  --nova-tilt: -4deg;
+}
+
+.nova[data-mood="warm"] .nova-eye,
+.nova[data-mood="waving"] .nova-eye {
+  opacity: 0;
+}
+
+.nova[data-mood="warm"] .nova-eye-happy,
+.nova[data-mood="waving"] .nova-eye-happy {
+  opacity: 1;
+}
+
+.nova[data-mood="warm"] .nova-mouth-smile,
+.nova[data-mood="waving"] .nova-mouth-smile {
+  opacity: 0;
+}
+
+.nova[data-mood="warm"] .nova-mouth-grin,
+.nova[data-mood="waving"] .nova-mouth-grin {
+  opacity: 1;
+}
+
+/* --- thinking: squinted eyes, flat mouth, head tipped, antenna cocked ------ */
+
+.nova[data-mood="thinking"] {
+  --nova-tilt: 7deg;
+}
+
+.nova[data-mood="thinking"] .nova-eye {
+  transform: scaleY(0.72);
+}
+
+.nova[data-mood="thinking"] .nova-mouth-smile {
+  opacity: 0;
+}
+
+.nova[data-mood="thinking"] .nova-mouth-flat {
+  opacity: 1;
+}
+
+.nova[data-mood="thinking"] .nova-antenna {
+  transform: rotate(-14deg);
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+/* --- excited: wide eyes, open mouth, violet, sparkles, arms up ------------- */
+
+.nova[data-mood="excited"] {
+  --nova-tint: var(--color-violet);
+}
+
+.nova[data-mood="excited"] .nova-eye {
+  transform: scale(1.18);
+}
+
+.nova[data-mood="excited"] .nova-mouth-smile {
+  opacity: 0;
+}
+
+.nova[data-mood="excited"] .nova-mouth-open {
+  opacity: 1;
+}
+
+.nova[data-mood="excited"] .nova-sparkle {
+  opacity: 1;
+  animation: nova-sparkle 1.6s ease-in-out infinite;
+}
+
+.nova[data-mood="excited"] .nova-sparkle-late {
+  animation-delay: -0.8s;
+}
+
+.nova[data-mood="excited"] .nova-arm-pose {
+  transform: translateY(-18px);
+}
+
+/* --- proud: half-lidded eyes, chin up ------------------------------------- */
+
+.nova[data-mood="proud"] {
+  --nova-tilt: -2deg;
+}
+
+.nova[data-mood="proud"] .nova-eye {
+  transform: scaleY(0.55);
+  transform-origin: center bottom;
+}
+
+/* --- focused: narrowed eyes, flat mouth, brighter core -------------------- */
+
+.nova[data-mood="focused"] .nova-eye {
+  transform: scaleX(0.68) scaleY(1.08);
+}
+
+.nova[data-mood="focused"] .nova-mouth-smile {
+  opacity: 0;
+}
+
+.nova[data-mood="focused"] .nova-mouth-flat {
+  opacity: 1;
+}
+
+.nova[data-mood="focused"] .nova-lamp {
+  filter: drop-shadow(0 0 10px var(--nova-tint));
+}
+
+/* --- waving: friendly face plus an actual wave ---------------------------- */
+
+.nova[data-mood="waving"] .nova-arm-pose-right {
+  animation: nova-wave 900ms ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Blinking                                                                    */
 /* -------------------------------------------------------------------------- */
 
-.nova-eye {
-  fill: var(--color-accent);
-  transform-box: fill-box;
-  transform-origin: center;
-  transition: transform 130ms ease-out;
-}
-
+/* After the mood rules on purpose: a blink outranks whatever shape the current
+   expression gave the eyes, at equal specificity. */
 .nova[data-blink="true"] .nova-eye {
   transform: scaleY(0.08);
+  transform-origin: center;
   /* Snap shut, ease open — an even blink looks mechanical. */
   transition-duration: 70ms;
 }
@@ -86,6 +255,16 @@
 /* Offset so the arms don't bob in lockstep with each other or the body. */
 .nova-arm-right {
   animation-delay: -2.1s;
+}
+
+.nova-arm-pose {
+  transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.nova-antenna {
+  transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .nova-shadow {
@@ -141,6 +320,28 @@
   }
 }
 
+@keyframes nova-sparkle {
+  0%,
+  100% {
+    transform: scale(0.7) rotate(0deg);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scale(1.15) rotate(25deg);
+    opacity: 1;
+  }
+}
+
+@keyframes nova-wave {
+  0%,
+  100% {
+    transform: translateY(-26px) rotate(-14deg);
+  }
+  50% {
+    transform: translateY(-26px) rotate(20deg);
+  }
+}
+
 /* -------------------------------------------------------------------------- */
 /* Click reaction                                                              */
 /* -------------------------------------------------------------------------- */
@@ -167,21 +368,13 @@
 /* Palette                                                                     */
 /* -------------------------------------------------------------------------- */
 
-.nova-eyes {
-  filter: drop-shadow(0 0 7px color-mix(in oklab, var(--color-accent) 70%, transparent));
-}
-
 .nova-lamp {
-  fill: var(--color-accent);
-  filter: drop-shadow(0 0 6px color-mix(in oklab, var(--color-accent) 65%, transparent));
+  fill: var(--nova-tint);
+  filter: drop-shadow(0 0 6px color-mix(in oklab, var(--nova-tint) 65%, transparent));
 }
 
 .nova-stem {
   stroke: #3a4460;
-}
-
-.nova-smile {
-  stroke: color-mix(in oklab, var(--color-accent) 55%, transparent);
 }
 
 .nova-plate {
@@ -191,13 +384,13 @@
 /* A pool of NOVA's own light rather than a cast shadow — a black shadow is
    invisible on a near-black page, but a glow reads as height. */
 .nova-shadow {
-  fill: color-mix(in oklab, var(--color-accent) 45%, transparent);
+  fill: color-mix(in oklab, var(--nova-tint) 45%, transparent);
   opacity: 0.38;
   filter: blur(7px);
 }
 
 .nova-bloom-start {
-  stop-color: color-mix(in oklab, var(--color-accent) 32%, transparent);
+  stop-color: color-mix(in oklab, var(--nova-tint) 32%, transparent);
 }
 
 .nova-bloom-end {
@@ -205,18 +398,173 @@
 }
 
 /* -------------------------------------------------------------------------- */
+/* Stage — the fixed layer NOVA lives on once she leaves the hero              */
+/* -------------------------------------------------------------------------- */
+
+.nova-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  /* Never in the way of the content underneath. */
+  pointer-events: none;
+  /* Hidden until the first frame has measured where she belongs, so she can't
+     flash in the top-left corner on load. */
+  opacity: 0;
+}
+
+.nova-stage[data-ready="true"] {
+  opacity: 1;
+}
+
+.nova-anchor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* Scaled from this width to both the hero slot and the corner dock. */
+  width: 380px;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+/* Only while flying between hero and dock — during hero tracking the transform
+   is rewritten every frame and any transition would read as lag. */
+.nova-anchor[data-flying="true"] {
+  transition: transform 780ms cubic-bezier(0.4, 0.1, 0.2, 1);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Speech bubble                                                               */
+/* -------------------------------------------------------------------------- */
+
+/* Carries the position, updated every frame. Deliberately untransitioned — the
+   bubble must not lag behind NOVA while the page is scrolling. */
+.nova-speech-anchor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translate(var(--nova-bubble-x, 0px), var(--nova-bubble-y, 0px));
+}
+
+/* Carries the entrance, which is transitioned. Splitting the two means the
+   open/close animation never fights the per-frame positioning. */
+.nova-speech {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(19rem, calc(100vw - 3rem));
+  padding: 0.7rem 0.95rem;
+  border: 1px solid color-mix(in oklab, var(--color-accent) 28%, var(--color-line));
+  border-radius: 1rem;
+  background: color-mix(in oklab, var(--color-surface) 92%, transparent);
+  backdrop-filter: blur(14px);
+  box-shadow:
+    0 18px 40px -18px rgb(0 0 0 / 0.9),
+    0 0 24px -12px color-mix(in oklab, var(--color-accent) 60%, transparent);
+  color: var(--color-ink);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  text-wrap: pretty;
+
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 220ms ease,
+    transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 220ms;
+}
+
+.nova-speech[data-open="true"] {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+/* The tail, pointing down at NOVA. */
+.nova-speech::after {
+  content: "";
+  position: absolute;
+  bottom: -5px;
+  width: 9px;
+  height: 9px;
+  border-right: inherit;
+  border-bottom: inherit;
+  border-radius: 0 0 3px 0;
+  background: inherit;
+  transform: rotate(45deg);
+}
+
+/* Hero: bubble sits above NOVA's head, centred, tail in the middle. */
+.nova-speech[data-dock="false"] {
+  transform: translate(-50%, -100%) scale(0.94);
+}
+
+.nova-speech[data-dock="false"][data-open="true"] {
+  transform: translate(-50%, -100%) scale(1);
+}
+
+.nova-speech[data-dock="false"]::after {
+  left: calc(50% - 4.5px);
+}
+
+/* Docked: bubble hangs above and to the left, so it never leaves the viewport. */
+.nova-speech[data-dock="true"] {
+  transform: translate(-100%, -100%) scale(0.94);
+}
+
+.nova-speech[data-dock="true"][data-open="true"] {
+  transform: translate(-100%, -100%) scale(1);
+}
+
+.nova-speech[data-dock="true"]::after {
+  right: 18px;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Motion preferences                                                          */
 /* -------------------------------------------------------------------------- */
 
 /* The gaze stays — it responds to the visitor's own input rather than moving on
-   its own — but every autonomous animation stops. globals.css neutralises the
-   durations; this makes sure nothing is left mid-keyframe. */
+   its own — and so does the speech, which carries meaning. Everything that
+   moves by itself stops, and the bubble drops to a plain fade. */
 @media (prefers-reduced-motion: reduce) {
   .nova-float,
   .nova-arm,
   .nova-shadow,
   .nova-glowing,
+  .nova-sparkle,
+  .nova[data-mood="waving"] .nova-arm-pose-right,
   .nova[data-react="true"] .nova-bob {
     animation: none;
+  }
+
+  /* Keep the waving arm in its raised pose rather than mid-swing. */
+  .nova[data-mood="waving"] .nova-arm-pose-right {
+    transform: translateY(-26px);
+  }
+
+  .nova-anchor[data-flying="true"] {
+    transition: none;
+  }
+
+  .nova-speech,
+  .nova-speech[data-open="true"] {
+    transition:
+      opacity 200ms ease,
+      visibility 0s linear 200ms;
+  }
+
+  .nova-speech[data-open="true"] {
+    transition-delay: 0s;
+  }
+
+  .nova-speech[data-dock="false"],
+  .nova-speech[data-dock="false"][data-open="true"] {
+    transform: translate(-50%, -100%);
+  }
+
+  .nova-speech[data-dock="true"],
+  .nova-speech[data-dock="true"][data-open="true"] {
+    transform: translate(-100%, -100%);
   }
 }

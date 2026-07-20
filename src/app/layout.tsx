@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, Inter } from "next/font/google";
 import { profile } from "@/content/profile";
+import { siteUrl } from "@/lib/site";
 import "./globals.css";
 
 // Display face — a little character in the headings, still readable small.
@@ -16,9 +17,6 @@ const body = Inter({
   subsets: ["latin"],
   display: "swap",
 });
-
-// Set NEXT_PUBLIC_SITE_URL once the domain is live; OG tags need absolute URLs.
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 const title = `${profile.name} — ${profile.role}`;
 const description = profile.bio;

@@ -1,5 +1,4 @@
 import { profile, stats } from "@/content/profile";
-import { Nova } from "@/components/nova/Nova";
 import { Reveal } from "@/components/ui/Reveal";
 import {
   ArrowDown,
@@ -127,12 +126,17 @@ export function Hero() {
         </div>
 
         {/* ---------------------------------------------------------------- */}
-        {/* NOVA — deliberately unboxed, so she reads as a character standing */}
-        {/* in the page rather than an illustration inside a card.            */}
+        {/* NOVA's landing spot. She is not rendered here — NovaStage pins her */}
+        {/* over this box from a fixed layer, so she can fly to the corner     */}
+        {/* when the hero scrolls away instead of being left behind. All this  */}
+        {/* reserves is the space.                                             */}
         {/* ---------------------------------------------------------------- */}
-        <Reveal delay={0.2} className="order-1 lg:order-none lg:justify-self-end">
-          <div className="relative mx-auto w-full max-w-[240px] sm:max-w-[300px] lg:max-w-[380px]">
-            <Nova />
+        {/* Right-aligned with auto margins rather than `justify-self: end` —
+            that would shrink-wrap the column, and with only an aspect-ratio box
+            inside, the slot collapses to the width of the caption below it. */}
+        <Reveal delay={0.2} className="order-1 lg:order-none">
+          <div className="relative mx-auto w-full max-w-[240px] sm:max-w-[300px] lg:mr-0 lg:ml-auto lg:max-w-[380px]">
+            <div data-nova-slot className="aspect-[240/264] w-full" />
 
             <p className="mt-2 flex items-center justify-center gap-2 text-xs text-faint">
               <span className="relative flex size-1.5">
