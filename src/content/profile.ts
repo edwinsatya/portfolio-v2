@@ -64,6 +64,12 @@ export type SectionMeta = {
   label: string;
   mood: NovaMood;
   line: string;
+  /**
+   * Shorter variants used once the visitor has already heard the full line on a
+   * previous visit. One is picked at random, so a third visit isn't a rerun of
+   * the second.
+   */
+  altLines?: string[];
 };
 
 export const sections: SectionMeta[] = [
@@ -78,38 +84,72 @@ export const sections: SectionMeta[] = [
     label: "About",
     mood: "warm",
     line: "Small town, big web. Let me introduce him.",
+    altLines: ["Same guy, still building.", "You’ve met him."],
   },
   {
     id: "skills",
     label: "Skills",
     mood: "thinking",
     line: "His tech arsenal — everything here has shipped something real.",
+    altLines: ["The toolkit again.", "Still all battle-tested."],
   },
   {
     id: "projects",
     label: "Projects",
     mood: "excited",
     line: "These are my favorites — the top three have my pick badge.",
+    altLines: ["The good stuff.", "Back for these, then."],
   },
   {
     id: "experience",
     label: "Experience",
     mood: "proud",
     line: "Six years, five teams. Here’s where they went.",
+    altLines: ["The timeline, again.", "Still five teams."],
   },
   {
     id: "services",
     label: "Services",
     mood: "focused",
     line: "Three ways to work with him. Pick your problem.",
+    altLines: ["Same three options.", "Pick a lane."],
   },
   {
     id: "contact",
     label: "Contact",
     mood: "waving",
     line: "He usually replies within 24 hours. Go on, say hi.",
+    altLines: ["Still under 24 hours.", "Go on, this time."],
   },
 ];
+
+/* -------------------------------------------------------------------------- */
+/* NOVA — greetings                                                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Everything NOVA says that depends on what she remembers. The logic that picks
+ * between these lives in `useSectionReactions`.
+ */
+export const greetings = {
+  /** First visit — shown alongside the name input. */
+  first: "Hi there. I’m NOVA, I look after this place. What should I call you?",
+  namePlaceholder: "Your name",
+  nameSubmit: "Nice to meet you",
+  nameSkip: "Skip",
+  /** Once a name is given. */
+  named: (name: string) => `Nice to meet you, ${name}. Come on in.`,
+  /** They skipped the question — never asked again. */
+  skipped: "No problem. Let me show you around.",
+  /** Return visits. */
+  backNamed: (name: string) => `Welcome back, ${name}!`,
+  backAnonymous: "Hey, you again! Good to see you.",
+  /** Return visit where they reached the projects last time. */
+  backForProjects: (name: string | null) =>
+    name ? `Welcome back, ${name} — back for the projects?` : "Back for the projects?",
+  /** After the visitor asks to be forgotten. */
+  forgotten: "Memory wiped. Nice to meet you, stranger.",
+} as const;
 
 /* -------------------------------------------------------------------------- */
 /* Skills                                                                      */

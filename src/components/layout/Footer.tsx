@@ -1,5 +1,6 @@
 import { profile } from "@/content/profile";
 import { Github, Linkedin, Mail } from "@/components/ui/Icons";
+import { ForgetMe } from "./ForgetMe";
 
 const socials = [
   { label: "GitHub", href: profile.links.github, Icon: Github },
@@ -11,10 +12,13 @@ export function Footer() {
   return (
     <footer className="border-t border-line">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-6 py-10 sm:flex-row sm:px-8">
-        <p className="text-center text-sm text-faint sm:text-left">
-          © {new Date().getFullYear()} {profile.name} · Built in{" "}
-          {profile.location}
-        </p>
+        <div className="flex flex-col items-center gap-2 sm:items-start">
+          <p className="text-center text-sm text-faint sm:text-left">
+            © {new Date().getFullYear()} {profile.name} · Built in{" "}
+            {profile.location}
+          </p>
+          <ForgetMe />
+        </div>
 
         <ul className="flex items-center gap-1">
           {socials.map(({ label, href, Icon }) => (

@@ -62,14 +62,14 @@ the flag.
 - [x] **2** — Static sections with real content
 - [x] **3** — NOVA: idle animation and cursor tracking
 - [x] **4** — Section-triggered reactions and speech bubbles
-- [ ] **5** — `localStorage` memory and return-visitor greeting
+- [x] **5** — `localStorage` memory and return-visitor greeting
 - [ ] **6** — Scripted chat
 - [ ] **7** — Optional: LLM-backed chat
 - [ ] **8** — Polish, responsive, accessibility, deploy
 
-Steps 5–6 have hooks waiting for them already: `chatIntents[]` in `profile.ts`
-holds the scripted answers, and `useSectionReactions` is where a remembered
-visitor's greeting would slot in.
+Step 6 has its hooks waiting already: `chatIntents[]` in `profile.ts` holds the
+scripted answers, and NOVA's bubble is already able to host an interactive form
+(see the name prompt).
 
 ## NOVA
 
@@ -99,6 +99,31 @@ block to `nova.css`, otherwise it falls back to `greeting`.
 same frame rather than measured off the SVG, so every frame is a single layout
 read followed only by writes. Reading back after a write would force a
 synchronous reflow 60 times a second.
+
+## Memory
+
+[`lib/memory.ts`](src/lib/memory.ts) stores `visitCount`, `visitorName`,
+`sectionsSeen`, and `lastVisit` under one localStorage key, and exposes them as a
+store that React reads through `useSyncExternalStore` — localStorage genuinely is
+an external store, and that is the primitive for reading one without tearing
+during hydration.
+
+What changes with what NOVA remembers:
+
+| | |
+| --- | --- |
+| First visit | Short intro, plus an inline name field with a Skip button. |
+| Return visit | `Welcome back, <name>!`, or `Hey, you again!` without a name. Reached the projects last time? `Back for the projects?` |
+| Sections heard before | A shorter `altLines` variant, picked at random so a third visit isn't a rerun of the second. |
+| Forgotten | The footer's "NOVA forgets you" wipes the key and drops straight back to first-visit behaviour. |
+
+Nothing is ever required. The name prompt is the only part of the stage that
+accepts clicks at all, and scrolling past it dismisses it like any other bubble.
+
+**Storage blocked** (private mode, disabled cookies): reads return an empty
+memory, writes are no-ops, the forget button hides itself, and every visitor is
+simply treated as new. Verified against both failure shapes — storage that throws
+on write, and storage that throws on property access.
 
 Under `prefers-reduced-motion` every autonomous animation stops — float, blink,
 wander, wave, the flight to the corner — but the gaze still tracks, because it
