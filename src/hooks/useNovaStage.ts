@@ -33,7 +33,7 @@ const FLY_MS = 800;
  * each frame is a single layout read followed only by writes — reading back
  * after a write would force a synchronous reflow every frame.
  */
-export function useNovaStage() {
+export function useNovaStage({ forceDock = false }: { forceDock?: boolean } = {}) {
   const stageRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -42,6 +42,12 @@ export function useNovaStage() {
   // Mirrored into React state only so the bubble can switch which corner it
   // points from; the loop itself reads the ref.
   const [docked, setDocked] = useState(false);
+
+  // Read by the loop, which is set up once and never re-created.
+  const forceDockRef = useRef(forceDock);
+  useEffect(() => {
+    forceDockRef.current = forceDock;
+  }, [forceDock]);
 
   useEffect(() => {
     const stage = stageRef.current;
@@ -114,8 +120,10 @@ export function useNovaStage() {
       const vh = window.innerHeight;
 
       // Dock once the hero slot has scrolled up into the top quarter — or
-      // immediately if the hero isn't on this page at all.
-      const shouldDock = !slotRect || slotRect.bottom < vh * 0.28;
+      // immediately if the hero isn't on this page at all. Opening the chat
+      // forces it too, so NOVA is always beside her own panel.
+      const shouldDock =
+        forceDockRef.current || !slotRect || slotRect.bottom < vh * 0.28;
 
       let centerX: number;
       let centerY: number;
@@ -150,6 +158,13 @@ export function useNovaStage() {
       if (!ready) {
         ready = true;
         stage.dataset.ready = "true";
+      }
+
+      // How much room NOVA occupies at the bottom of the screen, so the chat
+      // panel can sit directly on top of her at either dock size.
+      if (shouldDock) {
+        const dockTop = centerY - (BASE_HEIGHT * scale) / 2;
+        stage.style.setProperty("--nova-dock-gap", `${Math.round(vh - dockTop + 10)}px`);
       }
 
       /* Gaze — origin derived from the transform above, not measured. */

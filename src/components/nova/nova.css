@@ -432,6 +432,270 @@
   transition: transform 780ms cubic-bezier(0.4, 0.1, 0.2, 1);
 }
 
+/* Invisible click target sitting over the robot's silhouette. Insets keep it off
+   the bloom, so only NOVA herself is clickable. */
+.nova-tap {
+  position: absolute;
+  inset: 5% 12% 6%;
+  border-radius: 22%;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.nova-tap:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 6px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Chat panel                                                                  */
+/* -------------------------------------------------------------------------- */
+
+.nova-chat {
+  position: fixed;
+  right: 20px;
+  /* Written by the stage loop: exactly the room NOVA takes at the bottom. */
+  bottom: var(--nova-dock-gap, 160px);
+  z-index: 1;
+
+  display: flex;
+  flex-direction: column;
+  width: min(21rem, calc(100vw - 2.5rem));
+  max-height: min(28rem, calc(100vh - var(--nova-dock-gap, 160px) - 1.5rem));
+
+  border: 1px solid color-mix(in oklab, var(--color-accent) 24%, var(--color-line));
+  border-radius: 1.1rem;
+  background: color-mix(in oklab, var(--color-surface) 94%, transparent);
+  backdrop-filter: blur(16px);
+  box-shadow:
+    0 24px 60px -24px rgb(0 0 0 / 0.95),
+    0 0 30px -16px color-mix(in oklab, var(--color-accent) 60%, transparent);
+
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px) scale(0.97);
+  transform-origin: bottom right;
+  transition:
+    opacity 200ms ease,
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 200ms;
+}
+
+.nova-chat[data-open="true"] {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+  transition-delay: 0s;
+  pointer-events: auto;
+}
+
+.nova-chat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 0.85rem;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.nova-chat-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+}
+
+.nova-chat-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: var(--color-accent);
+  box-shadow: 0 0 8px var(--color-accent);
+}
+
+.nova-chat-close {
+  display: inline-flex;
+  padding: 0.25rem;
+  border-radius: 0.5rem;
+  color: var(--color-faint);
+  transition: color 180ms ease;
+}
+
+.nova-chat-close:hover {
+  color: var(--color-ink);
+}
+
+.nova-chat-log {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem;
+  scrollbar-width: thin;
+}
+
+.nova-chat-msg {
+  max-width: 88%;
+  padding: 0.5rem 0.7rem;
+  border-radius: 0.85rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.nova-chat-msg[data-from="nova"] {
+  align-self: flex-start;
+  border: 1px solid var(--color-line);
+  border-bottom-left-radius: 0.3rem;
+  background: var(--color-bg-soft);
+  color: var(--color-ink);
+}
+
+.nova-chat-msg[data-from="visitor"] {
+  align-self: flex-end;
+  border-bottom-right-radius: 0.3rem;
+  background: color-mix(in oklab, var(--color-accent) 88%, black);
+  color: var(--color-bg);
+}
+
+.nova-chat-typing {
+  display: inline-flex;
+  gap: 0.2rem;
+  padding: 0.15rem 0;
+}
+
+.nova-chat-typing i {
+  width: 0.32rem;
+  height: 0.32rem;
+  border-radius: 999px;
+  background: var(--color-faint);
+  animation: nova-typing 1.2s ease-in-out infinite;
+}
+
+.nova-chat-typing i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.nova-chat-typing i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes nova-typing {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+.nova-chat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0 0.85rem 0.6rem;
+}
+
+.nova-chat-chip {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background: var(--color-bg-soft);
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  transition:
+    border-color 180ms ease,
+    color 180ms ease;
+}
+
+.nova-chat-chip:hover {
+  border-color: color-mix(in oklab, var(--color-accent) 50%, transparent);
+  color: var(--color-ink);
+}
+
+.nova-chat-form {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.65rem;
+  border-top: 1px solid var(--color-line);
+}
+
+.nova-chat-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--color-line);
+  border-radius: 0.7rem;
+  background: var(--color-bg-soft);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 0.8125rem;
+}
+
+.nova-chat-input::placeholder {
+  color: var(--color-faint);
+}
+
+.nova-chat-input:focus {
+  border-color: color-mix(in oklab, var(--color-accent) 60%, transparent);
+  outline: none;
+}
+
+.nova-chat-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  border-radius: 0.7rem;
+  background: var(--color-accent);
+  color: var(--color-bg);
+  transition: opacity 180ms ease;
+}
+
+.nova-chat-send:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Bottom sheet on phones. */
+@media (max-width: 639px) {
+  .nova-chat {
+    right: 0;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    max-height: 78vh;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 1.25rem 1.25rem 0 0;
+    transform: translateY(100%);
+    transform-origin: bottom center;
+    /* Clear of the home indicator on iOS. */
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .nova-chat[data-open="true"] {
+    transform: translateY(0);
+  }
+
+  /* The sheet covers the corner NOVA docks in. Rather than leave her half
+     hidden behind it, take her off screen for as long as it's open — the sheet
+     header carries her name, and the close button is the way back. */
+  .nova-stage[data-chatting="true"] .nova-anchor {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms ease;
+  }
+}
+
 /* -------------------------------------------------------------------------- */
 /* Speech bubble                                                               */
 /* -------------------------------------------------------------------------- */
@@ -631,5 +895,23 @@
   .nova-speech[data-dock="true"],
   .nova-speech[data-dock="true"][data-open="true"] {
     transform: translate(-100%, -100%);
+  }
+
+  .nova-chat-typing i {
+    animation: none;
+    opacity: 0.6;
+  }
+
+  /* The panel still appears and disappears, it just fades rather than sliding. */
+  .nova-chat,
+  .nova-chat[data-open="true"] {
+    transform: none;
+    transition:
+      opacity 180ms ease,
+      visibility 0s linear 180ms;
+  }
+
+  .nova-chat[data-open="true"] {
+    transition-delay: 0s;
   }
 }

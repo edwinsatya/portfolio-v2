@@ -63,13 +63,11 @@ the flag.
 - [x] **3** — NOVA: idle animation and cursor tracking
 - [x] **4** — Section-triggered reactions and speech bubbles
 - [x] **5** — `localStorage` memory and return-visitor greeting
-- [ ] **6** — Scripted chat
+- [x] **6** — Scripted chat
 - [ ] **7** — Optional: LLM-backed chat
 - [ ] **8** — Polish, responsive, accessibility, deploy
 
-Step 6 has its hooks waiting already: `chatIntents[]` in `profile.ts` holds the
-scripted answers, and NOVA's bubble is already able to host an interactive form
-(see the name prompt).
+Step 7 is a one-function change — see the chat section below.
 
 ## NOVA
 
@@ -124,6 +122,35 @@ accepts clicks at all, and scrolling past it dismisses it like any other bubble.
 memory, writes are no-ops, the forget button hides itself, and every visitor is
 simply treated as new. Verified against both failure shapes — storage that throws
 on write, and storage that throws on property access.
+
+## Chat
+
+Clicking NOVA opens "Talk to NOVA" — a card above her on desktop, a bottom sheet
+on phones. Opening it also pulls her down to the corner, so the panel is always
+beside the robot rather than stranded across the page.
+
+Three layers, split so the answering can be replaced without touching the UI:
+
+| File | Does |
+| --- | --- |
+| [`content/nova-qa.ts`](src/content/nova-qa.ts) | The knowledge, as data. Keywords, answers, follow-up chips. No logic. |
+| [`lib/nova-brain.ts`](src/lib/nova-brain.ts) | The `NovaResponder` contract, and the keyword matcher that currently implements it. |
+| [`hooks/useNovaChat.ts`](src/hooks/useNovaChat.ts) | Conversation state, the thinking beat, and scroll actions. |
+
+**Swapping in an LLM (step 7):** write a second `NovaResponder` that POSTs to an
+API route, and pass it as `useNovaChat({ name, respond: apiResponder })`. The
+type is already async and already returns `{ text, scrollTo?, suggestions }`, so
+the panel, the history, the chips, and the scroll actions all keep working
+unchanged. Keep the key server-side in the route.
+
+**Matching:** weighted keyword overlap — longer keywords count for more, phrases
+count double, and a whole-word match gets a floor so short-but-specific terms
+like "cv" aren't drowned out. Below a confidence threshold NOVA says she doesn't
+know rather than guessing, and offers three chips instead.
+
+Answers use the visitor's remembered name where it reads naturally. Rates are
+deliberately vague — NOVA points people at the inbox rather than quoting numbers
+nobody gave her.
 
 Under `prefers-reduced-motion` every autonomous animation stops — float, blink,
 wander, wave, the flight to the corner — but the gaze still tracks, because it

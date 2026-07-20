@@ -41,11 +41,6 @@ export const stats = [
 /* -------------------------------------------------------------------------- */
 
 /**
- * The guided journey. `mood` and `line` drive NOVA: when a section scrolls into
- * view the robot switches to that mood and speaks that line. They live here so
- * the tour script is editable without touching component code.
- */
-/**
  * Every mood is a visibly different face — see `nova.css`, where each one sets
  * its own eye shape, mouth, tint, and pose. Adding a mood means adding a block
  * there too, otherwise it falls back to `greeting`.
@@ -59,6 +54,11 @@ export type NovaMood =
   | "focused"
   | "waving";
 
+/**
+ * The guided journey. When a section scrolls into view NOVA switches to its
+ * mood and speaks its line, so the whole tour script is editable here without
+ * touching component code.
+ */
 export type SectionMeta = {
   id: string;
   label: string;
@@ -381,61 +381,5 @@ export const services: Service[] = [
       "Workflow automation",
       "Prompt engineering",
     ],
-  },
-];
-
-/* -------------------------------------------------------------------------- */
-/* NOVA — scripted chat (wired up in step 6)                                   */
-/* -------------------------------------------------------------------------- */
-
-export type ChatIntent = {
-  id: string;
-  /** Shown as a suggestion chip under the chat input. */
-  prompt: string;
-  /** Lowercase keywords matched against whatever the visitor types. */
-  keywords: string[];
-  answer: string;
-  /** Optional section to scroll to after answering. */
-  scrollTo?: string;
-};
-
-export const chatIntents: ChatIntent[] = [
-  {
-    id: "who",
-    prompt: "Who is Edwin?",
-    keywords: ["who", "about", "edwin", "yourself", "him"],
-    answer: profile.bio,
-    scrollTo: "about",
-  },
-  {
-    id: "build",
-    prompt: "What can he build?",
-    keywords: ["build", "do", "skill", "stack", "tech", "make"],
-    answer:
-      "Front-end, full-stack, and AI integration. React and Next.js on the front, Node and Express behind it, and increasingly AI woven through the middle.",
-    scrollTo: "skills",
-  },
-  {
-    id: "available",
-    prompt: "Is he available?",
-    keywords: ["available", "hire", "hiring", "free", "work", "open"],
-    answer:
-      "Yes — accepting new projects and roles. Average reply under 24 hours.",
-    scrollTo: "contact",
-  },
-  {
-    id: "contact",
-    prompt: "How do I contact him?",
-    keywords: ["contact", "reach", "email", "message", "talk", "linkedin"],
-    answer: `Easiest is email: ${profile.email}. He’s also on LinkedIn and GitHub — all three are monitored.`,
-    scrollTo: "contact",
-  },
-  {
-    id: "work",
-    prompt: "Show me his best work",
-    keywords: ["best", "work", "project", "portfolio", "favourite", "favorite"],
-    answer:
-      "Take a look at Weathernime, Food Analyzer, and Happy Farm — those are the three I’d lead with. Scrolling you there now.",
-    scrollTo: "projects",
   },
 ];
