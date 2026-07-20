@@ -1,0 +1,228 @@
+@import "tailwindcss";
+
+/* -------------------------------------------------------------------------- */
+/* Design tokens                                                               */
+/* -------------------------------------------------------------------------- */
+
+@theme {
+  /* Surfaces — near-black with a cool cast, so the accent glow reads warm. */
+  --color-bg: #06070b;
+  --color-bg-soft: #0a0c13;
+  --color-surface: #0e1119;
+  --color-line: #1b2030;
+
+  /* Text — all three clear 4.5:1 against both the page and panel backgrounds. */
+  --color-ink: #e9ecf5;
+  --color-muted: #8a90a6;
+  --color-faint: #787f96;
+
+  /* Accent — NOVA's glow, and every call to action. */
+  --color-accent: #6ee7ff;
+  --color-accent-deep: #0e7490;
+  --color-violet: #a78bfa;
+
+  --font-display: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-pulse-soft: pulse-soft 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Base                                                                        */
+/* -------------------------------------------------------------------------- */
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    /* Clears the sticky nav when jumping to a section. */
+    scroll-padding-top: 6rem;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* The ambient light behind everything: one cool pool top-left, one violet
+     bloom right, plus a faint grid that fades out before it gets busy. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        60rem 40rem at 15% -10%,
+        color-mix(in oklab, var(--color-accent) 12%, transparent),
+        transparent 70%
+      ),
+      radial-gradient(
+        50rem 40rem at 95% 15%,
+        color-mix(in oklab, var(--color-violet) 10%, transparent),
+        transparent 70%
+      );
+  }
+
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.5;
+    background-image:
+      linear-gradient(to right, var(--color-line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--color-line) 1px, transparent 1px);
+    background-size: 4rem 4rem;
+    mask-image: radial-gradient(70% 55% at 50% 0%, #000 10%, transparent 85%);
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-accent) 30%, transparent);
+    color: #fff;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+    border-radius: 0.35rem;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Components                                                                  */
+/* -------------------------------------------------------------------------- */
+
+@layer components {
+  /* Frosted card used by projects, services, skills. */
+  .panel {
+    background: color-mix(in oklab, var(--color-surface) 70%, transparent);
+    border: 1px solid var(--color-line);
+    backdrop-filter: blur(12px);
+  }
+
+  .panel-hover {
+    transition:
+      border-color 0.35s ease,
+      background-color 0.35s ease,
+      transform 0.35s ease;
+  }
+
+  .panel-hover:hover {
+    border-color: color-mix(in oklab, var(--color-accent) 40%, transparent);
+    background: color-mix(in oklab, var(--color-surface) 92%, transparent);
+  }
+
+  /* Gradient hairline that lights up along the top edge of a card on hover. */
+  .edge-light {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .edge-light::before {
+    content: "";
+    position: absolute;
+    inset-inline: 15%;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      var(--color-accent),
+      transparent
+    );
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  .edge-light:hover::before {
+    opacity: 0.8;
+  }
+
+  /* Solid first, gradient only where the text can actually be clipped —
+     otherwise `color: transparent` would erase the headline entirely. */
+  .text-gradient {
+    color: var(--color-ink);
+  }
+
+  @supports (background-clip: text) or (-webkit-background-clip: text) {
+    .text-gradient {
+      background: linear-gradient(
+        135deg,
+        var(--color-ink) 20%,
+        var(--color-accent) 60%,
+        var(--color-violet)
+      );
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+  }
+
+  /* Small uppercase label that opens most sections. */
+  .eyebrow {
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Motion preferences                                                          */
+/* -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  body::after {
+    display: none;
+  }
+}
