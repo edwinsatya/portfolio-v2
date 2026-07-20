@@ -148,7 +148,7 @@ export type Project = {
   stack: string[];
   live?: string;
   source?: string;
-  /** NOVA recommends these when asked to show her favourites. */
+  /** NOVA recommends these when asked to show its favourites. */
   featured?: boolean;
   /** Blurb/stack inferred from the project name — confirm before publishing. */
   needsReview?: boolean;

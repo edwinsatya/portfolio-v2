@@ -1,0 +1,222 @@
+/**
+ * NOVA's motion layer.
+ *
+ * The hook writes two numbers onto the root <svg> — `--nova-look-x` and
+ * `--nova-look-y`, each roughly -1..1 — and every rule below reads from them.
+ * Keeping the maths in JS and the choreography in CSS means the amount each
+ * part moves is tunable here without touching the loop.
+ *
+ * Parts move by different amounts on purpose: eyes most, head less, body least.
+ * That parallax is what sells the gaze as depth rather than a flat slide.
+ */
+
+.nova {
+  --nova-look-x: 0;
+  --nova-look-y: 0;
+
+  width: 100%;
+  height: auto;
+  /* The bloom and glows spill well past the viewBox. */
+  overflow: visible;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Gaze                                                                        */
+/* -------------------------------------------------------------------------- */
+
+.nova-eyes {
+  transform: translate(
+    calc(var(--nova-look-x) * 9px),
+    calc(var(--nova-look-y) * 6px)
+  );
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.nova-head {
+  transform: rotate(calc(var(--nova-look-x) * 4.5deg))
+    translate(
+      calc(var(--nova-look-x) * 3px),
+      calc(var(--nova-look-y) * 2.5px)
+    );
+  /* Pivot on the neck, not the middle of the skull. */
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+.nova-lean {
+  transform: translateX(calc(var(--nova-look-x) * 5px));
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Blinking                                                                    */
+/* -------------------------------------------------------------------------- */
+
+.nova-eye {
+  fill: var(--color-accent);
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 130ms ease-out;
+}
+
+.nova[data-blink="true"] .nova-eye {
+  transform: scaleY(0.08);
+  /* Snap shut, ease open — an even blink looks mechanical. */
+  transition-duration: 70ms;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Idle life                                                                   */
+/* -------------------------------------------------------------------------- */
+
+.nova-float {
+  animation: nova-float 5.5s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.nova-arm {
+  animation: nova-limb 4.2s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Offset so the arms don't bob in lockstep with each other or the body. */
+.nova-arm-right {
+  animation-delay: -2.1s;
+}
+
+.nova-shadow {
+  animation: nova-shadow 5.5s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.nova-glowing {
+  animation: nova-glow 2.8s ease-in-out infinite;
+}
+
+@keyframes nova-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-9px);
+  }
+}
+
+@keyframes nova-limb {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Shrinks and fades as NOVA rises, so the float reads as height. */
+@keyframes nova-shadow {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  50% {
+    transform: scale(0.84);
+    opacity: 0.28;
+  }
+}
+
+@keyframes nova-glow {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Click reaction                                                              */
+/* -------------------------------------------------------------------------- */
+
+.nova[data-react="true"] .nova-bob {
+  animation: nova-bob 420ms ease-out;
+  transform-box: fill-box;
+  transform-origin: center bottom;
+}
+
+@keyframes nova-bob {
+  0% {
+    transform: translateY(0) scale(1, 1);
+  }
+  35% {
+    transform: translateY(5px) scale(1.05, 0.95);
+  }
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Palette                                                                     */
+/* -------------------------------------------------------------------------- */
+
+.nova-eyes {
+  filter: drop-shadow(0 0 7px color-mix(in oklab, var(--color-accent) 70%, transparent));
+}
+
+.nova-lamp {
+  fill: var(--color-accent);
+  filter: drop-shadow(0 0 6px color-mix(in oklab, var(--color-accent) 65%, transparent));
+}
+
+.nova-stem {
+  stroke: #3a4460;
+}
+
+.nova-smile {
+  stroke: color-mix(in oklab, var(--color-accent) 55%, transparent);
+}
+
+.nova-plate {
+  stroke: #2b3448;
+}
+
+/* A pool of NOVA's own light rather than a cast shadow — a black shadow is
+   invisible on a near-black page, but a glow reads as height. */
+.nova-shadow {
+  fill: color-mix(in oklab, var(--color-accent) 45%, transparent);
+  opacity: 0.38;
+  filter: blur(7px);
+}
+
+.nova-bloom-start {
+  stop-color: color-mix(in oklab, var(--color-accent) 32%, transparent);
+}
+
+.nova-bloom-end {
+  stop-color: transparent;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Motion preferences                                                          */
+/* -------------------------------------------------------------------------- */
+
+/* The gaze stays — it responds to the visitor's own input rather than moving on
+   its own — but every autonomous animation stops. globals.css neutralises the
+   durations; this makes sure nothing is left mid-keyframe. */
+@media (prefers-reduced-motion: reduce) {
+  .nova-float,
+  .nova-arm,
+  .nova-shadow,
+  .nova-glowing,
+  .nova[data-react="true"] .nova-bob {
+    animation: none;
+  }
+}

@@ -57,16 +57,34 @@ the flag.
 
 - [x] **1** — Scaffold, theme, fonts, layout
 - [x] **2** — Static sections with real content
-- [ ] **3** — NOVA: idle animation and cursor tracking
+- [x] **3** — NOVA: idle animation and cursor tracking
 - [ ] **4** — Section-triggered reactions and speech bubbles
 - [ ] **5** — `localStorage` memory and return-visitor greeting
 - [ ] **6** — Scripted chat
 - [ ] **7** — Optional: LLM-backed chat
 - [ ] **8** — Polish, responsive, accessibility, deploy
 
-Steps 3–6 have hooks waiting for them already: `sections[]` in `profile.ts`
+Steps 4–6 have hooks waiting for them already: `sections[]` in `profile.ts`
 carries a `mood` and `line` per section, `chatIntents[]` holds the scripted
 answers, and `useActiveSection` reports the current section.
+
+## NOVA
+
+Drawn as inline SVG in [`components/nova/Nova.tsx`](src/components/nova/Nova.tsx) —
+no asset to load and nothing that can fail to arrive. Two files drive her:
+
+- [`hooks/useNovaMotion.ts`](src/hooks/useNovaMotion.ts) — one
+  `requestAnimationFrame` loop that eases the gaze toward the pointer, wanders on
+  its own after 3.2s of stillness, schedules blinks, and reacts to clicks. It
+  writes `--nova-look-x` / `--nova-look-y` onto the `<svg>` rather than setting
+  React state, so pointer movement never triggers a render.
+- [`components/nova/nova.css`](src/components/nova/nova.css) — turns those two
+  numbers into movement. Eyes travel furthest, the head less, the body least;
+  that parallax is what makes the gaze read as depth. Tune the multipliers here.
+
+Under `prefers-reduced-motion` every autonomous animation stops — float, blink,
+wander, bob — but the gaze still tracks, since it answers the visitor's own
+input rather than moving by itself.
 
 ## Accessibility and motion
 

@@ -1,4 +1,5 @@
 import { profile, stats } from "@/content/profile";
+import { Nova } from "@/components/nova/Nova";
 import { Reveal } from "@/components/ui/Reveal";
 import {
   ArrowDown,
@@ -17,11 +18,12 @@ export function Hero() {
       aria-labelledby="intro-heading"
       className="relative mx-auto flex min-h-svh w-full max-w-6xl items-center px-6 pt-28 pb-20 sm:px-8"
     >
-      <div className="grid w-full items-center gap-14 lg:grid-cols-[1.15fr_1fr] lg:gap-20">
+      <div className="grid w-full items-center gap-12 lg:grid-cols-[1.15fr_1fr] lg:gap-20">
         {/* ---------------------------------------------------------------- */}
-        {/* Copy                                                              */}
+        {/* Copy — ordered second on small screens so NOVA does the greeting  */}
+        {/* before the pitch, the way she would on desktop.                   */}
         {/* ---------------------------------------------------------------- */}
-        <div>
+        <div className="order-2 lg:order-none">
           <Reveal>
             <p className="inline-flex items-center gap-2.5 rounded-full border border-line bg-surface/60 px-3.5 py-1.5 text-xs text-muted backdrop-blur-sm">
               <span className="relative flex size-1.5">
@@ -106,43 +108,9 @@ export function Hero() {
               </div>
             </div>
           </Reveal>
-        </div>
 
-        {/* ---------------------------------------------------------------- */}
-        {/* NOVA's dock — the robot lands here in step 3. Until then it holds  */}
-        {/* the stat readout so the composition stands on its own.            */}
-        {/* ---------------------------------------------------------------- */}
-        <Reveal delay={0.2} className="lg:justify-self-end">
-          <div className="panel edge-light relative w-full overflow-hidden rounded-3xl p-6 sm:p-8">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -top-24 left-1/2 size-64 -translate-x-1/2 rounded-full bg-accent/15 blur-3xl"
-            />
-
-            <div className="relative flex items-center justify-between text-xs">
-              <span className="font-display tracking-[0.2em] text-faint uppercase">
-                Nova
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-faint">
-                <span className="size-1.5 animate-pulse-soft rounded-full bg-accent" />
-                standby
-              </span>
-            </div>
-
-            {/* Placeholder presence — replaced by the Rive character. */}
-            <div className="relative my-8 flex h-40 items-center justify-center sm:h-48">
-              <div className="animate-float motion-reduce:animate-none">
-                <div className="relative flex size-24 items-center justify-center rounded-[1.75rem] border border-accent/25 bg-surface/80 sm:size-28">
-                  <div className="absolute inset-0 rounded-[1.75rem] bg-accent/5" />
-                  <div className="flex gap-3">
-                    <span className="size-3 rounded-full bg-accent shadow-[0_0_12px_var(--color-accent)]" />
-                    <span className="size-3 rounded-full bg-accent shadow-[0_0_12px_var(--color-accent)]" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <dl className="relative grid grid-cols-3 gap-4 border-t border-line pt-6">
+          <Reveal delay={0.4}>
+            <dl className="mt-10 grid max-w-md grid-cols-3 gap-4 border-t border-line pt-6">
               {stats.map((stat) => (
                 <div key={stat.label}>
                   <dt className="sr-only">{stat.label}</dt>
@@ -155,6 +123,30 @@ export function Hero() {
                 </div>
               ))}
             </dl>
+          </Reveal>
+        </div>
+
+        {/* ---------------------------------------------------------------- */}
+        {/* NOVA — deliberately unboxed, so she reads as a character standing */}
+        {/* in the page rather than an illustration inside a card.            */}
+        {/* ---------------------------------------------------------------- */}
+        <Reveal delay={0.2} className="order-1 lg:order-none lg:justify-self-end">
+          <div className="relative mx-auto w-full max-w-[240px] sm:max-w-[300px] lg:max-w-[380px]">
+            <Nova />
+
+            <p className="mt-2 flex items-center justify-center gap-2 text-xs text-faint">
+              <span className="relative flex size-1.5">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-70 motion-reduce:hidden" />
+                <span className="relative inline-flex size-1.5 rounded-full bg-accent" />
+              </span>
+              <span className="font-display tracking-[0.18em] uppercase">
+                Nova
+              </span>
+              {/* Only true where there's actually a cursor to follow. */}
+              <span className="hidden [@media(hover:hover)]:inline">
+                · watching your cursor
+              </span>
+            </p>
           </div>
         </Reveal>
       </div>
