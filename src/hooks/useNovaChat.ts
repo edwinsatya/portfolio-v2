@@ -1,8 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CHAT_GREETING, DEFAULT_SUGGESTIONS } from "@/content/nova-qa";
-import { scriptedResponder, type NovaResponder } from "@/lib/nova-brain";
+import {
+  CHAT_GREETING,
+  CHAT_NAME_ASK,
+  DEFAULT_SUGGESTIONS,
+  greetingsFor,
+} from "@/content/nova-qa";
+import { matchIntent, scriptedResponder, type NovaResponder } from "@/lib/nova-brain";
+import { onAskNova } from "@/lib/nova-bus";
+import { sanitizeName, setVisitorName } from "@/lib/memory";
 
 export type ChatMessage = {
   id: number;
@@ -38,9 +45,11 @@ function scrollToSection(id: string) {
  */
 export function useNovaChat({
   name,
+  isFirstVisit,
   respond = scriptedResponder,
 }: {
   name: string | null;
+  isFirstVisit: boolean;
   respond?: NovaResponder;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -50,19 +59,44 @@ export function useNovaChat({
 
   // Guards against a second question being sent while the first is in flight.
   const busy = useRef(false);
+  // True between NOVA asking the visitor's name and them answering. The ask now
+  // lives here rather than in a hero speech bubble.
+  const awaitingName = useRef(false);
 
-  const open = useCallback(() => {
-    setIsOpen(true);
-    // Seed the thread the first time only; reopening keeps what was said.
-    setMessages((current) =>
-      current.length > 0
-        ? current
-        : [{ id: nextId++, from: "nova", text: CHAT_GREETING(name) }],
-    );
-  }, [name]);
+  const push = useCallback((from: ChatMessage["from"], text: string) => {
+    setMessages((current) => [...current, { id: nextId++, from, text }]);
+  }, []);
+
+  /**
+   * `withQuestion` means the visitor arrived via a suggestion chip, so they want
+   * that answered — asking their name first would talk straight over it. The
+   * name is only requested when they open the chat to converse.
+   */
+  const open = useCallback(
+    (withQuestion = false) => {
+      setIsOpen(true);
+      // Seed the thread the first time only; reopening keeps what was said.
+      setMessages((current) => {
+        if (current.length > 0) return current;
+        const asksName = isFirstVisit && !name && !withQuestion;
+        awaitingName.current = asksName;
+        return [
+          {
+            id: nextId++,
+            from: "nova",
+            text: asksName ? CHAT_NAME_ASK : CHAT_GREETING(name),
+          },
+        ];
+      });
+    },
+    [name, isFirstVisit],
+  );
 
   const close = useCallback(() => setIsOpen(false), []);
-  const toggle = useCallback(() => (isOpen ? close() : open()), [isOpen, open, close]);
+  const toggle = useCallback(
+    () => (isOpen ? close() : open()),
+    [isOpen, open, close],
+  );
 
   const send = useCallback(
     (raw: string) => {
@@ -70,34 +104,62 @@ export function useNovaChat({
       if (!question || busy.current) return;
 
       busy.current = true;
-      setMessages((current) => [
-        ...current,
-        { id: nextId++, from: "visitor", text: question },
-      ]);
+      push("visitor", question);
       setIsThinking(true);
 
       void (async () => {
         try {
-          // Race the answer against a minimum pause: instant for the scripted
-          // brain, and already correct for a slower API-backed one.
+          // While waiting on a name, anything that isn't recognisably a question
+          // is taken as the answer. Checking the intent first means "what has he
+          // built?" still gets answered rather than stored as someone's name.
+          const takingName = awaitingName.current && !matchIntent(question);
+
           const [reply] = await Promise.all([
-            respond(question, { name }),
+            takingName
+              ? Promise.resolve(null)
+              : respond(question, { name }),
             new Promise((resolve) => setTimeout(resolve, THINKING_MS)),
           ]);
 
-          setMessages((current) => [
-            ...current,
-            { id: nextId++, from: "nova", text: reply.text },
-          ]);
-          setSuggestions(reply.suggestions);
-          if (reply.scrollTo) scrollToSection(reply.scrollTo);
+          if (takingName) {
+            awaitingName.current = false;
+            const saved = setVisitorName(question);
+            push(
+              "nova",
+              saved
+                ? greetingsFor.named(saved)
+                : "No problem — ask me anything about Edwin.",
+            );
+            setSuggestions(DEFAULT_SUGGESTIONS);
+            return;
+          }
+
+          // They asked a real question instead of answering; stop waiting.
+          awaitingName.current = false;
+          if (reply) {
+            push("nova", reply.text);
+            setSuggestions(reply.suggestions);
+            if (reply.scrollTo) scrollToSection(reply.scrollTo);
+          }
         } finally {
           setIsThinking(false);
           busy.current = false;
         }
       })();
     },
-    [name, respond],
+    [name, respond, push],
+  );
+
+  // Hero chips: open the panel, then ask. The send is deferred a tick so the
+  // greeting is seeded before the question lands under it.
+  useEffect(
+    () =>
+      onAskNova((question) => {
+        open(Boolean(question));
+        // No question means "just open" — the nav's chat button.
+        if (question) window.setTimeout(() => send(question), 60);
+      }),
+    [open, send],
   );
 
   // Escape closes from anywhere, not just while focus is inside the panel.
@@ -114,3 +176,6 @@ export function useNovaChat({
 
   return { isOpen, messages, isThinking, suggestions, open, close, toggle, send };
 }
+
+/** Re-exported so the panel can label its own input. */
+export { sanitizeName };

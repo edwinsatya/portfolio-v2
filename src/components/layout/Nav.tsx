@@ -1,151 +1,95 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { profile, sections } from "@/content/profile";
 import { useActiveSection } from "@/hooks/useActiveSection";
-import { ArrowUpRight } from "@/components/ui/Icons";
+import { askNova } from "@/lib/nova-bus";
+import {
+  ChatBubble,
+  FileText,
+  Grid,
+  Home,
+  Mail,
+  User,
+} from "@/components/ui/Icons";
 
 // Module scope so the array identity is stable across renders.
 const SECTION_IDS = sections.map((section) => section.id);
-const NAV_ITEMS = sections.filter((section) => section.id !== "intro");
 
+/**
+ * The reference's four-item nav, mapped onto this site's sections. Each carries
+ * an icon because the pill collapses to icons on phones, where four monospace
+ * labels would run the full width of the screen.
+ */
+const NAV_ITEMS = [
+  { id: "intro", label: "Home", Icon: Home },
+  { id: "projects", label: "Work", Icon: Grid },
+  { id: "about", label: "About", Icon: User },
+  { id: "contact", label: "Contact", Icon: Mail },
+];
+
+/**
+ * Floating pill nav, top-right.
+ *
+ * No mobile sheet: four short monospace labels fit across a phone at this size,
+ * so the pill only tightens its padding rather than collapsing behind a
+ * hamburger — one less tap between the visitor and the page.
+ */
 export function Nav() {
   const active = useActiveSection(SECTION_IDS);
-  const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  // Solidify the bar once the hero is behind us.
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  // Close the mobile sheet on Escape, and lock the page behind it.
-  useEffect(() => {
-    if (!menuOpen) return;
-
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMenuOpen(false);
-    };
-
-    document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
-  }, [menuOpen]);
 
   return (
     <header
       data-site-nav
-      className={`fixed inset-x-0 top-0 z-50 transition-colors duration-300 ${
-        scrolled ? "border-b border-line/70 bg-bg/80 backdrop-blur-xl" : ""
-      }`}
+      className="fixed inset-x-0 top-0 z-50 flex justify-end px-4 pt-4 sm:px-6 sm:pt-6"
     >
       <nav
         aria-label="Primary"
-        className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6 sm:px-8"
+        className="flex items-center gap-1 rounded-full border border-white/70 bg-surface/85 p-1.5 shadow-[0_8px_30px_-12px_rgb(20_22_31/0.25)] backdrop-blur-xl"
       >
-        <a
-          href="#intro"
-          className="group flex items-center gap-2.5 font-display text-sm font-semibold tracking-tight"
+        <button
+          type="button"
+          onClick={() => askNova()}
+          className="nav-icon"
+          aria-label="Talk to NOVA"
         >
-          <span className="relative flex size-2.5">
-            <span className="absolute inset-0 rounded-full bg-accent opacity-60 blur-[3px]" />
-            <span className="relative size-2.5 rounded-full bg-accent" />
-          </span>
-          {profile.firstName}
-          <span className="text-faint transition-colors group-hover:text-muted">
-            .dev
-          </span>
+          <ChatBubble className="size-4" />
+        </button>
+
+        <a
+          href={profile.links.resume}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="nav-icon"
+          aria-label="Resume (opens in a new tab)"
+        >
+          <FileText className="size-4" />
         </a>
 
-        {/* Desktop */}
-        <ul className="hidden items-center gap-1 md:flex">
-          {NAV_ITEMS.map((section) => (
-            <li key={section.id}>
-              <a
-                href={`#${section.id}`}
-                aria-current={active === section.id ? "true" : undefined}
-                className={`relative rounded-full px-3.5 py-2 text-sm transition-colors ${
-                  active === section.id
-                    ? "text-ink"
-                    : "text-muted hover:text-ink"
-                }`}
-              >
-                {active === section.id && (
-                  <span className="absolute inset-0 rounded-full border border-line bg-surface/80" />
-                )}
-                <span className="relative">{section.label}</span>
-              </a>
-            </li>
-          ))}
+        <span aria-hidden className="mx-0.5 h-4 w-px bg-line" />
+
+        <ul className="flex items-center gap-0.5">
+          {NAV_ITEMS.map(({ id, label, Icon }) => {
+            const isActive = active === id;
+            return (
+              <li key={id}>
+                <a
+                  href={`#${id}`}
+                  aria-current={isActive ? "page" : undefined}
+                  className={`mono-label flex items-center justify-center rounded-full transition-colors ${
+                    isActive ? "bg-chrome text-bg" : "text-faint hover:text-ink"
+                  } size-8 sm:size-auto sm:px-3.5 sm:py-2`}
+                >
+                  {/* Icon on phones, label from `sm` up. The label is always in
+                      the accessibility tree either way. */}
+                  <Icon className="size-4 sm:hidden" />
+                  <span className="hidden sm:inline">{label}</span>
+                  <span className="sr-only sm:hidden">{label}</span>
+                </a>
+              </li>
+            );
+          })}
         </ul>
-
-        <div className="flex items-center gap-2">
-          <a
-            href={profile.links.resume}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden items-center gap-1.5 rounded-full border border-line bg-surface/60 px-4 py-2 text-sm text-ink transition-colors hover:border-accent/50 sm:inline-flex"
-          >
-            Resume
-            <ArrowUpRight className="size-3.5" />
-          </a>
-
-          <button
-            type="button"
-            onClick={() => setMenuOpen((open) => !open)}
-            aria-expanded={menuOpen}
-            aria-controls="mobile-menu"
-            className="inline-flex size-10 items-center justify-center rounded-full border border-line bg-surface/60 md:hidden"
-          >
-            <span className="sr-only">
-              {menuOpen ? "Close menu" : "Open menu"}
-            </span>
-            <span className="relative block h-3 w-4">
-              <span
-                className={`absolute inset-x-0 h-px bg-ink transition-transform duration-300 ${
-                  menuOpen ? "top-1.5 rotate-45" : "top-0"
-                }`}
-              />
-              <span
-                className={`absolute inset-x-0 h-px bg-ink transition-transform duration-300 ${
-                  menuOpen ? "top-1.5 -rotate-45" : "top-3"
-                }`}
-              />
-            </span>
-          </button>
-        </div>
       </nav>
-
-      {/* Mobile sheet */}
-      <div
-        id="mobile-menu"
-        hidden={!menuOpen}
-        className="border-y border-line bg-bg/95 backdrop-blur-xl md:hidden"
-      >
-        <ul className="mx-auto max-w-6xl px-6 py-4">
-          {NAV_ITEMS.map((section) => (
-            <li key={section.id}>
-              <a
-                href={`#${section.id}`}
-                onClick={() => setMenuOpen(false)}
-                className={`flex items-center justify-between border-b border-line/60 py-3.5 text-base last:border-0 ${
-                  active === section.id ? "text-accent" : "text-ink"
-                }`}
-              >
-                {section.label}
-                <ArrowUpRight className="size-4 text-faint" />
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
     </header>
   );
 }

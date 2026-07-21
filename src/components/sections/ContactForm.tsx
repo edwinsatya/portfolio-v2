@@ -86,7 +86,7 @@ export function ContactForm() {
       <div className="mt-6 flex flex-wrap items-center gap-4">
         <button
           type="submit"
-          className="group inline-flex items-center gap-2 rounded-full bg-accent px-5 py-3 text-sm font-medium text-bg transition-transform hover:scale-[1.03] motion-reduce:hover:scale-100"
+          className="group inline-flex items-center gap-2 rounded-full bg-chrome px-5 py-3 text-sm font-medium text-bg transition-transform hover:scale-[1.03] motion-reduce:hover:scale-100"
         >
           Send message
           <ArrowUpRight className="size-4 transition-transform group-hover:translate-x-0.5 motion-reduce:group-hover:translate-x-0" />

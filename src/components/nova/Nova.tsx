@@ -38,19 +38,23 @@ export function Nova({ mood = "greeting", className = "", ref }: NovaProps) {
       aria-label="NOVA, a small robot character whose eyes follow your cursor"
     >
       <defs>
-        <linearGradient id={id("plate")} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#262f43" />
-          <stop offset="1" stopColor="#0e121b" />
+        <linearGradient id={id("plate")} x1="0.2" y1="0" x2="0.8" y2="1">
+          <stop offset="0" stopColor="#5b6274" />
+          <stop offset="0.28" stopColor="#2a2f3d" />
+          <stop offset="0.72" stopColor="#171a24" />
+          <stop offset="1" stopColor="#0b0d13" />
         </linearGradient>
 
-        <linearGradient id={id("shell")} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#1d2432" />
-          <stop offset="1" stopColor="#0b0f16" />
+        <linearGradient id={id("shell")} x1="0.2" y1="0" x2="0.8" y2="1">
+          <stop offset="0" stopColor="#4a5162" />
+          <stop offset="0.3" stopColor="#222732" />
+          <stop offset="0.75" stopColor="#141822" />
+          <stop offset="1" stopColor="#0a0c11" />
         </linearGradient>
 
         <linearGradient id={id("visor")} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#080b12" />
-          <stop offset="1" stopColor="#03050a" />
+          <stop offset="0" stopColor="#0d1017" />
+          <stop offset="1" stopColor="#020409" />
         </linearGradient>
 
         <radialGradient id={id("bloom")}>
@@ -115,10 +119,10 @@ export function Nova({ mood = "greeting", className = "", ref }: NovaProps) {
               x="84"
               y="185"
               width="72"
-              height="14"
-              rx="7"
+              height="13"
+              rx="6.5"
               fill="#fff"
-              opacity="0.04"
+              opacity="0.17"
             />
             <circle className="nova-lamp nova-glowing" cx="120" cy="209" r="9" />
 
@@ -168,13 +172,13 @@ export function Nova({ mood = "greeting", className = "", ref }: NovaProps) {
                 strokeWidth="1.5"
               />
               <rect
-                x="64"
+                x="62"
                 y="56"
-                width="112"
-                height="26"
-                rx="13"
+                width="116"
+                height="24"
+                rx="12"
                 fill="#fff"
-                opacity="0.05"
+                opacity="0.2"
               />
 
               {/* Face plate */}
@@ -187,7 +191,7 @@ export function Nova({ mood = "greeting", className = "", ref }: NovaProps) {
                 fill={`url(#${id("visor")})`}
               />
               <g clipPath={`url(#${id("visor-clip")})`}>
-                <path d="M76 62h20L60 154H40z" fill="#fff" opacity="0.045" />
+                <path d="M76 62h22L58 154H36z" fill="#fff" opacity="0.07" />
               </g>
 
               {/* Every expression is drawn; CSS shows the one this mood wants. */}

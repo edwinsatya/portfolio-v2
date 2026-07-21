@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk, Inter } from "next/font/google";
+import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import { profile } from "@/content/profile";
 import { siteUrl } from "@/lib/site";
 import "./globals.css";
@@ -14,6 +14,13 @@ const display = Space_Grotesk({
 // Body face — gets out of the way.
 const body = Inter({
   variable: "--font-body",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+// Machine voice — every UI label, nav item, chip, and boot message.
+const mono = JetBrains_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
   display: "swap",
 });
@@ -59,8 +66,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#06070b",
-  colorScheme: "dark",
+  themeColor: "#ecedf4",
+  colorScheme: "light",
 };
 
 export default function RootLayout({
@@ -71,7 +78,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${display.variable} ${body.variable} h-full antialiased`}
+      className={`${display.variable} ${body.variable} ${mono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
         {/* Reveal-on-scroll starts hidden and is unhidden by JS. With scripting
@@ -81,7 +88,7 @@ export default function RootLayout({
         </noscript>
         <a
           href="#about"
-          className="sr-only rounded-full bg-accent px-4 py-2 font-medium text-bg focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-100"
+          className="sr-only rounded-full bg-chrome px-4 py-2 font-medium text-bg focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-100"
         >
           Skip to content
         </a>

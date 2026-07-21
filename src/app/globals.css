@@ -5,24 +5,34 @@
 /* -------------------------------------------------------------------------- */
 
 @theme {
-  /* Surfaces — near-black with a cool cast, so the accent glow reads warm. */
-  --color-bg: #06070b;
-  --color-bg-soft: #0a0c13;
-  --color-surface: #0e1119;
-  --color-line: #1b2030;
+  /* Surfaces — a lavender-tinted white, cool enough that NOVA's cyan reads as
+     a light source rather than a sticker. */
+  --color-bg: #ecedf4;
+  --color-bg-soft: #f4f5f9;
+  --color-surface: #ffffff;
+  --color-line: #d8dae6;
 
-  /* Text — all three clear 4.5:1 against both the page and panel backgrounds. */
-  --color-ink: #e9ecf5;
-  --color-muted: #8a90a6;
-  --color-faint: #787f96;
+  /* Text. All three clear 4.5:1 against the page background — `faint` in
+     particular carries real content (skill captions, dates, contact copy), not
+     just decoration, so it can't be the near-invisible grey a dark theme allows. */
+  --color-ink: #14161f;
+  --color-muted: #454a5c;
+  --color-faint: #5c6175;
 
-  /* Accent — NOVA's glow, and every call to action. */
-  --color-accent: #6ee7ff;
+  /* Accent. `accent` is the glow on NOVA and on dark chrome; `accent-ink` is
+     the darkened version used for text and icons on light surfaces, where raw
+     cyan would fail contrast. */
+  --color-accent: #22b8d4;
+  --color-accent-ink: #0d7490;
   --color-accent-deep: #0e7490;
-  --color-violet: #a78bfa;
+  --color-violet: #7c5cf0;
+
+  /* Dark chrome — the pill nav's active item, buttons, NOVA's shell. */
+  --color-chrome: #14161f;
 
   --font-display: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
 
   --animate-float: float 6s ease-in-out infinite;
   --animate-pulse-soft: pulse-soft 3s ease-in-out infinite;
@@ -68,8 +78,8 @@
     text-rendering: optimizeLegibility;
   }
 
-  /* The ambient light behind everything: one cool pool top-left, one violet
-     bloom right, plus a faint grid that fades out before it gets busy. */
+  /* A barely-there wash that keeps the flat lavender from looking like an
+     unstyled page. */
   body::before {
     content: "";
     position: fixed;
@@ -78,38 +88,48 @@
     pointer-events: none;
     background:
       radial-gradient(
-        60rem 40rem at 15% -10%,
-        color-mix(in oklab, var(--color-accent) 12%, transparent),
+        70rem 50rem at 50% -15%,
+        #ffffff,
         transparent 70%
       ),
       radial-gradient(
-        50rem 40rem at 95% 15%,
-        color-mix(in oklab, var(--color-violet) 10%, transparent),
+        50rem 40rem at 95% 10%,
+        color-mix(in oklab, var(--color-violet) 6%, transparent),
         transparent 70%
       );
   }
 
+  /* Particle field. Two radial-gradient tiles at different sizes and offsets
+     read as scattered dust rather than a repeating grid — and cost nothing,
+     since there's no image to fetch. */
   body::after {
     content: "";
     position: fixed;
     inset: 0;
     z-index: -1;
     pointer-events: none;
-    opacity: 0.5;
+    opacity: 0.55;
     background-image:
-      linear-gradient(to right, var(--color-line) 1px, transparent 1px),
-      linear-gradient(to bottom, var(--color-line) 1px, transparent 1px);
-    background-size: 4rem 4rem;
-    mask-image: radial-gradient(70% 55% at 50% 0%, #000 10%, transparent 85%);
+      radial-gradient(1px 1px at 20% 30%, #9aa0bd, transparent),
+      radial-gradient(1px 1px at 70% 65%, #9aa0bd, transparent),
+      radial-gradient(1px 1px at 40% 80%, #a8adc7, transparent),
+      radial-gradient(1.5px 1.5px at 88% 22%, #9aa0bd, transparent),
+      radial-gradient(1px 1px at 12% 72%, #a8adc7, transparent);
+    background-size:
+      23rem 19rem,
+      31rem 27rem,
+      17rem 21rem,
+      37rem 33rem,
+      29rem 25rem;
   }
 
   ::selection {
-    background: color-mix(in oklab, var(--color-accent) 30%, transparent);
-    color: #fff;
+    background: color-mix(in oklab, var(--color-accent) 28%, transparent);
+    color: var(--color-ink);
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--color-accent-ink);
     outline-offset: 3px;
     border-radius: 0.35rem;
   }
@@ -130,9 +150,10 @@
 @layer components {
   /* Frosted card used by projects, services, skills. */
   .panel {
-    background: color-mix(in oklab, var(--color-surface) 70%, transparent);
+    background: color-mix(in oklab, var(--color-surface) 78%, transparent);
     border: 1px solid var(--color-line);
     backdrop-filter: blur(12px);
+    box-shadow: 0 1px 2px rgb(20 22 31 / 0.04);
   }
 
   .panel-hover {
@@ -143,8 +164,9 @@
   }
 
   .panel-hover:hover {
-    border-color: color-mix(in oklab, var(--color-accent) 40%, transparent);
-    background: color-mix(in oklab, var(--color-surface) 92%, transparent);
+    border-color: color-mix(in oklab, var(--color-accent) 45%, transparent);
+    background: var(--color-surface);
+    box-shadow: 0 10px 30px -14px rgb(20 22 31 / 0.18);
   }
 
   /* Gradient hairline that lights up along the top edge of a card on hover. */
@@ -183,8 +205,8 @@
     .text-gradient {
       background: linear-gradient(
         135deg,
-        var(--color-ink) 20%,
-        var(--color-accent) 60%,
+        var(--color-ink) 25%,
+        var(--color-accent-ink) 65%,
         var(--color-violet)
       );
       -webkit-background-clip: text;
@@ -195,12 +217,21 @@
 
   /* Small uppercase label that opens most sections. */
   .eyebrow {
-    font-family: var(--font-display);
+    font-family: var(--font-mono);
     font-size: 0.7rem;
     font-weight: 500;
     letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: var(--color-accent);
+    color: var(--color-accent-ink);
+  }
+
+  /* The house style for machine readouts: nav links, chips, status lines,
+     boot messages. Uppercase monospace with wide tracking. */
+  .mono-label {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
   }
 }
 
@@ -225,4 +256,160 @@
   body::after {
     display: none;
   }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Landing chrome                                                              */
+/* -------------------------------------------------------------------------- */
+
+@layer components {
+  /* Giant wordmark behind NOVA. Heavily blurred and low-contrast so it reads as
+     depth rather than as text competing with the robot. */
+  .hero-wordmark {
+    font-size: clamp(6rem, 27vw, 22rem);
+    line-height: 0.8;
+    letter-spacing: -0.05em;
+    color: #5d6377;
+    opacity: 0.28;
+    filter: blur(clamp(3px, 0.5vw, 8px));
+    user-select: none;
+  }
+
+  /* Typewriter cursor in the hero line. */
+  .hero-caret {
+    display: inline-block;
+    width: 0.55ch;
+    height: 1.05em;
+    margin-left: 0.1ch;
+    vertical-align: -0.18em;
+    background: var(--color-accent-ink);
+  }
+
+  .hero-caret-blink {
+    animation: caret 1.05s step-end infinite;
+  }
+
+  @keyframes caret {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0;
+    }
+  }
+
+  .hero-chip {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    padding: 0.4rem 0.7rem;
+    border: 1px solid var(--color-line);
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--color-surface) 70%, transparent);
+    color: var(--color-muted);
+    transition:
+      border-color 200ms ease,
+      color 200ms ease,
+      background-color 200ms ease;
+  }
+
+  .hero-chip:hover {
+    border-color: color-mix(in oklab, var(--color-accent) 55%, transparent);
+    background: var(--color-surface);
+    color: var(--color-ink);
+  }
+
+  .nav-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    color: var(--color-muted);
+    transition:
+      background-color 200ms ease,
+      color 200ms ease;
+  }
+
+  .nav-icon:hover {
+    background: var(--color-bg);
+    color: var(--color-ink);
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Boot sequence                                                               */
+/* -------------------------------------------------------------------------- */
+
+/* An overlay, not a gate: the page beneath is fully rendered and readable the
+   whole time, so skipping — or never running the JS at all — costs nothing. */
+.nova-boot {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 18vh;
+  background: var(--color-bg);
+  transition:
+    opacity 500ms ease,
+    visibility 0s linear 500ms;
+}
+
+.nova-boot[data-done="true"] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.nova-boot-readout {
+  width: min(20rem, 70vw);
+}
+
+.nova-boot-bar {
+  height: 2px;
+  background: var(--color-line);
+  overflow: hidden;
+}
+
+.nova-boot-bar span {
+  display: block;
+  height: 100%;
+  background: var(--color-chrome);
+  transition: width 120ms linear;
+}
+
+.nova-boot-status {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nova-boot {
+    transition: opacity 150ms ease;
+  }
+}
+
+/* While the boot screen is up, NOVA rises above it so she's visibly powering on,
+   and the nav steps out of the way. Both revert the moment booting ends. */
+html[data-booting="true"] .nova-stage {
+  z-index: 95;
+}
+
+html[data-booting="true"] [data-site-nav] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+[data-site-nav] {
+  transition: opacity 400ms ease;
 }

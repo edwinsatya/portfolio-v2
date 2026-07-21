@@ -17,33 +17,8 @@ const SECTION_IDS = sections.map((section) => section.id);
 const MOOD_DELAY = 260;
 /** …and the longer wait before she says anything about it. */
 const SPEAK_DELAY = 700;
-/** The opening greeting waits longer, so it doesn't land mid page-reveal. */
-const INTRO_DELAY = 1500;
-/** How long an ordinary bubble stays up. */
+/** How long a bubble stays up. */
 const BUBBLE_MS = 4200;
-/** The name prompt lingers — nobody can type an answer in four seconds. */
-const PROMPT_MS = 30000;
-
-/** What NOVA opens with, given what she remembers. */
-function openingLine(previous: NovaMemory): { line: string; asksName: boolean } {
-  if (previous.visitCount === 0) {
-    return { line: greetings.first, asksName: true };
-  }
-
-  if (previous.sectionsSeen.includes("projects")) {
-    return {
-      line: greetings.backForProjects(previous.visitorName),
-      asksName: false,
-    };
-  }
-
-  return {
-    line: previous.visitorName
-      ? greetings.backNamed(previous.visitorName)
-      : greetings.backAnonymous,
-    asksName: false,
-  };
-}
 
 /** Full line the first time, a shorter variant once they've heard it. */
 function lineFor(section: SectionMeta, previous: NovaMemory): string {
@@ -67,12 +42,11 @@ function lineFor(section: SectionMeta, previous: NovaMemory): string {
  */
 export function useSectionReactions() {
   const active = useActiveSection(SECTION_IDS);
-  const { visit, saveName, markSectionSeen } = useNovaMemory();
+  const { visit, markSectionSeen } = useNovaMemory();
 
   const [mood, setMood] = useState<NovaMood>("greeting");
   const [line, setLine] = useState("");
   const [open, setOpen] = useState(false);
-  const [asksName, setAsksName] = useState(false);
 
   // One bubble at a time: showing a new line always cancels the old dismissal.
   const dismissTimer = useRef<number | undefined>(undefined);
@@ -85,23 +59,12 @@ export function useSectionReactions() {
     activeRef.current = active;
   }, [active]);
 
-  const speak = useCallback(
-    (text: string, options?: { asksName?: boolean }) => {
-      const prompting = options?.asksName ?? false;
-      window.clearTimeout(dismissTimer.current);
-      setLine(text);
-      setAsksName(prompting);
-      setOpen(true);
-      dismissTimer.current = window.setTimeout(
-        () => {
-          setOpen(false);
-          setAsksName(false);
-        },
-        prompting ? PROMPT_MS : BUBBLE_MS,
-      );
-    },
-    [],
-  );
+  const speak = useCallback((text: string) => {
+    window.clearTimeout(dismissTimer.current);
+    setLine(text);
+    setOpen(true);
+    dismissTimer.current = window.setTimeout(() => setOpen(false), BUBBLE_MS);
+  }, []);
 
   const previous = visit.previous;
 
@@ -114,21 +77,15 @@ export function useSectionReactions() {
 
     const moodTimer = window.setTimeout(() => setMood(section.mood), MOOD_DELAY);
 
+    // The hero has its own typewriter line and chat entry now, so NOVA still
+    // changes face there but stays quiet rather than talking over them.
     let speakTimer: number | undefined;
-    if (!said.current.has(section.id)) {
-      const isIntro = section.id === "intro";
-      const opening = isIntro ? openingLine(previous) : null;
-
-      speakTimer = window.setTimeout(
-        () => {
-          said.current.add(section.id);
-          markSectionSeen(section.id);
-          speak(opening ? opening.line : lineFor(section, previous), {
-            asksName: opening?.asksName,
-          });
-        },
-        isIntro ? INTRO_DELAY : SPEAK_DELAY,
-      );
+    if (section.id !== "intro" && !said.current.has(section.id)) {
+      speakTimer = window.setTimeout(() => {
+        said.current.add(section.id);
+        markSectionSeen(section.id);
+        speak(lineFor(section, previous));
+      }, SPEAK_DELAY);
     }
 
     return () => {
@@ -152,15 +109,5 @@ export function useSectionReactions() {
   // own teardown rather than riding along with the effect above.
   useEffect(() => () => window.clearTimeout(dismissTimer.current), []);
 
-  const submitName = useCallback(
-    (raw: string) => {
-      const name = saveName(raw);
-      speak(name ? greetings.named(name) : greetings.skipped);
-    },
-    [saveName, speak],
-  );
-
-  const skipName = useCallback(() => speak(greetings.skipped), [speak]);
-
-  return { mood, line, open, asksName, submitName, skipName };
+  return { mood, line, open };
 }

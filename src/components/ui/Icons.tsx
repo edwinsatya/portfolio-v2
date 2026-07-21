@@ -88,3 +88,49 @@ export function Linkedin(props: IconProps) {
     </svg>
   );
 }
+
+export function ChatBubble(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H8l-4 3v-5.4A7.5 7.5 0 0 1 11.5 4h1A7.5 7.5 0 0 1 20 11.5Z" />
+    </svg>
+  );
+}
+
+export function FileText(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" />
+      <path d="M14 3v5h5M9 13h6M9 17h4" />
+    </svg>
+  );
+}
+
+export function Home(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M3 10.5 12 3l9 7.5" />
+      <path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5" />
+    </svg>
+  );
+}
+
+export function Grid(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="3" y="3" width="7.5" height="7.5" rx="1.5" />
+      <rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5" />
+      <rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" />
+      <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5" />
+    </svg>
+  );
+}
+
+export function User(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
+    </svg>
+  );
+}

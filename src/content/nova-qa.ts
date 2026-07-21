@@ -1,4 +1,4 @@
-import { profile, projects, services, skillGroups } from "./profile";
+import { greetings, profile, projects, services, skillGroups } from "./profile";
 
 /**
  * Everything NOVA can answer, as data.
@@ -268,6 +268,22 @@ export const DEFAULT_SUGGESTIONS = [
   "Show me his best work",
   "Is he available?",
 ];
+
+/** Everything NOVA says about the visitor themselves, in one place. */
+export const greetingsFor = greetings;
+
+/** The typewriter line in the hero, and the chips beneath it. */
+export const HERO_LINE = `i'm nova — ${profile.firstName.toLowerCase()}'s ai. ask me anything about his work.`;
+
+export const HERO_CHIPS = [
+  "what has he built?",
+  "is he available?",
+  "show me his best work",
+];
+
+/** Asked in the chat on a first visit, in place of the old hero bubble. */
+export const CHAT_NAME_ASK =
+  "hey! i'm NOVA. before we start — what should I call you?";
 
 export const CHAT_GREETING = (name: string | null) =>
   name

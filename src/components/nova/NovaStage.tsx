@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Nova } from "./Nova";
 import { NovaChat } from "./NovaChat";
-import { greetings } from "@/content/profile";
 import { useNovaChat } from "@/hooks/useNovaChat";
 import { useNovaMemory } from "@/hooks/useNovaMemory";
 import { useNovaStage } from "@/hooks/useNovaStage";
@@ -19,12 +18,15 @@ import { useSectionReactions } from "@/hooks/useSectionReactions";
  * with themselves mid-handoff.
  *
  * The layer is pointer-events: none, so nothing here can intercept a click meant
- * for the page. Three things opt back in: the robot herself (tap to chat), the
- * name prompt, and the chat panel.
+ * for the page. Two things opt back in: the robot herself (tap to chat) and the
+ * chat panel.
  */
 export function NovaStage() {
   const { visit } = useNovaMemory();
-  const chat = useNovaChat({ name: visit.name });
+  const chat = useNovaChat({
+    name: visit.name,
+    isFirstVisit: (visit.previous?.visitCount ?? 0) === 0,
+  });
 
   // Chatting pulls her out of the hero and down to the corner, so the panel is
   // always beside her rather than stranded across the page.
@@ -32,9 +34,7 @@ export function NovaStage() {
     forceDock: chat.isOpen,
   });
 
-  const { mood, line, open, asksName, submitName, skipName } =
-    useSectionReactions();
-  const [draft, setDraft] = useState("");
+  const { mood, line, open } = useSectionReactions();
   const tapRef = useRef<HTMLButtonElement>(null);
 
   // Whichever way the panel closes — Escape, the X, or tapping NOVA again —
@@ -66,48 +66,12 @@ export function NovaStage() {
           so the two transforms never fight. The chat replaces it while open —
           two things talking at once would just be noise. */}
       <div ref={bubbleRef} className="nova-speech-anchor">
-        <div
-          className="nova-speech"
-          data-open={open && !chat.isOpen}
-          data-interactive={asksName && !chat.isOpen}
-        >
+        <div className="nova-speech" data-open={open && !chat.isOpen}>
           {/* Ambient narration that repeats what the section heading already
-              says — announcing it would talk over the visitor's own navigation.
-              When it's the name question it stays exposed, as the input's
-              description rather than a second copy of the same sentence. */}
-          <p id="nova-says" aria-hidden={!asksName}>
+              says — announcing it would talk over the visitor's own navigation. */}
+          <p id="nova-says" aria-hidden="true">
             {line}
           </p>
-
-          {asksName && !chat.isOpen && (
-            <form
-              className="nova-ask"
-              onSubmit={(event) => {
-                event.preventDefault();
-                submitName(draft);
-              }}
-            >
-              <input
-                id="nova-name"
-                name="nova-name"
-                type="text"
-                value={draft}
-                maxLength={24}
-                autoComplete="given-name"
-                placeholder={greetings.namePlaceholder}
-                aria-label={greetings.namePlaceholder}
-                aria-describedby="nova-says"
-                onChange={(event) => setDraft(event.target.value)}
-                className="nova-ask-input"
-              />
-              <button type="submit" className="nova-ask-save">
-                {greetings.nameSubmit}
-              </button>
-              <button type="button" onClick={skipName} className="nova-ask-skip">
-                {greetings.nameSkip}
-              </button>
-            </form>
-          )}
         </div>
       </div>
 

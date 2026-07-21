@@ -1,6 +1,7 @@
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { NovaStage } from "@/components/nova/NovaStage";
+import { BootSequence } from "@/components/nova/BootSequence";
 import { Hero } from "@/components/sections/Hero";
 import { About } from "@/components/sections/About";
 import { Skills } from "@/components/sections/Skills";
@@ -23,8 +24,9 @@ export default function Home() {
         <Contact />
       </main>
       <Footer />
-      {/* Fixed layer above the page — NOVA and her speech bubble. */}
+      {/* Fixed layer above the page — NOVA, her speech bubble, and the chat. */}
       <NovaStage />
+      <BootSequence />
     </>
   );
 }

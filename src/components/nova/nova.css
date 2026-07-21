@@ -13,6 +13,7 @@
 .nova {
   --nova-look-x: 0;
   --nova-look-y: 0;
+  filter: drop-shadow(0 18px 26px rgb(24 27 45 / 0.22));
   /* Overridden per mood; everything glowing reads from it. */
   --nova-tint: var(--color-accent);
   /* Extra head rotation a mood can add on top of the gaze. */
@@ -374,23 +375,26 @@
 }
 
 .nova-stem {
-  stroke: #3a4460;
+  stroke: #6b7288;
 }
 
 .nova-plate {
-  stroke: #2b3448;
+  stroke: #555d70;
+  stroke-opacity: 0.55;
 }
 
 /* A pool of NOVA's own light rather than a cast shadow — a black shadow is
    invisible on a near-black page, but a glow reads as height. */
+/* A real contact shadow now — on a light page a glowing pool would read as
+   fog, where a grounded shadow reads as an object standing on a surface. */
 .nova-shadow {
-  fill: color-mix(in oklab, var(--nova-tint) 45%, transparent);
-  opacity: 0.38;
-  filter: blur(7px);
+  fill: #2a2f45;
+  opacity: 0.16;
+  filter: blur(9px);
 }
 
 .nova-bloom-start {
-  stop-color: color-mix(in oklab, var(--nova-tint) 32%, transparent);
+  stop-color: color-mix(in oklab, var(--nova-tint) 13%, transparent);
 }
 
 .nova-bloom-end {
@@ -468,8 +472,8 @@
   background: color-mix(in oklab, var(--color-surface) 94%, transparent);
   backdrop-filter: blur(16px);
   box-shadow:
-    0 24px 60px -24px rgb(0 0 0 / 0.95),
-    0 0 30px -16px color-mix(in oklab, var(--color-accent) 60%, transparent);
+    0 24px 60px -24px rgb(20 22 31 / 0.28),
+    0 2px 8px -4px rgb(20 22 31 / 0.12);
 
   opacity: 0;
   visibility: hidden;
@@ -557,7 +561,7 @@
 .nova-chat-msg[data-from="visitor"] {
   align-self: flex-end;
   border-bottom-right-radius: 0.3rem;
-  background: color-mix(in oklab, var(--color-accent) 88%, black);
+  background: var(--color-chrome);
   color: var(--color-bg);
 }
 
@@ -654,7 +658,7 @@
   justify-content: center;
   width: 2.1rem;
   border-radius: 0.7rem;
-  background: var(--color-accent);
+  background: var(--color-chrome);
   color: var(--color-bg);
   transition: opacity 180ms ease;
 }
@@ -723,8 +727,8 @@
   background: color-mix(in oklab, var(--color-surface) 92%, transparent);
   backdrop-filter: blur(14px);
   box-shadow:
-    0 18px 40px -18px rgb(0 0 0 / 0.9),
-    0 0 24px -12px color-mix(in oklab, var(--color-accent) 60%, transparent);
+    0 18px 40px -18px rgb(20 22 31 / 0.26),
+    0 2px 6px -3px rgb(20 22 31 / 0.1);
   color: var(--color-ink);
   font-size: 0.8125rem;
   line-height: 1.45;
@@ -796,7 +800,7 @@
 }
 
 .nova-ask-save {
-  background: var(--color-accent);
+  background: var(--color-chrome);
   color: var(--color-bg);
   font-weight: 500;
 }

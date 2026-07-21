@@ -13,7 +13,7 @@ enhancement layered on top, never a dependency.
 | --------- | ------------------------------------ |
 | Framework | Next.js 16 (App Router) + TypeScript |
 | Styling   | Tailwind CSS v4                      |
-| Fonts     | Space Grotesk (display) + Inter (body) |
+| Fonts     | Space Grotesk (display) + Inter (body) + JetBrains Mono (UI labels) |
 | Deploy    | Vercel                               |
 
 ## Getting started
@@ -68,6 +68,43 @@ the flag.
 - [ ] **8** — Polish, responsive, accessibility, deploy
 
 Step 7 is a one-function change — see the chat section below.
+
+## Theme and type
+
+Light throughout: a lavender-white page (`--color-bg`) with a CSS-only particle
+field, dark ink, and cyan reserved for NOVA's glow. Two accent tokens exist on
+purpose — `--color-accent` is the glow, `--color-accent-ink` is the darkened
+version for text and icons, because raw cyan on a light surface fails contrast
+at small sizes. Primary buttons and the nav's active pill use `--color-chrome`
+(near-black) for the same reason.
+
+`faint` is deliberately darker than a dark theme would allow: existing sections
+use it for real content — skill captions, dates, contact copy — not just
+decoration, so it has to clear 4.5:1 rather than merely look subtle.
+
+JetBrains Mono carries every UI label via the `.mono-label` class: nav, chips,
+status readouts, boot messages, eyebrows. Body copy stays Inter.
+
+## Landing
+
+NOVA is the subject, so [`Hero.tsx`](src/components/sections/Hero.tsx) renders
+almost nothing visible — a name block, a blurred `edwin.dev` wordmark for depth,
+the empty slot the fixed stage pins the robot over, and the chat entry. Stats
+moved to About, where the surrounding copy gives them context.
+
+[`BootSequence.tsx`](src/components/nova/BootSequence.tsx) plays a monospace
+power-on before the hero: ~2.6s first visit, ~0.9s on a return
+("RESUMING SESSION — WELCOME BACK, <NAME>"). It's an overlay, not a gate — the
+page beneath is fully rendered the whole time, it dismisses on any input, and a
+deep link skips it entirely. While it runs, `html[data-booting]` lifts NOVA
+above it and hides the nav, so you watch the robot boot rather than a blank page.
+
+[`HeroChat.tsx`](src/components/nova/HeroChat.tsx) types NOVA's line out with a
+blinking caret; the full sentence is always in the DOM for screen readers and
+reduced motion. Its chips call `askNova()` from
+[`lib/nova-bus.ts`](src/lib/nova-bus.ts), which opens the panel and sends the
+question. Opening *with* a question skips the name ask — otherwise NOVA would
+ask your name and then immediately talk over herself answering the chip.
 
 ## NOVA
 
