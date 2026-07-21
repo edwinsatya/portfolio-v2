@@ -11,7 +11,7 @@ import {
 } from "@/lib/nova-bus";
 
 /** How long a line stays readable *after* it has finished materialising. */
-const HOLD_MS = 5000;
+const HOLD_MS = 10000;
 /** Reduced motion has no reveal to wait for, so it's a flat interval. */
 const REDUCED_HOLD_MS = 7000;
 /** Stagger between words materialising. */
