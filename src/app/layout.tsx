@@ -78,7 +78,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${display.variable} ${body.variable} ${mono.variable} h-full antialiased`}
+      className={`${display.variable} ${body.variable} ${mono.variable} stage-root h-full antialiased`}
     >
       <body className="min-h-full">
         {/* Reveal-on-scroll starts hidden and is unhidden by JS. With scripting

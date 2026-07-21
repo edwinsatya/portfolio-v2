@@ -183,8 +183,16 @@
   animation-delay: -0.8s;
 }
 
-.nova[data-mood="excited"] .nova-arm-pose {
-  transform: translateY(-18px);
+.nova[data-mood="excited"] .nova-arm {
+  rotate: -24deg;
+}
+
+.nova[data-mood="excited"] .nova-arm-r {
+  rotate: 24deg;
+}
+
+.nova[data-mood="excited"] .nova-forearm {
+  rotate: -18deg;
 }
 
 /* --- proud: half-lidded eyes, chin up ------------------------------------- */
@@ -216,12 +224,11 @@
   filter: drop-shadow(0 0 10px var(--nova-tint));
 }
 
-/* --- waving: friendly face plus an actual wave ---------------------------- */
+/* --- waving: friendly face. The arm wave itself is `data-wave`, fired from
+       the stage loop, so it can also happen in any other mood. ------------- */
 
-.nova[data-mood="waving"] .nova-arm-pose-right {
-  animation: nova-wave 900ms ease-in-out infinite;
-  transform-box: fill-box;
-  transform-origin: 50% 100%;
+.nova[data-mood="proud"] .nova-arm {
+  rotate: -6deg;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -238,30 +245,92 @@
 }
 
 /* -------------------------------------------------------------------------- */
+/* Rig                                                                         */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * JOINTS — every origin below is in viewBox units and sits exactly on the
+ * joint, so rotations swing rather than slide. `transform-box: view-box` is what
+ * makes these coordinates mean the same thing as the SVG's own.
+ *
+ *   shoulder L  57.5 194      shoulder R  182.5 194
+ *   elbow L     57.5 222      elbow R     182.5 222
+ *   hip L       102.5 252     hip R       137.5 252
+ *   waist       120  250
+ */
+
+.nova-arm,
+.nova-arm-sway,
+.nova-forearm,
+.nova-leg,
+.nova-torso,
+.nova-head {
+  transform-box: view-box;
+}
+
+.nova-arm-l,
+.nova-arm-l .nova-arm-sway {
+  transform-origin: 57.5px 194px;
+}
+
+.nova-arm-r,
+.nova-arm-r .nova-arm-sway {
+  transform-origin: 182.5px 194px;
+}
+
+.nova-forearm-l {
+  transform-origin: 57.5px 222px;
+}
+
+.nova-forearm-r {
+  transform-origin: 182.5px 222px;
+}
+
+.nova-leg-l {
+  transform-origin: 102.5px 252px;
+}
+
+.nova-leg-r {
+  transform-origin: 137.5px 252px;
+}
+
+.nova-torso {
+  transform-origin: 120px 250px;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Idle life                                                                   */
 /* -------------------------------------------------------------------------- */
 
+/* Breathing. Everything above the hips rides this; the legs and shadow don't,
+   which is what keeps the feet planted. */
 .nova-float {
-  animation: nova-float 5.5s ease-in-out infinite;
-  transform-box: fill-box;
-  transform-origin: center;
+  animation: nova-breathe 4.6s ease-in-out infinite;
+  transform-box: view-box;
+  transform-origin: 120px 250px;
+}
+
+/* A second, slower scale on the torso alone, so the chest leads the breath. */
+.nova-torso {
+  animation: nova-chest 4.6s ease-in-out infinite;
+}
+
+/* Relaxed hang with a tiny sway, offset between arms so they don't march. */
+.nova-arm-sway {
+  animation: nova-sway 5.2s ease-in-out infinite;
+}
+
+.nova-arm-r .nova-arm-sway {
+  animation-delay: -2.3s;
+  animation-duration: 5.9s;
+}
+
+.nova-forearm {
+  transition: rotate 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .nova-arm {
-  animation: nova-limb 4.2s ease-in-out infinite;
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-/* Offset so the arms don't bob in lockstep with each other or the body. */
-.nova-arm-right {
-  animation-delay: -2.1s;
-}
-
-.nova-arm-pose {
-  transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  transform-box: fill-box;
-  transform-origin: center;
+  transition: rotate 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .nova-antenna {
@@ -269,45 +338,55 @@
 }
 
 .nova-shadow {
-  animation: nova-shadow 5.5s ease-in-out infinite;
-  transform-box: fill-box;
-  transform-origin: center;
+  animation: nova-shadow 4.6s ease-in-out infinite;
+  transform-box: view-box;
+  transform-origin: 120px 303px;
 }
 
 .nova-glowing {
   animation: nova-glow 2.8s ease-in-out infinite;
 }
 
-@keyframes nova-float {
+@keyframes nova-breathe {
   0%,
   100% {
-    transform: translateY(0);
+    translate: 0 0;
   }
   50% {
-    transform: translateY(-9px);
+    translate: 0 -4px;
   }
 }
 
-@keyframes nova-limb {
+@keyframes nova-chest {
   0%,
   100% {
-    transform: translateY(0);
+    scale: 1 1;
   }
   50% {
-    transform: translateY(-5px);
+    scale: 1.018 1.012;
   }
 }
 
-/* Shrinks and fades as NOVA rises, so the float reads as height. */
+@keyframes nova-sway {
+  0%,
+  100% {
+    rotate: 1.5deg;
+  }
+  50% {
+    rotate: -2.5deg;
+  }
+}
+
+/* Tightens as the body rises, so the breath reads as weight shifting. */
 @keyframes nova-shadow {
   0%,
   100% {
-    transform: scale(1);
-    opacity: 0.45;
+    scale: 1;
+    opacity: 0.16;
   }
   50% {
-    transform: scale(0.84);
-    opacity: 0.28;
+    scale: 0.94;
+    opacity: 0.12;
   }
 }
 
@@ -333,13 +412,60 @@
   }
 }
 
-@keyframes nova-wave {
-  0%,
-  100% {
-    transform: translateY(-26px) rotate(-14deg);
+/* -------------------------------------------------------------------------- */
+/* Wave                                                                        */
+/* -------------------------------------------------------------------------- */
+
+/* Driven by `data-wave` on the root: raise from the shoulder, flap three times
+   from the elbow, lower. Split across two joints on purpose — rotating the
+   whole arm alone reads as a plank rocking. */
+.nova[data-wave="true"] .nova-arm-r {
+  animation: nova-wave-shoulder 2.1s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.nova[data-wave="true"] .nova-arm-r .nova-forearm-r {
+  animation: nova-wave-forearm 2.1s ease-in-out;
+}
+
+/* The sway would fight the raise, so it steps aside for the duration. */
+.nova[data-wave="true"] .nova-arm-r .nova-arm-sway {
+  animation: none;
+  rotate: 0deg;
+}
+
+@keyframes nova-wave-shoulder {
+  0% {
+    rotate: 0deg;
   }
-  50% {
-    transform: translateY(-26px) rotate(20deg);
+  18%,
+  82% {
+    rotate: -142deg;
+  }
+  100% {
+    rotate: 0deg;
+  }
+}
+
+@keyframes nova-wave-forearm {
+  0%,
+  18% {
+    rotate: 0deg;
+  }
+  32% {
+    rotate: 26deg;
+  }
+  46% {
+    rotate: -14deg;
+  }
+  60% {
+    rotate: 26deg;
+  }
+  74% {
+    rotate: -10deg;
+  }
+  82%,
+  100% {
+    rotate: 0deg;
   }
 }
 
@@ -870,19 +996,25 @@
    its own — and so does the speech, which carries meaning. Everything that
    moves by itself stops, and the bubble drops to a plain fade. */
 @media (prefers-reduced-motion: reduce) {
+  /* Blinking keeps a real duration — globals.css collapses every transition to
+     0.01ms, which would snap the eyelids rather than blink them. Restated here
+     with the same specificity the blink rule uses. */
+  .nova[data-blink="true"] .nova-eye,
+  .nova .nova-eye {
+    transition-duration: 110ms !important;
+  }
+
+  /* Breathing, sway, glow, sparkles, and the wave all stop. */
   .nova-float,
-  .nova-arm,
+  .nova-torso,
+  .nova-arm-sway,
   .nova-shadow,
   .nova-glowing,
   .nova-sparkle,
-  .nova[data-mood="waving"] .nova-arm-pose-right,
+  .nova[data-wave="true"] .nova-arm-r,
+  .nova[data-wave="true"] .nova-arm-r .nova-forearm-r,
   .nova[data-react="true"] .nova-bob {
     animation: none;
-  }
-
-  /* Keep the waving arm in its raised pose rather than mid-swing. */
-  .nova[data-mood="waving"] .nova-arm-pose-right {
-    transform: translateY(-26px);
   }
 
   .nova-anchor[data-flying="true"] {

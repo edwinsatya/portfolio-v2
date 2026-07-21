@@ -1,7 +1,9 @@
 "use client";
 
-import { profile, sections } from "@/content/profile";
-import { useActiveSection } from "@/hooks/useActiveSection";
+import Link from "next/link";
+import { useSelectedLayoutSegment } from "next/navigation";
+import { profile } from "@/content/profile";
+import { scenes } from "@/content/scenes";
 import { askNova } from "@/lib/nova-bus";
 import {
   ChatBubble,
@@ -12,30 +14,19 @@ import {
   User,
 } from "@/components/ui/Icons";
 
-// Module scope so the array identity is stable across renders.
-const SECTION_IDS = sections.map((section) => section.id);
+/** Icons for the collapsed mobile pill, keyed by scene. */
+const ICONS = { home: Home, work: Grid, about: User, contact: Mail };
 
 /**
- * The reference's four-item nav, mapped onto this site's sections. Each carries
- * an icon because the pill collapses to icons on phones, where four monospace
- * labels would run the full width of the screen.
- */
-const NAV_ITEMS = [
-  { id: "intro", label: "Home", Icon: Home },
-  { id: "projects", label: "Work", Icon: Grid },
-  { id: "about", label: "About", Icon: User },
-  { id: "contact", label: "Contact", Icon: Mail },
-];
-
-/**
- * Floating pill nav, top-right.
+ * Floating pill nav, top-right. Each item is a real route, so the back button
+ * and direct links work without anything custom.
  *
- * No mobile sheet: four short monospace labels fit across a phone at this size,
- * so the pill only tightens its padding rather than collapsing behind a
- * hamburger — one less tap between the visitor and the page.
+ * No mobile sheet: the four labels collapse to icons on phones rather than
+ * hiding behind a hamburger — one less tap between the visitor and the scene.
  */
 export function Nav() {
-  const active = useActiveSection(SECTION_IDS);
+  const segment = useSelectedLayoutSegment();
+  const active = segment ?? "home";
 
   return (
     <header
@@ -68,23 +59,24 @@ export function Nav() {
         <span aria-hidden className="mx-0.5 h-4 w-px bg-line" />
 
         <ul className="flex items-center gap-0.5">
-          {NAV_ITEMS.map(({ id, label, Icon }) => {
-            const isActive = active === id;
+          {scenes.map((scene) => {
+            const Icon = ICONS[scene.id];
+            const isActive = active === scene.id;
             return (
-              <li key={id}>
-                <a
-                  href={`#${id}`}
+              <li key={scene.id}>
+                <Link
+                  href={scene.href}
                   aria-current={isActive ? "page" : undefined}
                   className={`mono-label flex items-center justify-center rounded-full transition-colors ${
                     isActive ? "bg-chrome text-bg" : "text-faint hover:text-ink"
                   } size-8 sm:size-auto sm:px-3.5 sm:py-2`}
                 >
-                  {/* Icon on phones, label from `sm` up. The label is always in
-                      the accessibility tree either way. */}
+                  {/* Icon on phones, label from `sm` up. The label stays in the
+                      accessibility tree either way. */}
                   <Icon className="size-4 sm:hidden" />
-                  <span className="hidden sm:inline">{label}</span>
-                  <span className="sr-only sm:hidden">{label}</span>
-                </a>
+                  <span className="hidden sm:inline">{scene.label}</span>
+                  <span className="sr-only sm:hidden">{scene.label}</span>
+                </Link>
               </li>
             );
           })}

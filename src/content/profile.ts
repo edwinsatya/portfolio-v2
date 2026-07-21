@@ -129,7 +129,7 @@ export const sections: SectionMeta[] = [
 
 /**
  * Everything NOVA says that depends on what she remembers. The logic that picks
- * between these lives in `useSectionReactions`.
+ * between these lives in `useSceneReactions`.
  */
 export const greetings = {
   /** First visit — shown alongside the name input. */

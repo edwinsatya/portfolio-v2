@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { onNovaBooted } from "@/lib/nova-bus";
 
 /** The anchor's CSS width. Everything scales from this to hero or dock size. */
 const BASE_WIDTH = 380;
-const ASPECT = 264 / 240;
+const ASPECT = 320 / 240;
 const BASE_HEIGHT = BASE_WIDTH * ASPECT;
 
 const DOCK_WIDTH = 118;
@@ -13,8 +14,8 @@ const DOCK_MARGIN = 20;
 const SMALL_SCREEN = 640;
 
 /** Vertical position of NOVA's eyes and antenna within the viewBox, 0–1. */
-const EYE_LINE = 109 / 264;
-const HEAD_TOP = 19 / 264;
+const EYE_LINE = 109 / 320;
+const HEAD_TOP = 19 / 320;
 
 /** Clearance the bubble keeps from every viewport edge. */
 const EDGE_PAD = 12;
@@ -36,6 +37,11 @@ const REACH = 380;
 const IDLE_AFTER = 3200;
 /** Length of the flight between hero and dock; matches the CSS transition. */
 const FLY_MS = 800;
+/** Wave duration; matches the keyframes in nova.css. */
+const WAVE_MS = 2100;
+/** Randomised gap between idle waves. */
+const WAVE_MIN_MS = 15000;
+const WAVE_MAX_MS = 30000;
 
 /**
  * Owns every per-frame concern in one requestAnimationFrame loop: where NOVA
@@ -113,9 +119,9 @@ export function useNovaStage({ forceDock = false }: { forceDock?: boolean } = {}
     // Somewhere plausible to look when nobody's driving. Biased shorter on the
     // vertical axis so NOVA glances sideways more than up and down.
     const pickWanderTarget = (now: number) => {
-      target.x = (Math.random() * 2 - 1) * 0.8;
+      target.x = (Math.random() * 2 - 1) * 0.85;
       target.y = (Math.random() * 2 - 1) * 0.55;
-      nextWanderAt = now + 1300 + Math.random() * 1900;
+      nextWanderAt = now + 2000 + Math.random() * 2000;
     };
 
     /* ---------------------------------------------------------------- */
@@ -309,6 +315,36 @@ export function useNovaStage({ forceDock = false }: { forceDock?: boolean } = {}
       );
     };
 
+    /* ---------------------------------------------------------------- */
+    /* Waving                                                            */
+    /* ---------------------------------------------------------------- */
+
+    const wave = () => {
+      if (reducedMotion.matches || svg.dataset.wave === "true") return;
+      svg.dataset.wave = "true";
+      later(() => {
+        svg.dataset.wave = "false";
+      }, WAVE_MS);
+    };
+
+    // Idle waves, at a randomised interval so they never feel metronomic.
+    const scheduleWave = () => {
+      later(
+        () => {
+          // Only when nobody's driving — waving mid-cursor-track reads as a
+          // twitch rather than a greeting.
+          if (!pointerSeen || performance.now() - lastPointerAt > IDLE_AFTER) {
+            wave();
+          }
+          scheduleWave();
+        },
+        WAVE_MIN_MS + Math.random() * (WAVE_MAX_MS - WAVE_MIN_MS),
+      );
+    };
+
+    // Hello, once, after the boot screen clears.
+    const greetOnBoot = () => later(wave, 400);
+
     const handlePointerDown = () => {
       if (reducedMotion.matches) return;
       svg.dataset.react = "true";
@@ -322,12 +358,19 @@ export function useNovaStage({ forceDock = false }: { forceDock?: boolean } = {}
     window.addEventListener("pointerout", handlePointerOut, { passive: true });
     window.addEventListener("pointerdown", handlePointerDown, { passive: true });
 
+    const offBooted = onNovaBooted(greetOnBoot);
+
     frame = requestAnimationFrame(tick);
-    if (!reducedMotion.matches) scheduleBlink();
+    // Blinking survives reduced motion on purpose: it's a change of expression
+    // in place, not movement across the screen, and without it NOVA reads as
+    // switched off. The wave loop does not.
+    scheduleBlink();
+    if (!reducedMotion.matches) scheduleWave();
 
     return () => {
       cancelAnimationFrame(frame);
       timers.forEach(window.clearTimeout);
+      offBooted();
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerout", handlePointerOut);
       window.removeEventListener("pointerdown", handlePointerDown);

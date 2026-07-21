@@ -26,3 +26,34 @@ export function onAskNova(listener: AskListener): () => void {
 export function askNova(question?: string): void {
   listeners.forEach((listener) => listener(question));
 }
+
+/* -------------------------------------------------------------------------- */
+/* Boot                                                                        */
+/* -------------------------------------------------------------------------- */
+
+const bootListeners = new Set<() => void>();
+let hasBooted = false;
+
+/**
+ * Fires when the boot screen finishes, so NOVA can greet on arrival.
+ *
+ * Late subscribers are called immediately: the stage and the boot screen mount
+ * in the same tick and there's no guaranteed order between them, so a listener
+ * that arrives after the event would otherwise miss the only greeting.
+ */
+export function onNovaBooted(listener: () => void): () => void {
+  if (hasBooted) {
+    listener();
+    return () => {};
+  }
+  bootListeners.add(listener);
+  return () => {
+    bootListeners.delete(listener);
+  };
+}
+
+export function novaBooted(): void {
+  if (hasBooted) return;
+  hasBooted = true;
+  bootListeners.forEach((listener) => listener());
+}

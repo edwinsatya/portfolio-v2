@@ -275,6 +275,16 @@ export const greetingsFor = greetings;
 /** The typewriter line in the hero, and the chips beneath it. */
 export const HERO_LINE = `i'm nova — ${profile.firstName.toLowerCase()}'s ai. ask me anything about his work.`;
 
+/**
+ * Lines NOVA cycles through on top of the current scene's own line. Kept
+ * scene-agnostic — they're true wherever the visitor happens to be.
+ */
+export const ROTATING_LINES = [
+  "he ships full-stack — i just take the credit.",
+  "ten projects in. ask me which one's the best.",
+  "psst — he's open to new work right now.",
+];
+
 export const HERO_CHIPS = [
   "what has he built?",
   "is he available?",

@@ -6,7 +6,7 @@ import { NovaChat } from "./NovaChat";
 import { useNovaChat } from "@/hooks/useNovaChat";
 import { useNovaMemory } from "@/hooks/useNovaMemory";
 import { useNovaStage } from "@/hooks/useNovaStage";
-import { useSectionReactions } from "@/hooks/useSectionReactions";
+import { useSceneReactions } from "@/hooks/useSceneReactions";
 
 /**
  * The fixed layer NOVA lives on.
@@ -34,7 +34,7 @@ export function NovaStage() {
     forceDock: chat.isOpen,
   });
 
-  const { mood, line, open } = useSectionReactions();
+  const { mood, line, open } = useSceneReactions();
   const tapRef = useRef<HTMLButtonElement>(null);
 
   // Whichever way the panel closes — Escape, the X, or tapping NOVA again —

@@ -14,12 +14,19 @@ type NovaProps = {
 /**
  * NOVA — the robot who introduces Edwin.
  *
- * Purely presentational: it draws every facial part it could ever need and lets
- * CSS decide which are visible for the current `data-mood`. All the motion —
- * gaze, blinking, docking — is driven from `useNovaStage`, which owns the ref.
+ * Purely presentational: it draws every part it could ever need and lets CSS
+ * decide which are visible and how they move. All the motion — gaze, blinking,
+ * waving, docking — is driven from `useNovaStage`, which owns the ref.
  *
- * Anatomy, back to front: bloom, ground glow, then a float wrapper holding the
- * torso and a head group that pivots at the neck.
+ * Rigged like a puppet. Each limb is its own group with `transform-box:
+ * view-box` and a `transform-origin` sitting exactly on its joint (see the
+ * JOINTS table in nova.css), so a rotation swings from the shoulder or hip
+ * rather than sliding the whole shape. Arms are two segments — upper arm, then
+ * a forearm group pivoting at the elbow — which is what lets the wave bend
+ * instead of rocking like a plank.
+ *
+ * Anatomy, back to front: bloom, ground shadow, legs, torso, arms, head. The
+ * head geometry is untouched from the original design.
  */
 export function Nova({ mood = "greeting", className = "", ref }: NovaProps) {
   // Namespaced so a second NOVA on the page can't hijack the first one's
@@ -31,7 +38,7 @@ export function Nova({ mood = "greeting", className = "", ref }: NovaProps) {
   return (
     <svg
       ref={ref}
-      viewBox="0 0 240 264"
+      viewBox="0 0 240 320"
       data-mood={mood}
       className={`nova ${className}`}
       role="img"
@@ -52,6 +59,12 @@ export function Nova({ mood = "greeting", className = "", ref }: NovaProps) {
           <stop offset="1" stopColor="#0a0c11" />
         </linearGradient>
 
+        <linearGradient id={id("limb")} x1="0" y1="0" x2="1" y2="0.6">
+          <stop offset="0" stopColor="#525a6d" />
+          <stop offset="0.35" stopColor="#252b38" />
+          <stop offset="1" stopColor="#0d1017" />
+        </linearGradient>
+
         <linearGradient id={id("visor")} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#0d1017" />
           <stop offset="1" stopColor="#020409" />
@@ -68,66 +81,152 @@ export function Nova({ mood = "greeting", className = "", ref }: NovaProps) {
       </defs>
 
       {/* Ambient light NOVA casts on the page behind her. */}
-      <ellipse cx="120" cy="132" rx="118" ry="128" fill={`url(#${id("bloom")})`} />
+      <ellipse cx="120" cy="150" rx="120" ry="150" fill={`url(#${id("bloom")})`} />
 
-      <ellipse className="nova-shadow" cx="120" cy="252" rx="52" ry="7" />
+      {/* Feet stay planted, so the shadow doesn't ride the breathing bob. */}
+      <ellipse className="nova-shadow" cx="120" cy="303" rx="54" ry="7" />
 
-      <g className="nova-float">
-        <g className="nova-bob">
-          <g className="nova-lean">
-            {/* Detached arms. The outer group carries the mood pose, the inner
-                rect keeps its own idle bob, so the two never fight. */}
-            <g className="nova-arm-pose nova-arm-pose-left">
+      <g className="nova-lean">
+        {/* ---- Legs. Planted; they take the body's sway, not the float. ---- */}
+        <g className="nova-leg nova-leg-l">
+          <rect
+            className="nova-plate"
+            x="92"
+            y="246"
+            width="21"
+            height="44"
+            rx="10.5"
+            fill={`url(#${id("limb")})`}
+            strokeWidth="1.5"
+          />
+          <rect
+            className="nova-plate"
+            x="84"
+            y="284"
+            width="37"
+            height="17"
+            rx="8.5"
+            fill={`url(#${id("shell")})`}
+            strokeWidth="1.5"
+          />
+        </g>
+
+        <g className="nova-leg nova-leg-r">
+          <rect
+            className="nova-plate"
+            x="127"
+            y="246"
+            width="21"
+            height="44"
+            rx="10.5"
+            fill={`url(#${id("limb")})`}
+            strokeWidth="1.5"
+          />
+          <rect
+            className="nova-plate"
+            x="119"
+            y="284"
+            width="37"
+            height="17"
+            rx="8.5"
+            fill={`url(#${id("shell")})`}
+            strokeWidth="1.5"
+          />
+        </g>
+
+        {/* ---- Everything above the hips breathes together. ---- */}
+        <g className="nova-float">
+          <g className="nova-bob">
+            {/* Arms sit behind the torso so the shoulder seam is hidden. */}
+            <g className="nova-arm nova-arm-l">
+              <g className="nova-arm-sway">
+                <rect
+                  className="nova-plate"
+                  x="50"
+                  y="188"
+                  width="15"
+                  height="38"
+                  rx="7.5"
+                  fill={`url(#${id("limb")})`}
+                  strokeWidth="1.5"
+                />
+                <g className="nova-forearm nova-forearm-l">
+                  <rect
+                    className="nova-plate"
+                    x="50"
+                    y="216"
+                    width="15"
+                    height="34"
+                    rx="7.5"
+                    fill={`url(#${id("limb")})`}
+                    strokeWidth="1.5"
+                  />
+                </g>
+              </g>
+            </g>
+
+            <g className="nova-arm nova-arm-r">
+              <g className="nova-arm-sway">
+                <rect
+                  className="nova-plate"
+                  x="175"
+                  y="188"
+                  width="15"
+                  height="38"
+                  rx="7.5"
+                  fill={`url(#${id("limb")})`}
+                  strokeWidth="1.5"
+                />
+                <g className="nova-forearm nova-forearm-r">
+                  <rect
+                    className="nova-plate"
+                    x="175"
+                    y="216"
+                    width="15"
+                    height="34"
+                    rx="7.5"
+                    fill={`url(#${id("limb")})`}
+                    strokeWidth="1.5"
+                  />
+                </g>
+              </g>
+            </g>
+
+            {/* ---- Torso ---- */}
+            <g className="nova-torso">
+              {/* Neck, drawn first so the torso's top edge covers the join. */}
               <rect
-                className="nova-arm nova-plate"
-                x="44"
-                y="192"
-                width="15"
-                height="30"
-                rx="7.5"
+                x="104"
+                y="162"
+                width="32"
+                height="26"
+                rx="11"
+                fill="#171b25"
+              />
+              <rect
+                className="nova-plate"
+                x="70"
+                y="178"
+                width="100"
+                height="72"
+                rx="30"
                 fill={`url(#${id("shell")})`}
                 strokeWidth="1.5"
               />
-            </g>
-            <g className="nova-arm-pose nova-arm-pose-right">
               <rect
-                className="nova-arm nova-arm-right nova-plate"
-                x="181"
-                y="192"
-                width="15"
-                height="30"
-                rx="7.5"
-                fill={`url(#${id("shell")})`}
-                strokeWidth="1.5"
+                x="88"
+                y="186"
+                width="64"
+                height="13"
+                rx="6.5"
+                fill="#fff"
+                opacity="0.17"
               />
+              <circle className="nova-lamp nova-glowing" cx="120" cy="215" r="9.5" />
             </g>
 
-            {/* Torso. Kept clear of the head rather than almost touching it —
-                everything on NOVA floats, so a visible gap reads deliberate
-                where a hairline seam just looks like a mistake. */}
-            <rect
-              className="nova-plate"
-              x="70"
-              y="178"
-              width="100"
-              height="62"
-              rx="28"
-              fill={`url(#${id("shell")})`}
-              strokeWidth="1.5"
-            />
-            <rect
-              x="84"
-              y="185"
-              width="72"
-              height="13"
-              rx="6.5"
-              fill="#fff"
-              opacity="0.17"
-            />
-            <circle className="nova-lamp nova-glowing" cx="120" cy="209" r="9" />
-
+            {/* ---- Head. Geometry unchanged from the original design. ---- */}
             <g className="nova-head">
-              {/* Antenna */}
               <g className="nova-antenna">
                 <path
                   className="nova-stem"

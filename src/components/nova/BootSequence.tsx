@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useNovaMemory } from "@/hooks/useNovaMemory";
+import { novaBooted } from "@/lib/nova-bus";
 
 /** Full boot, first visit. */
 const FIRST_LINES = [
@@ -64,6 +65,7 @@ export function BootSequence() {
       if (ratio >= 1) {
         setDone(true);
         delete document.documentElement.dataset.booting;
+        novaBooted();
         return;
       }
       frame = requestAnimationFrame(tick);
@@ -77,6 +79,7 @@ export function BootSequence() {
       setProgress(100);
       setDone(true);
       delete document.documentElement.dataset.booting;
+      novaBooted();
     };
 
     window.addEventListener("pointerdown", skip);
