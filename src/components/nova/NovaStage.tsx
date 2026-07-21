@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { addLike } from "@/lib/likes";
+import { celebrate, fireLike, onLike, setChatOpen } from "@/lib/nova-bus";
+import { LoveBurst } from "./LoveBurst";
 import { Nova } from "./Nova";
 import { NovaChat } from "./NovaChat";
 import { useNovaChat } from "@/hooks/useNovaChat";
@@ -37,13 +40,27 @@ export function NovaStage() {
   const { mood, line, open } = useSceneReactions();
   const tapRef = useRef<HTMLButtonElement>(null);
 
-  // Whichever way the panel closes — Escape, the X, or tapping NOVA again —
-  // focus goes back to the robot rather than being dropped on the document.
+  // Whichever way the panel closes — Escape or the X — focus goes back to the
+  // robot rather than being dropped on the document.
   const wasOpen = useRef(false);
   useEffect(() => {
     if (wasOpen.current && !chat.isOpen) tapRef.current?.focus();
     wasOpen.current = chat.isOpen;
   }, [chat.isOpen]);
+
+  // The tagline rotation pauses while the chat is up.
+  useEffect(() => setChatOpen(chat.isOpen), [chat.isOpen]);
+
+  // One place records a like and picks a celebration, whatever fired it — the
+  // L key, the counter, the tagline, or NOVA herself.
+  useEffect(
+    () =>
+      onLike(() => {
+        addLike();
+        celebrate();
+      }),
+    [],
+  );
 
   return (
     <div ref={stageRef} className="nova-stage" data-chatting={chat.isOpen}>
@@ -51,14 +68,14 @@ export function NovaStage() {
         <Nova ref={svgRef} mood={mood} />
 
         {/* Invisible hit area over the robot's silhouette, so the click target
-            is NOVA rather than the whole bloom around her. */}
+            is NOVA rather than the whole bloom around her. Clicking her likes —
+            the chat is opened from the nav's chat icon and the chips. */}
         <button
           ref={tapRef}
           type="button"
-          onClick={chat.toggle}
+          onClick={() => fireLike()}
           className="nova-tap"
-          aria-expanded={chat.isOpen}
-          aria-label={chat.isOpen ? "Close chat with NOVA" : "Talk to NOVA"}
+          aria-label="Like NOVA"
         />
       </div>
 
@@ -74,6 +91,8 @@ export function NovaStage() {
           </p>
         </div>
       </div>
+
+      <LoveBurst />
 
       <NovaChat
         isOpen={chat.isOpen}

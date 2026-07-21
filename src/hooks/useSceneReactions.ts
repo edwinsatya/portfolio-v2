@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSelectedLayoutSegment } from "next/navigation";
 import { greetings, type NovaMood } from "@/content/profile";
 import { sceneFromSegment } from "@/content/scenes";
+import { celebrate } from "@/lib/nova-bus";
 import { onForget } from "@/lib/memory";
 import { useNovaMemory } from "./useNovaMemory";
 
@@ -53,7 +54,11 @@ export function useSceneReactions() {
     if (previous.visitCount === 0) return;
 
     greeted.current = true;
+    const visits = previous.visitCount;
     const timer = window.setTimeout(() => {
+      // Third visit onward, NOVA is visibly glad to see them.
+      if (visits >= 2 && Math.random() < 0.7) celebrate("wave");
+
       const name = previous.visitorName;
       setLine(
         previous.sectionsSeen.includes("work")

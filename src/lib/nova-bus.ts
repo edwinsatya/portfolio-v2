@@ -57,3 +57,86 @@ export function novaBooted(): void {
   hasBooted = true;
   bootListeners.forEach((listener) => listener());
 }
+
+/* -------------------------------------------------------------------------- */
+/* Likes                                                                       */
+/* -------------------------------------------------------------------------- */
+
+/** Where the burst should originate, in viewport pixels. */
+export type LikeOrigin = { x: number; y: number } | null;
+
+type LikeListener = (origin: LikeOrigin) => void;
+
+const likeListeners = new Set<LikeListener>();
+
+export function onLike(listener: LikeListener): () => void {
+  likeListeners.add(listener);
+  return () => {
+    likeListeners.delete(listener);
+  };
+}
+
+/**
+ * Fires a love burst. `origin` is optional — without one the hearts launch from
+ * NOVA's head, which is what the L key and a tap on the robot both want.
+ */
+export function fireLike(origin: LikeOrigin = null): void {
+  likeListeners.forEach((listener) => listener(origin));
+}
+
+/* -------------------------------------------------------------------------- */
+/* Celebrations                                                                */
+/* -------------------------------------------------------------------------- */
+
+/** The three things NOVA does when she's pleased. */
+export type Celebration = "wave" | "dance" | "hop";
+
+type CelebrateListener = (kind: Celebration) => void;
+
+const celebrateListeners = new Set<CelebrateListener>();
+
+export function onCelebrate(listener: CelebrateListener): () => void {
+  celebrateListeners.add(listener);
+  return () => {
+    celebrateListeners.delete(listener);
+  };
+}
+
+/** Picks one at random unless a specific one is asked for. */
+export function celebrate(kind?: Celebration): void {
+  const pick: Celebration =
+    kind ?? (["wave", "dance", "hop"] as const)[Math.floor(Math.random() * 3)];
+  celebrateListeners.forEach((listener) => listener(pick));
+}
+
+/* -------------------------------------------------------------------------- */
+/* Chat open state                                                             */
+/* -------------------------------------------------------------------------- */
+
+/* The tagline rotation pauses while the chat is up, and the two live on
+   opposite sides of the tree — same reason the rest of this file exists. */
+
+let chatOpen = false;
+const chatListeners = new Set<() => void>();
+
+export function setChatOpen(open: boolean): void {
+  if (chatOpen === open) return;
+  chatOpen = open;
+  chatListeners.forEach((listener) => listener());
+}
+
+export function subscribeChatOpen(listener: () => void): () => void {
+  chatListeners.add(listener);
+  return () => {
+    chatListeners.delete(listener);
+  };
+}
+
+export function getChatOpen(): boolean {
+  return chatOpen;
+}
+
+/** The server never has a chat open. */
+export function getServerChatOpen(): boolean {
+  return false;
+}

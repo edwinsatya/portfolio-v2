@@ -8,7 +8,7 @@ import {
   greetingsFor,
 } from "@/content/nova-qa";
 import { matchIntent, scriptedResponder, type NovaResponder } from "@/lib/nova-brain";
-import { onAskNova } from "@/lib/nova-bus";
+import { celebrate, onAskNova } from "@/lib/nova-bus";
 import { sanitizeName, setVisitorName } from "@/lib/memory";
 
 export type ChatMessage = {
@@ -124,6 +124,9 @@ export function useNovaChat({
           if (takingName) {
             awaitingName.current = false;
             const saved = setVisitorName(question);
+            // Pleased to meet you. Only sometimes — every single time would
+            // stop reading as a reaction and start reading as a transition.
+            if (saved && Math.random() < 0.6) celebrate("wave");
             push(
               "nova",
               saved

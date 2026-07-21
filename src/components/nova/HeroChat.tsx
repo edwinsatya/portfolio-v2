@@ -1,14 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { ROTATING_LINES } from "@/content/nova-qa";
-import { askNova } from "@/lib/nova-bus";
+import {
+  askNova,
+  fireLike,
+  getChatOpen,
+  getServerChatOpen,
+  subscribeChatOpen,
+} from "@/lib/nova-bus";
 
-/** How long each line holds before the next one blurs in. */
-const HOLD_MIN_MS = 6000;
-const HOLD_MAX_MS = 8000;
+/** How long a line stays readable *after* it has finished materialising. */
+const HOLD_MS = 5000;
+/** Reduced motion has no reveal to wait for, so it's a flat interval. */
+const REDUCED_HOLD_MS = 7000;
 /** Stagger between words materialising. */
 const WORD_STEP_MS = 55;
+/** Matches the word transition in globals.css. */
+const WORD_REVEAL_MS = 420;
 /** Beat before the first line, so the boot screen is gone. */
 const START_DELAY = 600;
 
@@ -17,12 +26,6 @@ const START_DELAY = 600;
  *
  * The line cycles: the scene's own line first, then the scene-agnostic ones, so
  * whichever scene you're on you always get its introduction before the filler.
- * Each new line materialises word by word, blurred to sharp.
- *
- * The animation is per-word `opacity`/`filter` with a CSS delay — no JS runs per
- * frame and nothing reflows, so a line landing costs nothing measurable.
- * The whole sentence is always in the DOM for assistive tech, and reduced
- * motion swaps text with no animation at all.
  */
 export function HeroChat({
   sceneId,
@@ -61,40 +64,89 @@ export function HeroChat({
   );
 }
 
+/**
+ * Cycles the taglines, materialising each word by word from blurred to sharp.
+ *
+ * The hold is measured from when the *last word* lands, not from when the reveal
+ * starts — a long line takes longer to materialise, and timing from the start
+ * would quietly give it less reading time than a short one.
+ *
+ * Rotation pauses while the visitor is hovering the text (they're reading it) or
+ * has the chat open (they're busy), and resumes with the remaining time intact
+ * rather than restarting the clock.
+ */
 function LineRotator({ line }: { line: string }) {
   // Scene line first, then the rotating ones.
   const lines = useMemo(() => [line, ...ROTATING_LINES], [line]);
   const [index, setIndex] = useState(0);
   const [visible, setVisible] = useState(false);
+  const [hovered, setHovered] = useState(false);
 
-  // Reveal the current line, then queue the next.
+  const chatOpen = useSyncExternalStore(
+    subscribeChatOpen,
+    getChatOpen,
+    getServerChatOpen,
+  );
+  const paused = hovered || chatOpen;
+
+  // Milliseconds still owed to the current line. Survives pause/resume.
+  const remaining = useRef<number | null>(null);
+  const startedAt = useRef(0);
+
+  const current = lines[index];
+  const words = useMemo(() => current.split(" "), [current]);
+
+  // Reveal the line, then hand over to the hold timer below.
   useEffect(() => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const show = window.setTimeout(
-      () => setVisible(true),
+      () => {
+        setVisible(true);
+        // Reveal finishes when the last word's transition ends.
+        const revealMs = reduced
+          ? 0
+          : (words.length - 1) * WORD_STEP_MS + WORD_REVEAL_MS;
+        remaining.current = revealMs + (reduced ? REDUCED_HOLD_MS : HOLD_MS);
+        startedAt.current = performance.now();
+      },
       index === 0 && !reduced ? START_DELAY : 20,
     );
 
-    const advance = window.setTimeout(
-      () => {
-        setVisible(false);
-        setIndex((current) => (current + 1) % lines.length);
-      },
-      HOLD_MIN_MS + Math.random() * (HOLD_MAX_MS - HOLD_MIN_MS),
-    );
+    return () => window.clearTimeout(show);
+  }, [index, words.length]);
 
-    return () => {
-      window.clearTimeout(show);
-      window.clearTimeout(advance);
-    };
-  }, [index, lines.length]);
+  // The hold. Re-runs on pause changes, banking the time already served.
+  useEffect(() => {
+    if (remaining.current === null) return;
 
-  const current = lines[index];
-  const words = current.split(" ");
+    if (paused) {
+      // Bank what's left and stop the clock.
+      const served = performance.now() - startedAt.current;
+      remaining.current = Math.max(0, remaining.current - served);
+      return;
+    }
+
+    startedAt.current = performance.now();
+    const timer = window.setTimeout(() => {
+      remaining.current = null;
+      setVisible(false);
+      setIndex((i) => (i + 1) % lines.length);
+    }, remaining.current);
+
+    return () => window.clearTimeout(timer);
+  }, [paused, index, visible, lines.length]);
 
   return (
-    <p className="stage-line">
+    <p
+      className="stage-line"
+      onPointerEnter={() => setHovered(true)}
+      onPointerLeave={() => setHovered(false)}
+      // Liking from the tagline, as well as from NOVA and the counter.
+      onClick={(event) =>
+        fireLike({ x: event.clientX, y: event.clientY })
+      }
+    >
       {/* Screen readers get the sentence whole; the word split is visual. */}
       <span className="sr-only">{current}</span>
       <span aria-hidden>

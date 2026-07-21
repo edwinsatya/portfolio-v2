@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { onNovaBooted } from "@/lib/nova-bus";
+import {
+  fireLike,
+  onCelebrate,
+  onNovaBooted,
+  type Celebration,
+} from "@/lib/nova-bus";
 
 /** The anchor's CSS width. Everything scales from this to hero or dock size. */
 const BASE_WIDTH = 380;
@@ -39,6 +44,12 @@ const IDLE_AFTER = 3200;
 const FLY_MS = 800;
 /** Wave duration; matches the keyframes in nova.css. */
 const WAVE_MS = 2100;
+/** Celebration durations, matching their keyframes. */
+const CELEBRATE_MS: Record<Celebration, number> = {
+  wave: 2100,
+  dance: 1900,
+  hop: 1050,
+};
 /** Randomised gap between idle waves. */
 const WAVE_MIN_MS = 15000;
 const WAVE_MAX_MS = 30000;
@@ -235,6 +246,18 @@ export function useNovaStage({ forceDock = false }: { forceDock?: boolean } = {}
       svg.style.setProperty("--nova-look-x", gaze.x.toFixed(3));
       svg.style.setProperty("--nova-look-y", gaze.y.toFixed(3));
 
+      // Where the hearts launch from. Written to the root rather than the
+      // stage so the burst layer can read it without threading refs around.
+      const antennaTop = boxTop + BASE_HEIGHT * scale * HEAD_TOP;
+      document.documentElement.style.setProperty(
+        "--nova-head-x",
+        `${Math.round(centerX)}`,
+      );
+      document.documentElement.style.setProperty(
+        "--nova-head-y",
+        `${Math.round(antennaTop)}`,
+      );
+
       /* Bubble — placed by collision, not by fixed offsets.
          Prefers sitting above NOVA's antenna. Where that would put it under the
          navbar or off the top of the screen — which is exactly what happens in
@@ -345,6 +368,46 @@ export function useNovaStage({ forceDock = false }: { forceDock?: boolean } = {}
     // Hello, once, after the boot screen clears.
     const greetOnBoot = () => later(wave, 400);
 
+    /* ---------------------------------------------------------------- */
+    /* Celebrations                                                      */
+    /* ---------------------------------------------------------------- */
+
+    const runCelebration = (kind: Celebration) => {
+      // Under reduced motion the joyful face is the whole celebration — no
+      // dancing, no hopping, no arm across the screen.
+      const shown = reducedMotion.matches ? "joy" : kind;
+      svg.dataset.celebrate = shown;
+      later(
+        () => {
+          // `delete`, not `= ""` — an empty string leaves the attribute in the
+          // DOM, and `[data-celebrate]` matches it, which would strand NOVA in
+          // her joyful face for the rest of the visit.
+          delete svg.dataset.celebrate;
+        },
+        reducedMotion.matches ? 1400 : CELEBRATE_MS[kind],
+      );
+    };
+
+    /* ---------------------------------------------------------------- */
+    /* Liking                                                            */
+    /* ---------------------------------------------------------------- */
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "l" && event.key !== "L") return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+
+      // Never steal the key from someone typing into the chat or a form.
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.isContentEditable ||
+        ["INPUT", "TEXTAREA", "SELECT"].includes(target?.tagName ?? "")
+      ) {
+        return;
+      }
+
+      fireLike();
+    };
+
     const handlePointerDown = () => {
       if (reducedMotion.matches) return;
       svg.dataset.react = "true";
@@ -359,6 +422,8 @@ export function useNovaStage({ forceDock = false }: { forceDock?: boolean } = {}
     window.addEventListener("pointerdown", handlePointerDown, { passive: true });
 
     const offBooted = onNovaBooted(greetOnBoot);
+    const offCelebrate = onCelebrate(runCelebration);
+    window.addEventListener("keydown", handleKeyDown);
 
     frame = requestAnimationFrame(tick);
     // Blinking survives reduced motion on purpose: it's a change of expression
@@ -371,6 +436,8 @@ export function useNovaStage({ forceDock = false }: { forceDock?: boolean } = {}
       cancelAnimationFrame(frame);
       timers.forEach(window.clearTimeout);
       offBooted();
+      offCelebrate();
+      window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerout", handlePointerOut);
       window.removeEventListener("pointerdown", handlePointerDown);

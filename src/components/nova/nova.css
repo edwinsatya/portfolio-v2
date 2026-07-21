@@ -470,6 +470,226 @@
 }
 
 /* -------------------------------------------------------------------------- */
+/* Celebrations                                                                */
+/* -------------------------------------------------------------------------- */
+
+/* Joy overrides whatever face the current mood set — placed after the mood
+   blocks so it wins at equal specificity. */
+.nova[data-celebrate] .nova-eye {
+  opacity: 0;
+}
+
+.nova[data-celebrate] .nova-eye-happy {
+  opacity: 1;
+}
+
+.nova[data-celebrate] .nova-mouth-smile,
+.nova[data-celebrate] .nova-mouth-flat,
+.nova[data-celebrate] .nova-mouth-open {
+  opacity: 0;
+}
+
+.nova[data-celebrate] .nova-mouth-grin {
+  opacity: 1;
+}
+
+/* --- wave: reuses the greeting wave --------------------------------------- */
+
+.nova[data-celebrate="wave"] .nova-arm-r {
+  animation: nova-wave-shoulder 2.1s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.nova[data-celebrate="wave"] .nova-arm-r .nova-forearm-r {
+  animation: nova-wave-forearm 2.1s ease-in-out;
+}
+
+.nova[data-celebrate="wave"] .nova-arm-r .nova-arm-sway {
+  animation: none;
+  rotate: 0deg;
+}
+
+/* --- dance: hips wiggle, arms up and swinging ----------------------------- */
+
+.nova[data-celebrate="dance"] .nova-lean {
+  animation: nova-dance-body 1.9s ease-in-out;
+  transform-box: view-box;
+  transform-origin: 120px 300px;
+}
+
+.nova[data-celebrate="dance"] .nova-arm-l {
+  animation: nova-dance-arm-l 1.9s ease-in-out;
+}
+
+.nova[data-celebrate="dance"] .nova-arm-r {
+  animation: nova-dance-arm-r 1.9s ease-in-out;
+}
+
+.nova[data-celebrate="dance"] .nova-arm-sway {
+  animation: none;
+}
+
+@keyframes nova-dance-body {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  20% {
+    rotate: 5deg;
+  }
+  45% {
+    rotate: -5deg;
+  }
+  70% {
+    rotate: 4deg;
+  }
+  88% {
+    rotate: -2deg;
+  }
+}
+
+@keyframes nova-dance-arm-l {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  15%,
+  85% {
+    rotate: 128deg;
+  }
+  40% {
+    rotate: 108deg;
+  }
+  65% {
+    rotate: 138deg;
+  }
+}
+
+@keyframes nova-dance-arm-r {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  15%,
+  85% {
+    rotate: -128deg;
+  }
+  40% {
+    rotate: -138deg;
+  }
+  65% {
+    rotate: -108deg;
+  }
+}
+
+/* --- hop: up, then a squash on landing ------------------------------------ */
+
+.nova[data-celebrate="hop"] .nova-lean {
+  animation: nova-hop 1.05s cubic-bezier(0.3, 0.9, 0.4, 1);
+  transform-box: view-box;
+  transform-origin: 120px 300px;
+}
+
+.nova[data-celebrate="hop"] .nova-arm-l,
+.nova[data-celebrate="hop"] .nova-arm-r {
+  animation: nova-hop-arms 1.05s ease-out;
+}
+
+.nova[data-celebrate="hop"] .nova-arm-sway {
+  animation: none;
+}
+
+@keyframes nova-hop {
+  0% {
+    translate: 0 0;
+    scale: 1 1;
+  }
+  14% {
+    /* Crouch before the launch — the anticipation is what sells the jump. */
+    translate: 0 4px;
+    scale: 1.05 0.94;
+  }
+  45% {
+    translate: 0 -34px;
+    scale: 0.97 1.05;
+  }
+  74% {
+    translate: 0 0;
+    scale: 1 1;
+  }
+  84% {
+    /* Landing squash. */
+    translate: 0 5px;
+    scale: 1.07 0.92;
+  }
+  100% {
+    translate: 0 0;
+    scale: 1 1;
+  }
+}
+
+@keyframes nova-hop-arms {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  45% {
+    rotate: -18deg;
+  }
+}
+
+.nova[data-celebrate="hop"] .nova-arm-r {
+  animation-name: nova-hop-arms-r;
+}
+
+@keyframes nova-hop-arms-r {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  45% {
+    rotate: 18deg;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Love burst                                                                  */
+/* -------------------------------------------------------------------------- */
+
+.love-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+}
+
+.love-heart {
+  position: absolute;
+  color: var(--color-love);
+  /* Centres the glyph on its launch point. */
+  translate: -50% -50%;
+  animation: nova-heart 1.5s cubic-bezier(0.25, 0.7, 0.4, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Transform and opacity only — a burst never touches layout. */
+@keyframes nova-heart {
+  0% {
+    transform: translate(0, 0) scale(0.4) rotate(0deg);
+    opacity: 0;
+  }
+  18% {
+    transform: translate(calc(var(--drift) * 0.2), -14px) scale(var(--scale))
+      rotate(calc(var(--spin) * 0.3));
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--drift), -120px) scale(calc(var(--scale) * 0.75))
+      rotate(var(--spin));
+    opacity: 0;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
 /* Click reaction                                                              */
 /* -------------------------------------------------------------------------- */
 
@@ -1002,6 +1222,38 @@
   .nova[data-blink="true"] .nova-eye,
   .nova .nova-eye {
     transition-duration: 110ms !important;
+  }
+
+  /* No dancing, hopping, or waving — `data-celebrate` is set to "joy" under
+     reduced motion, which lands the happy face and nothing else. */
+  .nova[data-celebrate] .nova-lean,
+  .nova[data-celebrate] .nova-arm-l,
+  .nova[data-celebrate] .nova-arm-r,
+  .nova[data-celebrate] .nova-forearm-r {
+    animation: none;
+    rotate: 0deg;
+    translate: none;
+    scale: none;
+  }
+
+  /* Hearts appear and fade where they are, rather than flying up the screen. */
+  .love-heart {
+    animation: nova-heart-still 1.2s ease-out forwards;
+  }
+
+  @keyframes nova-heart-still {
+    0% {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+    25% {
+      opacity: 1;
+      transform: scale(var(--scale));
+    }
+    100% {
+      opacity: 0;
+      transform: scale(var(--scale));
+    }
   }
 
   /* Breathing, sway, glow, sparkles, and the wave all stop. */

@@ -4,6 +4,7 @@ import { useSelectedLayoutSegment } from "next/navigation";
 import { profile } from "@/content/profile";
 import { sceneFromSegment } from "@/content/scenes";
 import { HeroChat } from "@/components/nova/HeroChat";
+import { LikeCounter } from "@/components/nova/LikeCounter";
 
 /**
  * The constant frame around every scene: identity top-left, blurred wordmark
@@ -20,6 +21,8 @@ export function StageFrame({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="stage">
+      <LikeCounter />
+
       {/* Identity, top-left. */}
       <header className="stage-identity">
         <h1 className="font-display text-lg font-semibold tracking-tight lowercase sm:text-xl">
@@ -48,11 +51,17 @@ export function StageFrame({ children }: { children: React.ReactNode }) {
 
       {/* Bottom band. */}
       <div className="stage-foot">
-        <HeroChat
-          sceneId={scene.id}
-          line={scene.line}
-          chips={scene.chips}
-        />
+        <div>
+          <HeroChat sceneId={scene.id} line={scene.line} chips={scene.chips} />
+          {/* Two phrasings: "press L" is meaningless without a keyboard, so
+              touch devices get the tap wording instead. CSS picks. */}
+          <p className="stage-hint">
+            <span className="stage-hint-key">
+              Press <kbd>L</kbd> to like — or click NOVA
+            </span>
+            <span className="stage-hint-tap">Tap NOVA to like</span>
+          </p>
+        </div>
 
         <div aria-hidden className="stage-status">
           <div className="stage-status-bar">
