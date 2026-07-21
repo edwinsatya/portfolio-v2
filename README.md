@@ -94,9 +94,17 @@ she pulls a different face. Adding a new mood means adding a `[data-mood="…"]`
 block to `nova.css`, otherwise it falls back to `greeting`.
 
 **Why one loop:** the gaze origin is derived from the dock position computed the
-same frame rather than measured off the SVG, so every frame is a single layout
-read followed only by writes. Reading back after a write would force a
-synchronous reflow 60 times a second.
+same frame rather than measured off the SVG, so every frame's reads are batched
+up front and everything after them is a write. Reading back after a write would
+force a synchronous reflow 60 times a second.
+
+**Bubble placement** is computed, not fixed. Each frame the loop measures the
+bubble, the navbar, and NOVA, then prefers to sit above her antenna — flipping
+below her (tail flipped too) when above would collide with the navbar, which is
+what happens in the hero on a phone. Both axes are then clamped into the safe
+area, so a bubble can never render off screen or under the nav, and the tail
+keeps tracking NOVA even when the body has been clamped away from her. Tune
+`EDGE_PAD`, `BUBBLE_GAP`, and `TAIL_INSET` in `useNovaStage.ts`.
 
 ## Memory
 

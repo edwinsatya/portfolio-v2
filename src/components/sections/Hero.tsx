@@ -135,7 +135,11 @@ export function Hero() {
             that would shrink-wrap the column, and with only an aspect-ratio box
             inside, the slot collapses to the width of the caption below it. */}
         <Reveal delay={0.2} className="order-1 lg:order-none">
-          <div className="relative mx-auto w-full max-w-[240px] sm:max-w-[300px] lg:mr-0 lg:ml-auto lg:max-w-[380px]">
+          {/* The `28svh` term caps NOVA against viewport *height*, not just
+              width. On a short phone (SE, landscape) that shrinks her instead
+              of letting her push into the headline or leave the bubble nowhere
+              to go. It never binds on desktop, where the px values are smaller. */}
+          <div className="relative mx-auto w-full max-w-[min(240px,28svh)] sm:max-w-[min(300px,34svh)] lg:mr-0 lg:ml-auto lg:max-w-[380px]">
             <div data-nova-slot className="aspect-[240/264] w-full" />
 
             <p className="mt-2 flex items-center justify-center gap-2 text-xs text-faint">

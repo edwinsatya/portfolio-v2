@@ -41,6 +41,7 @@ export function Nav() {
 
   return (
     <header
+      data-site-nav
       className={`fixed inset-x-0 top-0 z-50 transition-colors duration-300 ${
         scrolled ? "border-b border-line/70 bg-bg/80 backdrop-blur-xl" : ""
       }`}

@@ -16,6 +16,20 @@ const SMALL_SCREEN = 640;
 const EYE_LINE = 109 / 264;
 const HEAD_TOP = 19 / 264;
 
+/** Clearance the bubble keeps from every viewport edge. */
+const EDGE_PAD = 12;
+/** Gap between the bubble and NOVA herself. */
+const BUBBLE_GAP = 10;
+/** Fallback nav height, used only if the header can't be measured. */
+const NAV_FALLBACK = 64;
+/** How far in from the bubble's corner the tail sits. */
+const TAIL_INSET = 20;
+
+const clamp = (value: number, min: number, max: number) =>
+  // Guards the case where the bubble is taller than the space it has to fit in:
+  // min wins, so it stays below the nav rather than sliding under it.
+  Math.max(min, Math.min(max, value));
+
 /** How far the pointer travels, in px, before the gaze is fully committed. */
 const REACH = 380;
 /** Silence after which NOVA stops tracking and starts looking around alone. */
@@ -67,6 +81,7 @@ export function useNovaStage({ forceDock = false }: { forceDock?: boolean } = {}
     let isDocked = false;
     let ready = false;
     let slot: HTMLElement | null = null;
+    let nav: HTMLElement | null = null;
     let frame = 0;
 
     const timers = new Set<number>();
@@ -110,11 +125,24 @@ export function useNovaStage({ forceDock = false }: { forceDock?: boolean } = {}
     const tick = (now: number) => {
       frame = requestAnimationFrame(tick);
 
-      // The one layout read of the frame. Everything after this is a write.
+      // The reads of the frame, batched. Everything after this is a write —
+      // reading back after a write would force a synchronous reflow.
       if (!slot?.isConnected) {
         slot = document.querySelector<HTMLElement>("[data-nova-slot]");
       }
+      if (!nav?.isConnected) {
+        nav = document.querySelector<HTMLElement>("[data-site-nav]");
+      }
       const slotRect = slot?.getBoundingClientRect() ?? null;
+      const navBottom = nav?.getBoundingClientRect().bottom ?? NAV_FALLBACK;
+
+      // Only measured while the bubble is actually up; the rest of the time its
+      // size is irrelevant and measuring it would be wasted layout work.
+      const bubble = bubbleRef.current;
+      const speech = bubble?.firstElementChild as HTMLElement | null;
+      const bubbleVisible = speech?.dataset.open === "true";
+      const bubbleWidth = bubbleVisible ? speech!.offsetWidth : 0;
+      const bubbleHeight = bubbleVisible ? speech!.offsetHeight : 0;
 
       const vw = window.innerWidth;
       const vh = window.innerHeight;
@@ -201,15 +229,59 @@ export function useNovaStage({ forceDock = false }: { forceDock?: boolean } = {}
       svg.style.setProperty("--nova-look-x", gaze.x.toFixed(3));
       svg.style.setProperty("--nova-look-y", gaze.y.toFixed(3));
 
-      /* Bubble — hangs just above the antenna, on the side with room. */
-      const bubble = bubbleRef.current;
+      /* Bubble — placed by collision, not by fixed offsets.
+         Prefers sitting above NOVA's antenna. Where that would put it under the
+         navbar or off the top of the screen — which is exactly what happens in
+         the hero on a phone — it flips below her instead and the tail flips with
+         it. Both axes are then clamped into the safe area, so the bubble can
+         never render outside the viewport or beneath the nav. */
       if (bubble) {
-        const headY = boxTop + BASE_HEIGHT * scale * HEAD_TOP - 12;
-        const anchorX = shouldDock
-          ? centerX + (BASE_WIDTH * scale) / 2
-          : centerX;
-        bubble.style.setProperty("--nova-bubble-x", `${anchorX}px`);
-        bubble.style.setProperty("--nova-bubble-y", `${headY}px`);
+        const novaHeight = BASE_HEIGHT * scale;
+        const antennaY = boxTop + novaHeight * HEAD_TOP;
+        const novaBottom = boxTop + novaHeight;
+
+        // Top and bottom of the region the bubble is allowed to occupy.
+        const safeTop = navBottom + EDGE_PAD;
+        const safeBottom = vh - EDGE_PAD;
+
+        const above = antennaY - BUBBLE_GAP - bubbleHeight;
+        const below = novaBottom + BUBBLE_GAP;
+
+        // Flip only when there genuinely isn't room above — otherwise every
+        // desktop bubble would move too.
+        const placeBelow =
+          above < safeTop && below + bubbleHeight <= safeBottom;
+
+        const top = clamp(
+          placeBelow ? below : above,
+          safeTop,
+          Math.max(safeTop, safeBottom - bubbleHeight),
+        );
+
+        // Docked, NOVA hugs the right edge, so the bubble hangs from her right
+        // side rather than centring on her and overflowing.
+        const preferredLeft = shouldDock
+          ? centerX + (BASE_WIDTH * scale) / 2 - bubbleWidth
+          : centerX - bubbleWidth / 2;
+
+        const left = clamp(
+          preferredLeft,
+          EDGE_PAD,
+          Math.max(EDGE_PAD, vw - EDGE_PAD - bubbleWidth),
+        );
+
+        // The tail tracks NOVA even after the body has been clamped away from
+        // her, so it keeps pointing at the robot rather than into space.
+        const tailX = clamp(
+          centerX - left,
+          TAIL_INSET,
+          Math.max(TAIL_INSET, bubbleWidth - TAIL_INSET),
+        );
+
+        bubble.style.setProperty("--nova-bubble-x", `${Math.round(left)}px`);
+        bubble.style.setProperty("--nova-bubble-y", `${Math.round(top)}px`);
+        bubble.style.setProperty("--nova-tail-x", `${Math.round(tailX)}px`);
+        speech!.dataset.place = placeBelow ? "below" : "above";
       }
     };
 

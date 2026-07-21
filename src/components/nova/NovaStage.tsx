@@ -28,7 +28,7 @@ export function NovaStage() {
 
   // Chatting pulls her out of the hero and down to the corner, so the panel is
   // always beside her rather than stranded across the page.
-  const { stageRef, anchorRef, svgRef, bubbleRef, docked } = useNovaStage({
+  const { stageRef, anchorRef, svgRef, bubbleRef } = useNovaStage({
     forceDock: chat.isOpen,
   });
 
@@ -69,7 +69,6 @@ export function NovaStage() {
         <div
           className="nova-speech"
           data-open={open && !chat.isOpen}
-          data-dock={docked}
           data-interactive={asksName && !chat.isOpen}
         >
           {/* Ambient narration that repeats what the section heading already

@@ -809,11 +809,12 @@
   color: var(--color-ink);
 }
 
-/* The tail, pointing down at NOVA. */
+/* The tail. `--nova-tail-x` tracks NOVA even when the body has been clamped
+   away from her, so it always points back at the robot. */
 .nova-speech::after {
   content: "";
   position: absolute;
-  bottom: -5px;
+  left: calc(var(--nova-tail-x, 50%) - 4.5px);
   width: 9px;
   height: 9px;
   border-right: inherit;
@@ -823,30 +824,38 @@
   transform: rotate(45deg);
 }
 
-/* Hero: bubble sits above NOVA's head, centred, tail in the middle. */
-.nova-speech[data-dock="false"] {
-  transform: translate(-50%, -100%) scale(0.94);
+/* Above NOVA — the default everywhere there's room, including all of desktop.
+   Tail hangs off the bottom edge, pointing down at her. */
+.nova-speech[data-place="above"] {
+  transform: translateY(-6px) scale(0.94);
 }
 
-.nova-speech[data-dock="false"][data-open="true"] {
-  transform: translate(-50%, -100%) scale(1);
+.nova-speech[data-place="above"][data-open="true"] {
+  transform: translateY(0) scale(1);
 }
 
-.nova-speech[data-dock="false"]::after {
-  left: calc(50% - 4.5px);
+.nova-speech[data-place="above"]::after {
+  bottom: -5px;
 }
 
-/* Docked: bubble hangs above and to the left, so it never leaves the viewport. */
-.nova-speech[data-dock="true"] {
-  transform: translate(-100%, -100%) scale(0.94);
+/* Below NOVA — what the hero falls back to on a phone, where above would put
+   the bubble under the navbar. Same tail, flipped to point up at her. */
+.nova-speech[data-place="below"] {
+  transform: translateY(6px) scale(0.94);
 }
 
-.nova-speech[data-dock="true"][data-open="true"] {
-  transform: translate(-100%, -100%) scale(1);
+.nova-speech[data-place="below"][data-open="true"] {
+  transform: translateY(0) scale(1);
 }
 
-.nova-speech[data-dock="true"]::after {
-  right: 18px;
+.nova-speech[data-place="below"]::after {
+  top: -5px;
+  border-radius: 3px 0 0 0;
+  /* Mirrors the corner so the two visible edges are the top and left ones. */
+  border-right: 0;
+  border-bottom: 0;
+  border-top: inherit;
+  border-left: inherit;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -887,14 +896,11 @@
     transition-delay: 0s;
   }
 
-  .nova-speech[data-dock="false"],
-  .nova-speech[data-dock="false"][data-open="true"] {
-    transform: translate(-50%, -100%);
-  }
-
-  .nova-speech[data-dock="true"],
-  .nova-speech[data-dock="true"][data-open="true"] {
-    transform: translate(-100%, -100%);
+  /* Matches the specificity of the [data-place] rules above — a media query
+     adds none of its own, so a plain `.nova-speech` would lose to them. */
+  .nova-speech[data-place][data-open],
+  .nova-speech[data-place][data-open="true"] {
+    transform: none;
   }
 
   .nova-chat-typing i {
