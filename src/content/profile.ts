@@ -202,6 +202,13 @@ export type Project = {
   stack: string[];
   live?: string;
   source?: string;
+  /**
+   * Screenshot filename inside `public/projects/`. Stated per project rather
+   * than derived from the slug, because several files don't match their slug
+   * (mile-app / mileapp, bountie-hunter / bountie, tola / tola-web) — a derived
+   * path would 404 on those silently. Omit it and the card draws a placeholder.
+   */
+  image?: string;
   /** NOVA recommends these when asked to show its favourites. */
   featured?: boolean;
   /** Blurb/stack inferred from the project name — confirm before publishing. */
@@ -211,6 +218,7 @@ export type Project = {
 export const projects: Project[] = [
   {
     slug: "weathernime",
+    image: "weathernime.png",
     name: "Weathernime",
     blurb:
       "Weather forecast web app wrapped in an anime concept — built end to end through vibe coding.",
@@ -221,77 +229,109 @@ export const projects: Project[] = [
   },
   {
     slug: "food-analyzer",
+    image: "food-analyzer.png",
     name: "Food Analyzer",
     blurb:
       "Upload a meal and get an instant nutrition breakdown back, powered by an AI vision model.",
-    stack: ["Next.js", "AI Vision", "Node.js"],
+    stack: ["Next.js", "AI Vision", "Open Router AI", "Cloudinary"],
+    live: "https://food-analyzer.touchsimpledev.site",
+    source: "https://github.com/edwinsatya/food-analyzer",
     featured: true,
     needsReview: true,
   },
   {
     slug: "happy-farm",
+    image: "happy-farm.png",
     name: "Happy Farm",
     blurb:
       "Farm operations platform for Tola Solution — tracking cycles, stock, and daily field activity.",
-    stack: ["Next.js", "Node.js", "PostgreSQL"],
+    stack: ["Next.js", "Node.js", "PostgreSQL", "Tailwind CSS", "Prisma"],
     featured: true,
     needsReview: true,
   },
   {
     slug: "magloft",
+    image: "magloft.png",
     name: "Magloft",
     blurb:
       "Digital publishing platform that turns magazines and long-form content into apps and web readers.",
-    stack: ["Vue.js", "Node.js", "GraphQL"],
+    stack: ["Next.js", "Tailwind CSS", "Contentful CMS", "Node.js"],
+    live: "https://www.magloft.com",
     needsReview: true,
   },
   {
     slug: "mileapp",
+    image: "mile-app.png",
     name: "MileApp",
     blurb:
       "Field operations SaaS for logistics teams — task assignment, routing, and proof of delivery.",
-    stack: ["Vue.js", "Node.js", "MongoDB"],
+    stack: ["Vue.js", "Node.js", "Express", "Mockapi"],
+    live: "https://mileapp-tasks.touchsimpledev.site",
+    source: "https://github.com/edwinsatya/mileapp-client",
     needsReview: true,
   },
   {
     slug: "bountie",
+    image: "bountie-hunter.png",
     name: "Bountie",
     blurb:
       "Competitive gaming platform where players earn rewards for the matches they play.",
-    stack: ["React", "Node.js", "PostgreSQL"],
+    stack: ["Next.js", "Tailwind CSS", "Metamask", "Web3"],
+    live: "https://bountiehunter.io",
     needsReview: true,
   },
   {
     slug: "desklab",
+    image: "desklab.png",
     name: "DeskLab",
     blurb: "A workspace tool built to take the repetitive parts out of the day.",
-    stack: ["React", "Node.js"],
+    stack: ["Next.js", "Tailwind CSS", "Open Router AI", "Zustand"],
+    live: "https://desklab.touchsimpledev.site",
+    source: "https://github.com/edwinsatya/DeskLab",
     needsReview: true,
   },
   {
     slug: "tola-web",
+    image: "tola.png",
     name: "Tola Web",
     blurb:
       "Company site for Tola Solution — the studio behind the Happy Farm platform.",
     stack: ["Next.js", "Tailwind CSS"],
+    live: "https://www.tola.solutions",
     needsReview: true,
   },
   {
     slug: "pokedex",
+    image: "pokedex.png",
     name: "Pokedex",
     blurb:
       "A fast, searchable Pokédex built on the PokéAPI, with type filters and detail views.",
-    stack: ["React", "REST API"],
+    stack: ["Next.js", "Tailwind CSS", "PokéAPI", "PokeWallet"],
+    live: "https://pokedex.touchsimpledev.site",
+    source: "https://github.com/edwinsatya/pokedex",
     needsReview: true,
   },
   {
     slug: "mini-google",
+    image: "mini-google.png",
     name: "Mini-Google",
     blurb:
       "A search engine in miniature — crawling, indexing, and ranking behind a deliberately plain UI.",
-    stack: ["Node.js", "Express"],
+    stack: ["React.js", "serper.dev", "context api"],
+    live: "https://mini-google.touchsimpledev.site",
+    source: "https://github.com/edwinsatya/mini-google",
     needsReview: true,
   },
+  {
+    slug: "anivault",
+    image: "anivault.png",
+    name: "Anivault",
+    blurb: "Anime / Manga database and tracker with search, watchlist, and recommendations.",
+    stack: ["Next.js", "Tailwind.css", "anilist api"],
+    live: "https://anivault.touchsimpledev.site",
+    source: "https://github.com/edwinsatya/AniVault",
+    needsReview: true,
+  }
 ];
 
 /* -------------------------------------------------------------------------- */
@@ -307,6 +347,13 @@ export type Role = {
 };
 
 export const experience: Role[] = [
+  {
+    company: "PT. Bank Rakyat Indonesia (Persero) Tbk",
+    project: "LMS (Loyalty Management System) Project",
+    title: "Frontend Developer",
+    period: "Jun 2026 – Present",
+    current: true,
+  },
   {
     company: "Tola Solution",
     project: "Happy Farm Project",

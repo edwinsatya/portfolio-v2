@@ -1,6 +1,7 @@
 import { projects, type Project } from "@/content/profile";
 import { Section } from "@/components/ui/Section";
 import { Reveal } from "@/components/ui/Reveal";
+import { ProjectShot } from "@/components/ui/ProjectShot";
 import { ArrowUpRight, Github, Sparkle } from "@/components/ui/Icons";
 
 function ProjectCard({
@@ -12,11 +13,13 @@ function ProjectCard({
 }) {
   return (
     <div
-      className={`panel panel-hover edge-light group flex h-full flex-col rounded-2xl p-6 sm:p-7 ${
-        featured ? "sm:p-8" : ""
+      className={`panel panel-hover edge-light group flex h-full flex-col rounded-2xl p-4 sm:p-5 ${
+        featured ? "sm:p-6" : ""
       }`}
     >
-      <div className="flex items-start justify-between gap-4">
+      <ProjectShot project={project} />
+
+      <div className="mt-5 flex items-start justify-between gap-4 px-1">
         <h3
           className={`font-display font-semibold ${
             featured ? "text-xl sm:text-2xl" : "text-lg"
@@ -34,14 +37,14 @@ function ProjectCard({
       </div>
 
       <p
-        className={`mt-3 leading-relaxed text-muted text-pretty ${
+        className={`mt-3 px-1 leading-relaxed text-muted text-pretty ${
           featured ? "text-base" : "text-sm"
         }`}
       >
         {project.blurb}
       </p>
 
-      <ul className="mt-5 flex flex-wrap gap-1.5">
+      <ul className="mt-5 flex flex-1 flex-wrap content-start gap-1.5 px-1">
         {project.stack.map((tech) => (
           <li
             key={tech}
@@ -53,7 +56,7 @@ function ProjectCard({
       </ul>
 
       {(project.live || project.source) && (
-        <div className="mt-6 flex flex-wrap items-center gap-4 border-t border-line pt-5">
+        <div className="mt-6 mx-1 flex flex-wrap items-center gap-4 border-t border-line pt-5">
           {project.live && (
             <a
               href={project.live}

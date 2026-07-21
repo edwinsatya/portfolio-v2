@@ -14,8 +14,7 @@ export function Footer() {
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-6 py-10 sm:flex-row sm:px-8">
         <div className="flex flex-col items-center gap-2 sm:items-start">
           <p className="text-center text-sm text-faint sm:text-left">
-            © {new Date().getFullYear()} {profile.name} · Built in{" "}
-            {profile.location}
+            © {new Date().getFullYear()} {profile.name}
           </p>
           <ForgetMe />
         </div>

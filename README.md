@@ -106,6 +106,24 @@ area, so a bubble can never render off screen or under the nav, and the tail
 keeps tracking NOVA even when the body has been clamped away from her. Tune
 `EDGE_PAD`, `BUBBLE_GAP`, and `TAIL_INSET` in `useNovaStage.ts`.
 
+## Project screenshots
+
+Screenshots live in `public/projects/` and are wired up per project via the
+`image` field in `profile.ts`. That field names the file explicitly rather than
+deriving it from the slug, because several filenames don't match their slug
+(`mile-app` / `mileapp`, `bountie-hunter` / `bountie`, `tola` / `tola-web`) — a
+derived path would 404 on those silently.
+
+[`ui/ProjectShot.tsx`](src/components/ui/ProjectShot.tsx) renders them through
+`next/image` in a fixed 2:1 box with `object-cover`, so the grid stays even no
+matter what the source images do. A project with no `image` gets a gradient
+placeholder with its initial instead — same box, no ragged layout.
+
+Nothing here is `priority`: the grid never sits above the fold, so all eleven
+stay lazy. The `sizes` attribute mirrors the grid's breakpoints; if you change
+the column counts in `Projects.tsx`, change `sizes` to match or the optimizer
+will ship files at the wrong width.
+
 ## Memory
 
 [`lib/memory.ts`](src/lib/memory.ts) stores `visitCount`, `visitorName`,
