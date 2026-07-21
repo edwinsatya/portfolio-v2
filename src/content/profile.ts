@@ -236,7 +236,6 @@ export const projects: Project[] = [
     stack: ["Next.js", "AI Vision", "Open Router AI", "Cloudinary"],
     live: "https://food-analyzer.touchsimpledev.site",
     source: "https://github.com/edwinsatya/food-analyzer",
-    featured: true,
     needsReview: true,
   },
   {
@@ -246,7 +245,6 @@ export const projects: Project[] = [
     blurb:
       "Farm operations platform for Tola Solution — tracking cycles, stock, and daily field activity.",
     stack: ["Next.js", "Node.js", "PostgreSQL", "Tailwind CSS", "Prisma"],
-    featured: true,
     needsReview: true,
   },
   {
@@ -309,6 +307,7 @@ export const projects: Project[] = [
     stack: ["Next.js", "Tailwind CSS", "PokéAPI", "PokeWallet"],
     live: "https://pokedex.touchsimpledev.site",
     source: "https://github.com/edwinsatya/pokedex",
+    featured: true,
     needsReview: true,
   },
   {
@@ -330,6 +329,7 @@ export const projects: Project[] = [
     stack: ["Next.js", "Tailwind.css", "anilist api"],
     live: "https://anivault.touchsimpledev.site",
     source: "https://github.com/edwinsatya/AniVault",
+    featured: true,
     needsReview: true,
   }
 ];

@@ -1,4 +1,4 @@
-import { profile, services, skillGroups } from "./profile";
+import { profile, projects, services, skillGroups } from "./profile";
 
 /**
  * Everything NOVA can answer, as data.
@@ -37,6 +37,15 @@ export type NovaIntent = {
 function greet(name: string | null, withName: string, withoutName: string) {
   return name ? withName.replace("{name}", name) : withoutName;
 }
+
+const projectCount = projects.length;
+
+/** "A, B and C" — read from the `featured` flags rather than hard-coded. */
+const picks = (() => {
+  const names = projects.filter((p) => p.featured).map((p) => p.name);
+  if (names.length <= 1) return names[0] ?? "coming soon";
+  return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+})();
 
 const frontend = skillGroups[0].items.slice(0, 4).join(", ");
 const backend = skillGroups[1].items.slice(0, 3).join(", ");
@@ -112,11 +121,13 @@ export const novaIntents: NovaIntent[] = [
       "case study",
       "examples",
     ],
+    // Count and picks both derived, so flipping `featured` in profile.ts moves
+    // NOVA's answer with it instead of leaving her naming last month's three.
     answer: ({ name }) =>
       greet(
         name,
-        "Happily, {name} — ten of them. My three picks are Weathernime, Food Analyzer and Happy Farm. Scrolling you there now.",
-        "Ten of them. My three picks are Weathernime, Food Analyzer and Happy Farm. Scrolling you there now.",
+        `Happily, {name} — ${projectCount} of them. My picks are ${picks}. Scrolling you there now.`,
+        `${projectCount} of them, and my picks are ${picks}. Scrolling you there now.`,
       ),
     scrollTo: "projects",
     followUps: ["What's his tech stack?", "Is he available?", "How do I contact him?"],

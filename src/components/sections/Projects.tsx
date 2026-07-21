@@ -94,7 +94,7 @@ export function Projects() {
       id="projects"
       eyebrow="Selected work"
       title="Things that actually shipped"
-      lede="Ten projects, from bootcamp experiments to platforms with real users on them. NOVA has opinions about which are best."
+      lede="From bootcamp experiments to platforms with real users on them. NOVA has opinions about which are best."
     >
       <ul className="grid gap-4 md:grid-cols-3">
         {featured.map((project, index) => (
