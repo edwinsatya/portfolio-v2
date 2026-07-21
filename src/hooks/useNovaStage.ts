@@ -205,13 +205,6 @@ export function useNovaStage({ forceDock = false }: { forceDock?: boolean } = {}
         stage.dataset.ready = "true";
       }
 
-      // How much room NOVA occupies at the bottom of the screen, so the chat
-      // panel can sit directly on top of her at either dock size.
-      if (shouldDock) {
-        const dockTop = centerY - (BASE_HEIGHT * scale) / 2;
-        stage.style.setProperty("--nova-dock-gap", `${Math.round(vh - dockTop + 10)}px`);
-      }
-
       /* Gaze — origin derived from the transform above, not measured. */
       const halfHeight = (BASE_HEIGHT * scale) / 2;
       const boxTop = centerY - halfHeight;

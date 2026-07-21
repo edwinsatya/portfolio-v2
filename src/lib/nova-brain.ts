@@ -8,8 +8,8 @@ import {
 
 export type NovaReply = {
   text: string;
-  /** Section id to smooth-scroll to once the reply lands. */
-  scrollTo?: string;
+  /** Scene to offer navigation to once the reply lands. */
+  scene?: string;
   /** Chips to offer next. */
   suggestions: string[];
 };
@@ -101,7 +101,7 @@ export const scriptedResponder: NovaResponder = async (question, context) => {
 
   return {
     text: intent.answer(context),
-    scrollTo: intent.scrollTo,
+    scene: intent.scene,
     suggestions: intent.followUps ?? DEFAULT_SUGGESTIONS,
   };
 };

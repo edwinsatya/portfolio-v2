@@ -2,10 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import { addLike } from "@/lib/likes";
-import { celebrate, fireLike, onLike, setChatOpen } from "@/lib/nova-bus";
+import { celebrate, fireLike, onLike } from "@/lib/nova-bus";
 import { LoveBurst } from "./LoveBurst";
 import { Nova } from "./Nova";
-import { NovaChat } from "./NovaChat";
+import { NovaTerminal } from "./NovaTerminal";
 import { useNovaChat } from "@/hooks/useNovaChat";
 import { useNovaMemory } from "@/hooks/useNovaMemory";
 import { useNovaStage } from "@/hooks/useNovaStage";
@@ -31,11 +31,7 @@ export function NovaStage() {
     isFirstVisit: (visit.previous?.visitCount ?? 0) === 0,
   });
 
-  // Chatting pulls her out of the hero and down to the corner, so the panel is
-  // always beside her rather than stranded across the page.
-  const { stageRef, anchorRef, svgRef, bubbleRef } = useNovaStage({
-    forceDock: chat.isOpen,
-  });
+  const { stageRef, anchorRef, svgRef, bubbleRef } = useNovaStage();
 
   const { mood, line, open } = useSceneReactions();
   const tapRef = useRef<HTMLButtonElement>(null);
@@ -47,9 +43,6 @@ export function NovaStage() {
     if (wasOpen.current && !chat.isOpen) tapRef.current?.focus();
     wasOpen.current = chat.isOpen;
   }, [chat.isOpen]);
-
-  // The tagline rotation pauses while the chat is up.
-  useEffect(() => setChatOpen(chat.isOpen), [chat.isOpen]);
 
   // One place records a like and picks a celebration, whatever fired it — the
   // L key, the counter, the tagline, or NOVA herself.
@@ -94,13 +87,14 @@ export function NovaStage() {
 
       <LoveBurst />
 
-      <NovaChat
+      <NovaTerminal
         isOpen={chat.isOpen}
-        messages={chat.messages}
+        lines={chat.lines}
         isThinking={chat.isThinking}
         suggestions={chat.suggestions}
         onSend={chat.send}
         onClose={chat.close}
+        onScene={chat.goToScene}
       />
     </div>
   );

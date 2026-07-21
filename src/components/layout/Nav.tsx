@@ -18,11 +18,11 @@ import {
 const ICONS = { home: Home, work: Grid, about: User, contact: Mail };
 
 /**
- * Floating pill nav, top-right. Each item is a real route, so the back button
- * and direct links work without anything custom.
+ * Site navigation.
  *
- * No mobile sheet: the four labels collapse to icons on phones rather than
- * hiding behind a hamburger — one less tap between the visitor and the scene.
+ * Desktop: a floating pill top-right. Phones: a bottom tab bar with icons and
+ * labels, where thumbs actually reach. Each item is a real route, so the back
+ * button and direct links work without anything custom.
  */
 export function Nav() {
   const segment = useSelectedLayoutSegment();
@@ -31,34 +31,35 @@ export function Nav() {
   return (
     <header
       data-site-nav
-      className="fixed inset-x-0 top-0 z-50 flex justify-end px-4 pt-4 sm:px-6 sm:pt-6"
+      className="site-nav"
     >
-      <nav
-        aria-label="Primary"
-        className="flex items-center gap-1 rounded-full border border-white/70 bg-surface/85 p-1.5 shadow-[0_8px_30px_-12px_rgb(20_22_31/0.25)] backdrop-blur-xl"
-      >
-        <button
-          type="button"
-          onClick={() => askNova()}
-          className="nav-icon"
-          aria-label="Talk to NOVA"
-        >
-          <ChatBubble className="size-4" />
-        </button>
+      <nav aria-label="Primary" className="site-nav-pill">
+        {/* Utilities. Inline in the desktop pill; on phones this whole group
+            breaks out to the top-right, leaving the bottom bar to the scenes. */}
+        <span className="site-nav-utils">
+          <button
+            type="button"
+            onClick={() => askNova()}
+            className="nav-icon"
+            aria-label="Talk to NOVA"
+          >
+            <ChatBubble className="size-4" />
+          </button>
 
-        <a
-          href={profile.links.resume}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="nav-icon"
-          aria-label="Resume (opens in a new tab)"
-        >
-          <FileText className="size-4" />
-        </a>
+          <a
+            href={profile.links.resume}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="nav-icon"
+            aria-label="Resume (opens in a new tab)"
+          >
+            <FileText className="size-4" />
+          </a>
+        </span>
 
-        <span aria-hidden className="mx-0.5 h-4 w-px bg-line" />
+        <span aria-hidden className="site-nav-rule" />
 
-        <ul className="flex items-center gap-0.5">
+        <ul className="site-nav-items">
           {scenes.map((scene) => {
             const Icon = ICONS[scene.id];
             const isActive = active === scene.id;
@@ -67,15 +68,12 @@ export function Nav() {
                 <Link
                   href={scene.href}
                   aria-current={isActive ? "page" : undefined}
-                  className={`mono-label flex items-center justify-center rounded-full transition-colors ${
-                    isActive ? "bg-chrome text-bg" : "text-faint hover:text-ink"
-                  } size-8 sm:size-auto sm:px-3.5 sm:py-2`}
+                  className="site-nav-link mono-label"
+                  data-active={isActive}
                 >
-                  {/* Icon on phones, label from `sm` up. The label stays in the
-                      accessibility tree either way. */}
-                  <Icon className="size-4 sm:hidden" />
-                  <span className="hidden sm:inline">{scene.label}</span>
-                  <span className="sr-only sm:hidden">{scene.label}</span>
+                  {/* Icon shows on phones only; the label is always present. */}
+                  <Icon className="site-nav-icon" />
+                  <span>{scene.label}</span>
                 </Link>
               </li>
             );

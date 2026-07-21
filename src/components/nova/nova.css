@@ -766,6 +766,13 @@
   opacity: 1;
 }
 
+/* The terminal lives inside this layer, so its own z-index is scoped to this
+   stacking context — it can never rise above the nav from in here. Lifting the
+   whole stage while the terminal is open is what puts the modal on top. */
+.nova-stage[data-chatting="true"] {
+  z-index: 90;
+}
+
 .nova-anchor {
   position: absolute;
   top: 0;
@@ -798,251 +805,443 @@
 }
 
 /* -------------------------------------------------------------------------- */
-/* Chat panel                                                                  */
+/* Terminal                                                                    */
 /* -------------------------------------------------------------------------- */
 
-.nova-chat {
+/* The terminal is the one dark surface on a light site, so it gets its own
+   palette rather than borrowing the page tokens. */
+.term-layer {
+  --term-bg: #0d1117;
+  --term-bg-soft: #11161f;
+  --term-line: #222b36;
+  --term-dim: #6b7789;
+  --term-green: #4ade9b;
+  --term-green-soft: #7fe3b6;
+  --term-red: #ff6b6b;
+
   position: fixed;
-  right: 20px;
-  /* Written by the stage loop: exactly the room NOVA takes at the bottom. */
-  bottom: var(--nova-dock-gap, 160px);
-  z-index: 1;
-
-  display: flex;
-  flex-direction: column;
-  width: min(21rem, calc(100vw - 2.5rem));
-  max-height: min(28rem, calc(100vh - var(--nova-dock-gap, 160px) - 1.5rem));
-
-  border: 1px solid color-mix(in oklab, var(--color-accent) 24%, var(--color-line));
-  border-radius: 1.1rem;
-  background: color-mix(in oklab, var(--color-surface) 94%, transparent);
-  backdrop-filter: blur(16px);
-  box-shadow:
-    0 24px 60px -24px rgb(20 22 31 / 0.28),
-    0 2px 8px -4px rgb(20 22 31 / 0.12);
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
 
   opacity: 0;
   visibility: hidden;
-  transform: translateY(10px) scale(0.97);
-  transform-origin: bottom right;
+  /* The stage this renders inside is pointer-events: none so it can't swallow
+     page clicks. The terminal is a modal and must take them, so it opts back
+     in — without this the traffic light, chips, and buttons are all dead. */
+  pointer-events: none;
   transition:
-    opacity 200ms ease,
-    transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
-    visibility 0s linear 200ms;
+    opacity 220ms ease,
+    visibility 0s linear 220ms;
 }
 
-.nova-chat[data-open="true"] {
+.term-layer[data-open="true"] {
   opacity: 1;
   visibility: visible;
-  transform: translateY(0) scale(1);
-  transition-delay: 0s;
   pointer-events: auto;
+  transition-delay: 0s;
 }
 
-.nova-chat-head {
+/* Dims and blurs the stage behind. Also the click-off-to-close target. */
+.term-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgb(12 14 22 / 0.42);
+  backdrop-filter: blur(7px);
+  cursor: default;
+}
+
+.term {
+  position: relative;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.7rem 0.85rem;
-  border-bottom: 1px solid var(--color-line);
-}
+  flex-direction: column;
+  width: min(720px, 100%);
+  height: min(560px, 100%);
 
-.nova-chat-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-family: var(--font-display);
+  border: 1px solid var(--term-line);
+  border-radius: 0.85rem;
+  background: var(--term-bg);
+  box-shadow:
+    0 40px 90px -30px rgb(8 10 16 / 0.7),
+    0 0 0 1px rgb(255 255 255 / 0.03) inset;
+  overflow: hidden;
+
+  font-family: var(--font-mono);
   font-size: 0.8rem;
-  letter-spacing: 0.02em;
+  line-height: 1.65;
+
+  translate: 0 10px;
+  scale: 0.985;
+  transition:
+    translate 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    scale 300ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.nova-chat-dot {
+.term-layer[data-open="true"] .term {
+  translate: 0 0;
+  scale: 1;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Desktop chrome: the left rail                                               */
+/* -------------------------------------------------------------------------- */
+
+.term-rail {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 2.4rem;
+  border-right: 1px solid var(--term-line);
+  background: var(--term-bg-soft);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.85rem 0;
+}
+
+.term-lights {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.term-light {
+  width: 0.66rem;
+  height: 0.66rem;
+  border-radius: 999px;
+  background: #39424f;
+}
+
+.term-light-close {
+  background: var(--term-red);
+  cursor: pointer;
+}
+
+.term-light-min {
+  background: #f5bd4f;
+}
+
+.term-light-max {
+  background: #5ec26a;
+}
+
+/* The spine label, rotated to run up the rail. */
+.term-spine {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  writing-mode: vertical-rl;
+  rotate: 180deg;
+  letter-spacing: 0.28em;
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  color: var(--term-dim);
+  white-space: nowrap;
+}
+
+.term-live {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  writing-mode: vertical-rl;
+  rotate: 180deg;
+  letter-spacing: 0.22em;
+  font-size: 0.55rem;
+  color: var(--term-dim);
+}
+
+.term-live i {
   width: 0.4rem;
   height: 0.4rem;
   border-radius: 999px;
-  background: var(--color-accent);
-  box-shadow: 0 0 8px var(--color-accent);
+  background: var(--term-green);
+  box-shadow: 0 0 7px var(--term-green);
+  animation: term-pulse 2.4s ease-in-out infinite;
 }
 
-.nova-chat-close {
-  display: inline-flex;
-  padding: 0.25rem;
-  border-radius: 0.5rem;
-  color: var(--color-faint);
-  transition: color 180ms ease;
+@keyframes term-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
 }
 
-.nova-chat-close:hover {
-  color: var(--color-ink);
+/* The mobile title bar is hidden on desktop, where the rail does the job. */
+.term-bar {
+  display: none;
 }
 
-.nova-chat-log {
+/* -------------------------------------------------------------------------- */
+/* Transcript                                                                  */
+/* -------------------------------------------------------------------------- */
+
+.term-log {
   flex: 1 1 auto;
   overflow-y: auto;
   overscroll-behavior: contain;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.85rem;
+  padding: 1.1rem 1.2rem 0.6rem;
+  margin-left: 2.4rem;
   scrollbar-width: thin;
+  scrollbar-color: var(--term-line) transparent;
 }
 
-.nova-chat-msg {
-  max-width: 88%;
-  padding: 0.5rem 0.7rem;
-  border-radius: 0.85rem;
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  text-wrap: pretty;
+.term-row + .term-row {
+  margin-top: 0.55rem;
 }
 
-.nova-chat-msg[data-from="nova"] {
-  align-self: flex-start;
-  border: 1px solid var(--color-line);
-  border-bottom-left-radius: 0.3rem;
-  background: var(--color-bg-soft);
-  color: var(--color-ink);
+.term-line {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: #c9d4e2;
 }
 
-.nova-chat-msg[data-from="visitor"] {
-  align-self: flex-end;
-  border-bottom-right-radius: 0.3rem;
-  background: var(--color-chrome);
-  color: var(--color-bg);
+.term-line[data-kind="boot"] {
+  color: var(--term-green-soft);
 }
 
-.nova-chat-typing {
-  display: inline-flex;
-  gap: 0.2rem;
-  padding: 0.15rem 0;
+.term-line[data-kind="hint"] {
+  color: var(--term-dim);
 }
 
-.nova-chat-typing i {
-  width: 0.32rem;
-  height: 0.32rem;
-  border-radius: 999px;
-  background: var(--color-faint);
-  animation: nova-typing 1.2s ease-in-out infinite;
+.term-line[data-kind="comment"],
+.term-line[data-kind="status"] {
+  color: var(--term-dim);
+  font-style: italic;
 }
 
-.nova-chat-typing i:nth-child(2) {
-  animation-delay: 0.15s;
+.term-line[data-kind="input"] {
+  color: #e6edf5;
 }
 
-.nova-chat-typing i:nth-child(3) {
-  animation-delay: 0.3s;
+.term-line[data-kind="reply"] {
+  color: var(--term-green-soft);
 }
 
-@keyframes nova-typing {
-  0%,
-  60%,
-  100% {
-    opacity: 0.25;
-    transform: translateY(0);
-  }
-  30% {
-    opacity: 1;
-    transform: translateY(-2px);
-  }
+.term-line[data-kind="error"] {
+  color: var(--term-red);
 }
 
-.nova-chat-chips {
+.term-line-prompt {
+  color: var(--term-green);
+}
+
+.term-line-caret {
+  color: var(--term-green);
+}
+
+/* Outlined action button under a reply that maps to a scene. */
+.term-nav {
+  display: inline-block;
+  margin-top: 0.6rem;
+  padding: 0.42rem 0.75rem;
+  border: 1px solid color-mix(in oklab, var(--term-green) 45%, transparent);
+  border-radius: 0.4rem;
+  background: color-mix(in oklab, var(--term-green) 8%, transparent);
+  color: var(--term-green);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.term-nav:hover {
+  background: color-mix(in oklab, var(--term-green) 18%, transparent);
+  border-color: var(--term-green);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Suggestions + prompt                                                        */
+/* -------------------------------------------------------------------------- */
+
+.term-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
-  padding: 0 0.85rem 0.6rem;
+  padding: 0.5rem 1.2rem 0.2rem;
+  margin-left: 2.4rem;
 }
 
-.nova-chat-chip {
-  padding: 0.3rem 0.6rem;
-  border: 1px solid var(--color-line);
-  border-radius: 999px;
-  background: var(--color-bg-soft);
-  color: var(--color-muted);
-  font-size: 0.72rem;
+.term-chip {
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--term-line);
+  border-radius: 0.35rem;
+  color: var(--term-dim);
+  font-size: 0.68rem;
   transition:
-    border-color 180ms ease,
-    color 180ms ease;
+    color 150ms ease,
+    border-color 150ms ease;
 }
 
-.nova-chat-chip:hover {
-  border-color: color-mix(in oklab, var(--color-accent) 50%, transparent);
-  color: var(--color-ink);
+.term-chip:hover {
+  color: var(--term-green-soft);
+  border-color: color-mix(in oklab, var(--term-green) 40%, transparent);
 }
 
-.nova-chat-form {
+.term-form {
   display: flex;
-  gap: 0.4rem;
-  padding: 0.65rem;
-  border-top: 1px solid var(--color-line);
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.75rem 1.2rem;
+  margin-left: 2.4rem;
+  border-top: 1px solid var(--term-line);
 }
 
-.nova-chat-input {
+.term-prompt {
+  color: var(--term-green);
+  white-space: nowrap;
+}
+
+/* The real input sits on top of a block caret parked at the text's end. */
+.term-input-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.term-input {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 0.45rem 0.7rem;
-  border: 1px solid var(--color-line);
-  border-radius: 0.7rem;
-  background: var(--color-bg-soft);
-  color: var(--color-ink);
-  font: inherit;
-  font-size: 0.8125rem;
-}
-
-.nova-chat-input::placeholder {
-  color: var(--color-faint);
-}
-
-.nova-chat-input:focus {
-  border-color: color-mix(in oklab, var(--color-accent) 60%, transparent);
+  background: none;
+  border: 0;
   outline: none;
+  color: #e6edf5;
+  font: inherit;
+  /* The block caret below stands in for it. */
+  caret-color: transparent;
 }
 
-.nova-chat-send {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.1rem;
-  border-radius: 0.7rem;
-  background: var(--color-chrome);
-  color: var(--color-bg);
-  transition: opacity 180ms ease;
+.term-caret {
+  position: absolute;
+  left: 0;
+  width: 0.52em;
+  height: 1.05em;
+  background: var(--term-green);
+  animation: term-caret 1.05s step-end infinite;
+  pointer-events: none;
 }
 
-.nova-chat-send:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
+/* Once there's text the native caret is more use than a parked block, so the
+   block steps aside rather than sitting under the first character. */
+.term-caret[data-typing="true"] {
+  display: none;
 }
 
-/* Bottom sheet on phones. */
-@media (max-width: 639px) {
-  .nova-chat {
-    right: 0;
-    left: 0;
-    bottom: 0;
-    width: 100%;
-    max-height: 78vh;
-    border-right: 0;
-    border-bottom: 0;
-    border-left: 0;
-    border-radius: 1.25rem 1.25rem 0 0;
-    transform: translateY(100%);
-    transform-origin: bottom center;
-    /* Clear of the home indicator on iOS. */
-    padding-bottom: env(safe-area-inset-bottom);
+.term-input:focus ~ .term-caret[data-typing="false"] {
+  display: block;
+}
+
+@keyframes term-caret {
+  0%,
+  100% {
+    opacity: 1;
   }
-
-  .nova-chat[data-open="true"] {
-    transform: translateY(0);
-  }
-
-  /* The sheet covers the corner NOVA docks in. Rather than leave her half
-     hidden behind it, take her off screen for as long as it's open — the sheet
-     header carries her name, and the close button is the way back. */
-  .nova-stage[data-chatting="true"] .nova-anchor {
+  50% {
     opacity: 0;
-    pointer-events: none;
-    transition: opacity 200ms ease;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Phones: full-height sheet, title bar instead of the rail                     */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 639px) {
+  .term-layer {
+    padding: 0;
+  }
+
+  .term {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+    translate: 0 2%;
+  }
+
+  .term-rail {
+    display: none;
+  }
+
+  .term-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.9rem 1rem;
+    padding-top: max(0.9rem, env(safe-area-inset-top));
+    border-bottom: 1px solid var(--term-line);
+    background: var(--term-bg-soft);
+  }
+
+  .term-bar-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--term-green-soft);
+  }
+
+  .term-bar-title i {
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 999px;
+    background: var(--term-green);
+    box-shadow: 0 0 7px var(--term-green);
+  }
+
+  .term-bar-actions {
+    display: flex;
+    gap: 0.35rem;
+  }
+
+  .term-bar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 999px;
+    background: #1b222d;
+    color: var(--term-dim);
+  }
+
+  .term-log,
+  .term-chips,
+  .term-form {
+    margin-left: 0;
+  }
+
+  .term-form {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Motion preferences                                                          */
+/* -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .term,
+  .term-layer[data-open="true"] .term {
+    translate: none;
+    scale: 1;
+    transition: none;
+  }
+
+  .term-live i,
+  .term-caret {
+    animation: none;
   }
 }
 
@@ -1291,21 +1490,4 @@
     transform: none;
   }
 
-  .nova-chat-typing i {
-    animation: none;
-    opacity: 0.6;
-  }
-
-  /* The panel still appears and disappears, it just fades rather than sliding. */
-  .nova-chat,
-  .nova-chat[data-open="true"] {
-    transform: none;
-    transition:
-      opacity 180ms ease,
-      visibility 0s linear 180ms;
-  }
-
-  .nova-chat[data-open="true"] {
-    transition-delay: 0s;
-  }
 }

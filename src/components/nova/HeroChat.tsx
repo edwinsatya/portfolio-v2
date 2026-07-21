@@ -20,6 +20,8 @@ const WORD_STEP_MS = 55;
 const WORD_REVEAL_MS = 420;
 /** Beat before the first line, so the boot screen is gone. */
 const START_DELAY = 600;
+/** Window for a second tap to count as a double-tap. */
+const DOUBLE_TAP_MS = 320;
 
 /**
  * NOVA's line and suggestion chips, bottom-left of the stage.
@@ -43,6 +45,11 @@ export function HeroChat({
       {/* Keyed by scene: React remounts the rotator so it restarts from that
           scene's own line, rather than resuming mid-cycle. */}
       <LineRotator key={sceneId} line={line} />
+
+      {/* Phones only — on desktop the chips read as clickable on their own. */}
+      <p className="stage-ask-hint" aria-hidden>
+        Tap to ask ↓
+      </p>
 
       <ul className="stage-chips">
         {chips.map((chip) => (
@@ -92,6 +99,8 @@ function LineRotator({ line }: { line: string }) {
   // Milliseconds still owed to the current line. Survives pause/resume.
   const remaining = useRef<number | null>(null);
   const startedAt = useRef(0);
+  // Timestamp of the last tap, for detecting a double-tap on touch.
+  const lastTapAt = useRef(0);
 
   const current = lines[index];
   const words = useMemo(() => current.split(" "), [current]);
@@ -142,10 +151,24 @@ function LineRotator({ line }: { line: string }) {
       className="stage-line"
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
-      // Liking from the tagline, as well as from NOVA and the counter.
-      onClick={(event) =>
-        fireLike({ x: event.clientX, y: event.clientY })
-      }
+      // Liking from the tagline, as well as from NOVA and the counter. Touch
+      // needs a double-tap: a single tap here is how you pause the rotation to
+      // read, and firing hearts for that would be noise.
+      onClick={(event) => {
+        const isTouch = event.nativeEvent.detail === 0 || !window.matchMedia("(hover: hover)").matches;
+        if (!isTouch) {
+          fireLike({ x: event.clientX, y: event.clientY });
+          return;
+        }
+
+        const now = Date.now();
+        if (now - lastTapAt.current < DOUBLE_TAP_MS) {
+          lastTapAt.current = 0;
+          fireLike({ x: event.clientX, y: event.clientY });
+        } else {
+          lastTapAt.current = now;
+        }
+      }}
     >
       {/* Screen readers get the sentence whole; the word split is visual. */}
       <span className="sr-only">{current}</span>

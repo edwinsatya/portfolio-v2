@@ -31,6 +31,12 @@ export function StageFrame({ children }: { children: React.ReactNode }) {
         <p className="mono-label mt-1.5 text-faint">
           {profile.role} · {profile.location}
         </p>
+        {/* Machine readout under the identity, phones only — desktop already
+            has the NOVA ONLINE strip along the bottom. */}
+        <p className="stage-status-line" aria-hidden>
+          <i />
+          System status: nominal
+        </p>
       </header>
 
       {/* Giant blurred wordmark, behind everything, on NOVA's centre line. */}
@@ -59,7 +65,9 @@ export function StageFrame({ children }: { children: React.ReactNode }) {
             <span className="stage-hint-key">
               Press <kbd>L</kbd> to like — or click NOVA
             </span>
-            <span className="stage-hint-tap">Tap NOVA to like</span>
+            <span className="stage-hint-tap">
+              <kbd>Double tap</kbd> to like — or tap NOVA
+            </span>
           </p>
         </div>
 

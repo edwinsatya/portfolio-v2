@@ -27,8 +27,8 @@ export type NovaIntent = {
    */
   keywords: string[];
   answer: (context: NovaAnswerContext) => string;
-  /** Section to smooth-scroll to after answering. */
-  scrollTo?: string;
+  /** Scene to navigate to after answering. Renders as a NAVIGATE_TO button. */
+  scene?: string;
   /** Chips offered once this answer has been given. */
   followUps?: string[];
 };
@@ -85,7 +85,7 @@ export const novaIntents: NovaIntent[] = [
       `${profile.bio}${
         name ? ` Short version, ${name}: he builds the whole thing, front to back.` : ""
       }`,
-    scrollTo: "about",
+    scene: "about",
     followUps: ["What's his tech stack?", "Where has he worked?", "Is he available?"],
   },
   {
@@ -103,7 +103,7 @@ export const novaIntents: NovaIntent[] = [
     ],
     answer: () =>
       `Front end it's ${frontend}. Behind it, ${backend}. Databases: MongoDB, PostgreSQL, MySQL. Plus Git, Docker and AWS to hold it all together.`,
-    scrollTo: "skills",
+    scene: "work",
     followUps: ["Show me his best work", "What can he build?", "Where has he worked?"],
   },
   {
@@ -126,10 +126,10 @@ export const novaIntents: NovaIntent[] = [
     answer: ({ name }) =>
       greet(
         name,
-        `Happily, {name} — ${projectCount} of them. My picks are ${picks}. Scrolling you there now.`,
-        `${projectCount} of them, and my picks are ${picks}. Scrolling you there now.`,
+        `Happily, {name} — ${projectCount} of them. My picks are ${picks}.`,
+        `${projectCount} of them, and my picks are ${picks}.`,
       ),
-    scrollTo: "projects",
+    scene: "work",
     followUps: ["What's his tech stack?", "Is he available?", "How do I contact him?"],
   },
   {
@@ -150,7 +150,7 @@ export const novaIntents: NovaIntent[] = [
     ],
     answer: () =>
       "Six years across five teams: Tola Solution on the Happy Farm platform, Magloft, Bountie, homecare24.id, and a fiber-optic internship at Telkom Indonesia before any of it.",
-    scrollTo: "experience",
+    scene: "work",
     followUps: ["What's his tech stack?", "Show me his best work", "Is he available?"],
   },
   {
@@ -172,7 +172,7 @@ export const novaIntents: NovaIntent[] = [
       `Three things: ${services
         .map((service) => service.title)
         .join(", ")}. Pick whichever sounds like your problem.`,
-    scrollTo: "services",
+    scene: "contact",
     followUps: ["Is he available?", "Show me his best work", "How do I contact him?"],
   },
   {
@@ -200,7 +200,7 @@ export const novaIntents: NovaIntent[] = [
         "Yes — he's taking on new projects and roles, and he usually replies inside 24 hours. Rates depend on the shape of the work, {name}, so email him and he'll give you a straight answer.",
         "Yes — he's taking on new projects and roles, and he usually replies inside 24 hours. Rates depend on the shape of the work, so email him and he'll give you a straight answer.",
       ),
-    scrollTo: "contact",
+    scene: "contact",
     followUps: ["How do I contact him?", "What can he build?", "Can I see his CV?"],
   },
   {
@@ -221,15 +221,15 @@ export const novaIntents: NovaIntent[] = [
       `Easiest is email: ${profile.email}. He's on GitHub and LinkedIn too, and all three are monitored.${
         name ? ` Tell him ${name} sent you.` : ""
       }`,
-    scrollTo: "contact",
+    scene: "contact",
     followUps: ["Is he available?", "Can I see his CV?", "Show me his best work"],
   },
   {
     id: "resume",
     keywords: ["resume", "cv", "curriculum", "download"],
     answer: () =>
-      "There's a resume link in the contact section — and a Resume button up in the nav, if you're in a hurry.",
-    scrollTo: "contact",
+      "Type /cv and I'll open it, or grab the Resume button up in the nav.",
+    scene: "contact",
     followUps: ["Where has he worked?", "Is he available?", "How do I contact him?"],
   },
   {

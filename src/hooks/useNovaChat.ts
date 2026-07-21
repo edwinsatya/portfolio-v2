@@ -1,47 +1,60 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   CHAT_GREETING,
   CHAT_NAME_ASK,
   DEFAULT_SUGGESTIONS,
   greetingsFor,
 } from "@/content/nova-qa";
+import { scenes } from "@/content/scenes";
+import { profile } from "@/content/profile";
 import { matchIntent, scriptedResponder, type NovaResponder } from "@/lib/nova-brain";
-import { celebrate, onAskNova } from "@/lib/nova-bus";
+import { celebrate, onAskNova, setChatOpen } from "@/lib/nova-bus";
 import { sanitizeName, setVisitorName } from "@/lib/memory";
 
-export type ChatMessage = {
+/**
+ * One line of terminal output.
+ *
+ * `kind` decides how it renders — the prompt prefix, the colour, whether it
+ * types itself out. Keeping the transcript as tagged lines rather than
+ * chat bubbles is what lets the log read like a real session.
+ */
+export type TerminalLine = {
   id: number;
-  from: "visitor" | "nova";
+  kind: "boot" | "hint" | "comment" | "input" | "status" | "reply" | "error";
   text: string;
+  /** On a reply: offer a NAVIGATE_TO button for this scene. */
+  scene?: string;
+  /** Newly-landed replies type themselves; replayed history does not. */
+  fresh?: boolean;
 };
 
 /** Minimum beat before a reply lands, so answers don't snap in instantly. */
-const THINKING_MS = 480;
+const THINKING_MS = 520;
+
+/** Commands the terminal understands, shown in the header and on error. */
+export const COMMANDS = ["/work", "/about", "/contact", "/cv", "/clear"] as const;
+
+const BOOT_LINES: Omit<TerminalLine, "id">[] = [
+  { kind: "boot", text: "nova_ai v1.0 · cognition_layer online" },
+  { kind: "hint", text: `type a question, or one of: ${COMMANDS.join(" ")}` },
+];
 
 let nextId = 0;
-
-function scrollToSection(id: string) {
-  const target = document.getElementById(id);
-  if (!target) return;
-
-  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  target.scrollIntoView({
-    behavior: reduced ? "auto" : "smooth",
-    block: "start",
-  });
-}
+const line = (l: Omit<TerminalLine, "id">): TerminalLine => ({ id: nextId++, ...l });
 
 /**
- * Conversation state for the chat panel.
+ * Terminal state for the NOVA chat.
  *
- * History lives here rather than in the panel component, so closing and
- * reopening keeps the thread — the stage never unmounts, so the conversation
- * lasts as long as the visit does.
+ * The answering brain, the name flow, and the memory writes are unchanged from
+ * the bubble version — this is the same conversation wearing a terminal. What's
+ * new is slash commands and that an answer's scene becomes a navigate button
+ * rather than a scroll, since the stage doesn't scroll any more.
  *
- * `respond` is injected. Today it's the scripted keyword matcher; pointing it at
- * an API route later needs no changes here or in the UI.
+ * `respond` is still injected, so pointing it at an LLM route later needs no
+ * changes here or in the UI.
  */
 export function useNovaChat({
   name,
@@ -52,40 +65,40 @@ export function useNovaChat({
   isFirstVisit: boolean;
   respond?: NovaResponder;
 }) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [lines, setLines] = useState<TerminalLine[]>([]);
   const [isThinking, setIsThinking] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_SUGGESTIONS);
 
   // Guards against a second question being sent while the first is in flight.
   const busy = useRef(false);
-  // True between NOVA asking the visitor's name and them answering. The ask now
-  // lives here rather than in a hero speech bubble.
+  // True between NOVA asking the visitor's name and them answering.
   const awaitingName = useRef(false);
 
-  const push = useCallback((from: ChatMessage["from"], text: string) => {
-    setMessages((current) => [...current, { id: nextId++, from, text }]);
+  const push = useCallback((l: Omit<TerminalLine, "id">) => {
+    setLines((current) => [...current, line(l)]);
   }, []);
 
   /**
    * `withQuestion` means the visitor arrived via a suggestion chip, so they want
-   * that answered — asking their name first would talk straight over it. The
-   * name is only requested when they open the chat to converse.
+   * that answered — asking their name first would talk straight over it.
    */
   const open = useCallback(
     (withQuestion = false) => {
       setIsOpen(true);
-      // Seed the thread the first time only; reopening keeps what was said.
-      setMessages((current) => {
+      setLines((current) => {
         if (current.length > 0) return current;
         const asksName = isFirstVisit && !name && !withQuestion;
         awaitingName.current = asksName;
         return [
-          {
-            id: nextId++,
-            from: "nova",
-            text: asksName ? CHAT_NAME_ASK : CHAT_GREETING(name),
-          },
+          ...BOOT_LINES.map(line),
+          line({
+            kind: "comment",
+            text: asksName
+              ? `// ${CHAT_NAME_ASK}`
+              : `// ${CHAT_GREETING(name).toLowerCase()}`,
+          }),
         ];
       });
     },
@@ -98,13 +111,63 @@ export function useNovaChat({
     [isOpen, open, close],
   );
 
+  /** Leaves the terminal and switches scene. Used by /commands and buttons. */
+  const goToScene = useCallback(
+    (sceneId: string) => {
+      const scene = scenes.find((s) => s.id === sceneId);
+      if (!scene) return;
+      close();
+      router.push(scene.href);
+    },
+    [close, router],
+  );
+
+  /** Returns true if the input was a command and has been handled. */
+  const runCommand = useCallback(
+    (raw: string): boolean => {
+      if (!raw.startsWith("/")) return false;
+
+      const cmd = raw.toLowerCase().split(/\s+/)[0];
+      push({ kind: "input", text: raw });
+
+      switch (cmd) {
+        case "/work":
+        case "/about":
+        case "/contact":
+          goToScene(cmd.slice(1));
+          return true;
+
+        case "/cv":
+          push({ kind: "reply", text: "opening resume in a new tab…" });
+          window.open(profile.links.resume, "_blank", "noopener,noreferrer");
+          return true;
+
+        case "/clear":
+          // Back to a fresh prompt, header and all. The name ask doesn't
+          // return — they've already been asked once.
+          setLines(BOOT_LINES.map(line));
+          return true;
+
+        default:
+          push({
+            kind: "error",
+            text: `command not found: ${cmd}\navailable: ${COMMANDS.join("  ")}`,
+          });
+          return true;
+      }
+    },
+    [push, goToScene],
+  );
+
   const send = useCallback(
     (raw: string) => {
       const question = raw.trim();
       if (!question || busy.current) return;
 
+      if (runCommand(question)) return;
+
       busy.current = true;
-      push("visitor", question);
+      push({ kind: "input", text: question });
       setIsThinking(true);
 
       void (async () => {
@@ -115,24 +178,23 @@ export function useNovaChat({
           const takingName = awaitingName.current && !matchIntent(question);
 
           const [reply] = await Promise.all([
-            takingName
-              ? Promise.resolve(null)
-              : respond(question, { name }),
+            takingName ? Promise.resolve(null) : respond(question, { name }),
             new Promise((resolve) => setTimeout(resolve, THINKING_MS)),
           ]);
 
           if (takingName) {
             awaitingName.current = false;
             const saved = setVisitorName(question);
-            // Pleased to meet you. Only sometimes — every single time would
-            // stop reading as a reaction and start reading as a transition.
-            if (saved && Math.random() < 0.6) celebrate("wave");
-            push(
-              "nova",
-              saved
+            push({
+              kind: "reply",
+              fresh: true,
+              text: saved
                 ? greetingsFor.named(saved)
                 : "No problem — ask me anything about Edwin.",
-            );
+            });
+            // Pleased to meet you. Only sometimes — every time would stop
+            // reading as a reaction and start reading as a transition.
+            if (saved && Math.random() < 0.6) celebrate("wave");
             setSuggestions(DEFAULT_SUGGESTIONS);
             return;
           }
@@ -140,9 +202,13 @@ export function useNovaChat({
           // They asked a real question instead of answering; stop waiting.
           awaitingName.current = false;
           if (reply) {
-            push("nova", reply.text);
+            push({
+              kind: "reply",
+              text: reply.text,
+              scene: reply.scene,
+              fresh: true,
+            });
             setSuggestions(reply.suggestions);
-            if (reply.scrollTo) scrollToSection(reply.scrollTo);
           }
         } finally {
           setIsThinking(false);
@@ -150,35 +216,35 @@ export function useNovaChat({
         }
       })();
     },
-    [name, respond, push],
+    [name, respond, push, runCommand],
   );
 
-  // Hero chips: open the panel, then ask. The send is deferred a tick so the
-  // greeting is seeded before the question lands under it.
+  // Hero chips: open the terminal, then ask. Deferred a tick so the header is
+  // seeded before the question lands under it.
   useEffect(
     () =>
       onAskNova((question) => {
         open(Boolean(question));
-        // No question means "just open" — the nav's chat button.
         if (question) window.setTimeout(() => send(question), 60);
       }),
     [open, send],
   );
 
-  // Escape closes from anywhere, not just while focus is inside the panel.
-  useEffect(() => {
-    if (!isOpen) return;
+  // The tagline rotation pauses while the terminal is up.
+  useEffect(() => setChatOpen(isOpen), [isOpen]);
 
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") close();
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isOpen, close]);
-
-  return { isOpen, messages, isThinking, suggestions, open, close, toggle, send };
+  return {
+    isOpen,
+    lines,
+    isThinking,
+    suggestions,
+    open,
+    close,
+    toggle,
+    send,
+    goToScene,
+  };
 }
 
-/** Re-exported so the panel can label its own input. */
+/** Re-exported so the terminal can label its own input. */
 export { sanitizeName };
