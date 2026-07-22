@@ -5,6 +5,7 @@ import { profile } from "@/content/profile";
 import { sceneFromSegment } from "@/content/scenes";
 import { HeroChat } from "@/components/nova/HeroChat";
 import { LikeCounter } from "@/components/nova/LikeCounter";
+import { StageStatus } from "@/components/stage/StageStatus";
 
 /**
  * The constant frame around every scene: identity top-left, blurred wordmark
@@ -71,12 +72,7 @@ export function StageFrame({ children }: { children: React.ReactNode }) {
           </p>
         </div>
 
-        <div aria-hidden className="stage-status">
-          <div className="stage-status-bar">
-            <div />
-          </div>
-          <p className="mono-label mt-2 text-center text-faint">Nova online</p>
-        </div>
+        <StageStatus />
       </div>
     </div>
   );

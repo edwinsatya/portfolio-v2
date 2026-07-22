@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { useSelectedLayoutSegment } from "next/navigation";
-import { profile } from "@/content/profile";
 import { scenes } from "@/content/scenes";
-import { askNova } from "@/lib/nova-bus";
+import { askNova, openResume } from "@/lib/nova-bus";
 import {
   ChatBubble,
   FileText,
@@ -46,15 +45,16 @@ export function Nav() {
             <ChatBubble className="size-4" />
           </button>
 
-          <a
-            href={profile.links.resume}
-            target="_blank"
-            rel="noopener noreferrer"
+          {/* Opens the live resume window rather than leaving for the PDF —
+              the PDF is still one click away, from inside it. */}
+          <button
+            type="button"
+            onClick={() => openResume()}
             className="nav-icon"
-            aria-label="Resume (opens in a new tab)"
+            aria-label="Open live resume"
           >
             <FileText className="size-4" />
-          </a>
+          </button>
         </span>
 
         <ul className="site-nav-items">

@@ -11,13 +11,19 @@ const TYPE_MS = 12;
 type NovaTerminalProps = {
   isOpen: boolean;
   windowState: WindowState;
+  /**
+   * The resume window is up in front of this one — both can be open at once,
+   * since either can be restored from the dock while the other is showing. The
+   * terminal then stops answering Escape and stops trapping Tab, so the window
+   * actually on top is the one the keyboard talks to.
+   */
+  obscured?: boolean;
   lines: TerminalLine[];
   isThinking: boolean;
   onSend: (text: string) => void;
   onClose: () => void;
   onMinimize: () => void;
   onToggleMaximize: () => void;
-  onRestore: () => void;
   onScene: (sceneId: string) => void;
 };
 
@@ -35,13 +41,13 @@ type NovaTerminalProps = {
 export function NovaTerminal({
   isOpen,
   windowState,
+  obscured = false,
   lines,
   isThinking,
   onSend,
   onClose,
   onMinimize,
   onToggleMaximize,
-  onRestore,
   onScene,
 }: NovaTerminalProps) {
   const minimized = windowState === "minimized";
@@ -53,19 +59,19 @@ export function NovaTerminal({
 
   // Focus the prompt on open, and hand focus back to whatever opened it.
   useEffect(() => {
-    if (isOpen && !minimized) {
+    if (isOpen && !minimized && !obscured) {
       restoreTo.current = document.activeElement as HTMLElement | null;
       // After the open transition has started, so focus doesn't scroll the page.
       const timer = window.setTimeout(() => inputRef.current?.focus(), 60);
       return () => window.clearTimeout(timer);
     }
     restoreTo.current?.focus?.();
-  }, [isOpen, minimized]);
+  }, [isOpen, minimized, obscured]);
 
   // Escape closes; Tab cycles inside the dialog rather than escaping to the page
   // behind it.
   useEffect(() => {
-    if (!isOpen || minimized) return;
+    if (!isOpen || minimized || obscured) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -96,7 +102,7 @@ export function NovaTerminal({
 
     document.addEventListener("keydown", onKeyDown, true);
     return () => document.removeEventListener("keydown", onKeyDown, true);
-  }, [isOpen, minimized, onClose]);
+  }, [isOpen, minimized, obscured, onClose]);
 
   // Keep the newest line in view.
   useEffect(() => {
@@ -120,27 +126,10 @@ export function NovaTerminal({
     inputRef.current?.focus();
   }
 
+  /* Minimised, the window collapses to a pill in the shared dock strip, which
+     `NovaStage` renders — see `DockPill`. The transcript is untouched, so
+     restoring picks the session back up. */
   return (
-    <>
-      {/* Minimised: a dock pill, the way a real window collapses. The transcript
-          is untouched — restoring picks the session back up. */}
-      <button
-        type="button"
-        className="term-dock"
-        data-open={isOpen && minimized}
-        aria-hidden={!(isOpen && minimized)}
-        inert={!(isOpen && minimized)}
-        onClick={onRestore}
-      >
-        <span className="term-dock-lights" aria-hidden>
-          <i />
-          <i />
-          <i />
-        </span>
-        NOVA_AI · TERMINAL
-        <span className="term-dock-live" aria-hidden />
-      </button>
-
     <div
       className="term-layer"
       data-open={isOpen && !minimized}
@@ -325,7 +314,6 @@ export function NovaTerminal({
         </form>
       </div>
     </div>
-    </>
   );
 }
 

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSelectedLayoutSegment } from "next/navigation";
 import { greetings, type NovaMood } from "@/content/profile";
 import { sceneFromSegment } from "@/content/scenes";
-import { celebrate, getChatOpen, subscribeChatOpen } from "@/lib/nova-bus";
+import { celebrate, getStageBusy, subscribeStageBusy } from "@/lib/nova-bus";
 import { onForget } from "@/lib/memory";
 import { useNovaMemory } from "./useNovaMemory";
 
@@ -85,8 +85,8 @@ export function useSceneReactions() {
    */
   useEffect(
     () =>
-      subscribeChatOpen(() => {
-        if (!getChatOpen()) return;
+      subscribeStageBusy(() => {
+        if (!getStageBusy()) return;
         window.clearTimeout(dismissTimer.current);
         setOpen(false);
       }),

@@ -806,18 +806,33 @@
 }
 
 /* -------------------------------------------------------------------------- */
-/* Dock pill                                                                   */
+/* Dock strip                                                                  */
 /* -------------------------------------------------------------------------- */
 
-/* Where the terminal lives while minimised. Deliberately outside `.term-layer`
-   so it isn't dimmed or inert along with the window. */
-.term-dock {
+/* Where minimised windows live. Deliberately outside every window layer so the
+   pills aren't dimmed or made inert along with the window they belong to, and a
+   flex row rather than fixed pills so the terminal and the resume sit beside
+   each other when both are collapsed. */
+.nova-dock-strip {
   position: fixed;
   left: 1rem;
   bottom: 1rem;
   z-index: 82;
 
-  display: inline-flex;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  /* The stage this sits inside is pointer-events: none so it can't swallow page
+     clicks; the pills have to opt back in or the click falls through to the hint
+     text underneath them. */
+  pointer-events: none;
+}
+
+.dock-pill {
+  /* Hidden pills leave the row entirely — a reserved gap where a closed window
+     used to be would push the open one off-centre. `allow-discrete` is what
+     keeps the fade in both directions despite the display switch. */
+  display: none;
   align-items: center;
   gap: 0.55rem;
   padding: 0.5rem 0.85rem;
@@ -834,54 +849,67 @@
   color: #c9d4e2;
 
   opacity: 0;
-  visibility: hidden;
   translate: 0 8px;
-  /* The stage this sits inside is pointer-events: none so it can't swallow page
-     clicks; the pill has to opt back in or the click falls through to the hint
-     text underneath it. */
   pointer-events: none;
   transition:
     opacity 220ms ease,
     translate 260ms cubic-bezier(0.22, 1, 0.36, 1),
-    visibility 0s linear 220ms;
+    display 220ms allow-discrete;
 }
 
-.term-dock[data-open="true"] {
+.dock-pill[data-open="true"] {
+  display: inline-flex;
   opacity: 1;
-  visibility: visible;
   translate: 0 0;
   pointer-events: auto;
-  transition-delay: 0s;
+
+  @starting-style {
+    opacity: 0;
+    translate: 0 8px;
+  }
 }
 
-.term-dock:hover {
+.dock-pill:hover {
   border-color: #33404f;
 }
 
-.term-dock-lights {
+/* The resume's pill wears its window's paper chrome, so a glance at the dock
+   says which window is down there. */
+.dock-pill[data-tone="paper"] {
+  border-color: #d9d5c8;
+  background: #f4f2ec;
+  color: #3b3a35;
+  box-shadow: 0 14px 34px -16px rgb(30 28 22 / 0.45);
+}
+
+.dock-pill[data-tone="paper"]:hover {
+  border-color: #c3bda9;
+}
+
+.dock-pill-lights {
   display: inline-flex;
   gap: 0.22rem;
 }
 
-.term-dock-lights i {
+.dock-pill-lights i {
   width: 0.4rem;
   height: 0.4rem;
   border-radius: 999px;
 }
 
-.term-dock-lights i:nth-child(1) {
+.dock-pill-lights i:nth-child(1) {
   background: #ff6b6b;
 }
 
-.term-dock-lights i:nth-child(2) {
+.dock-pill-lights i:nth-child(2) {
   background: #f5bd4f;
 }
 
-.term-dock-lights i:nth-child(3) {
+.dock-pill-lights i:nth-child(3) {
   background: #5ec26a;
 }
 
-.term-dock-live {
+.dock-pill-live {
   width: 0.4rem;
   height: 0.4rem;
   border-radius: 999px;
@@ -1157,20 +1185,16 @@
     transition: none;
   }
 
-  .term-dock,
-  .term-dock[data-open="true"] {
+  .dock-pill,
+  .dock-pill[data-open="true"] {
     translate: none;
     transition:
       opacity 150ms ease,
-      visibility 0s linear 150ms;
-  }
-
-  .term-dock[data-open="true"] {
-    transition-delay: 0s;
+      display 150ms allow-discrete;
   }
 
   .term-live i,
-  .term-dock-live,
+  .dock-pill-live,
   .term-caret {
     animation: none;
   }

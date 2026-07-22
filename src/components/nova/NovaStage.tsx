@@ -3,12 +3,15 @@
 import { useEffect, useRef } from "react";
 import { addLike } from "@/lib/likes";
 import { celebrate, fireLike, onLike } from "@/lib/nova-bus";
+import { DockPill } from "./DockPill";
 import { LoveBurst } from "./LoveBurst";
 import { Nova } from "./Nova";
 import { NovaTerminal } from "./NovaTerminal";
+import { ResumeWindow } from "./ResumeWindow";
 import { useNovaChat } from "@/hooks/useNovaChat";
 import { useNovaMemory } from "@/hooks/useNovaMemory";
 import { useNovaStage } from "@/hooks/useNovaStage";
+import { useResumeWindow } from "@/hooks/useResumeWindow";
 import { useSceneReactions } from "@/hooks/useSceneReactions";
 
 /**
@@ -31,9 +34,11 @@ export function NovaStage() {
     isFirstVisit: (visit.previous?.visitCount ?? 0) === 0,
   });
 
-  // NOVA steps aside to the corner while the terminal has the visitor.
+  const resume = useResumeWindow();
+
+  // NOVA steps aside to the corner while either window has the visitor.
   const { stageRef, anchorRef, svgRef, bubbleRef } = useNovaStage({
-    sidelined: chat.isEngaged,
+    sidelined: chat.isEngaged || resume.isEngaged,
   });
 
   const { mood, line, open } = useSceneReactions();
@@ -62,7 +67,7 @@ export function NovaStage() {
     <div
       ref={stageRef}
       className="nova-stage"
-      data-chatting={chat.isEngaged}
+      data-chatting={chat.isEngaged || resume.isEngaged}
       data-window={chat.isOpen ? chat.windowState : undefined}
     >
       <div ref={anchorRef} className="nova-anchor">
@@ -98,15 +103,41 @@ export function NovaStage() {
       <NovaTerminal
         isOpen={chat.isOpen}
         windowState={chat.windowState}
+        obscured={resume.isEngaged}
         lines={chat.lines}
         isThinking={chat.isThinking}
         onSend={chat.send}
         onClose={chat.close}
         onMinimize={chat.minimize}
         onToggleMaximize={chat.toggleMaximize}
-        onRestore={chat.restore}
         onScene={chat.goToScene}
       />
+
+      <ResumeWindow
+        isOpen={resume.isOpen}
+        windowState={resume.windowState}
+        theme={resume.theme}
+        onClose={resume.close}
+        onMinimize={resume.minimize}
+        onToggleMaximize={resume.toggleMaximize}
+        onToggleTheme={resume.toggleTheme}
+      />
+
+      {/* Both windows collapse into the same strip, so two minimised windows sit
+          side by side rather than on top of one another. */}
+      <div className="nova-dock-strip">
+        <DockPill
+          label="NOVA_AI · TERMINAL"
+          open={chat.isOpen && chat.windowState === "minimized"}
+          onClick={chat.restore}
+        />
+        <DockPill
+          label="NOVA · LIVE_RESUME"
+          tone="paper"
+          open={resume.isOpen && resume.windowState === "minimized"}
+          onClick={resume.restore}
+        />
+      </div>
     </div>
   );
 }

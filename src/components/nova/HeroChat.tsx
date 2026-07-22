@@ -5,9 +5,9 @@ import { ROTATING_LINES } from "@/content/nova-qa";
 import {
   askNova,
   fireLike,
-  getChatOpen,
-  getServerChatOpen,
-  subscribeChatOpen,
+  getServerStageBusy,
+  getStageBusy,
+  subscribeStageBusy,
 } from "@/lib/nova-bus";
 
 /** How long a line stays readable *after* it has finished materialising. */
@@ -89,12 +89,12 @@ function LineRotator({ line }: { line: string }) {
   const [visible, setVisible] = useState(false);
   const [hovered, setHovered] = useState(false);
 
-  const chatOpen = useSyncExternalStore(
-    subscribeChatOpen,
-    getChatOpen,
-    getServerChatOpen,
+  const stageBusy = useSyncExternalStore(
+    subscribeStageBusy,
+    getStageBusy,
+    getServerStageBusy,
   );
-  const paused = hovered || chatOpen;
+  const paused = hovered || stageBusy;
 
   // Milliseconds still owed to the current line. Survives pause/resume.
   const remaining = useRef<number | null>(null);

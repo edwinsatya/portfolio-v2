@@ -11,7 +11,7 @@ import {
 import { scenes } from "@/content/scenes";
 import { profile } from "@/content/profile";
 import { matchIntent, scriptedResponder, type NovaResponder } from "@/lib/nova-brain";
-import { celebrate, onAskNova, setChatOpen } from "@/lib/nova-bus";
+import { celebrate, onAskNova, setNovaThinking, setWindowOpen } from "@/lib/nova-bus";
 import { sanitizeName, setVisitorName } from "@/lib/memory";
 
 /**
@@ -193,6 +193,8 @@ export function useNovaChat({
       busy.current = true;
       push({ kind: "input", text: question });
       setIsThinking(true);
+      // Also on the bus: the stage readout shows the same beat from outside.
+      setNovaThinking(true);
 
       void (async () => {
         try {
@@ -236,6 +238,7 @@ export function useNovaChat({
           }
         } finally {
           setIsThinking(false);
+          setNovaThinking(false);
           busy.current = false;
         }
       })();
@@ -261,7 +264,7 @@ export function useNovaChat({
    */
   const isEngaged = isOpen && windowState !== "minimized";
 
-  useEffect(() => setChatOpen(isEngaged), [isEngaged]);
+  useEffect(() => setWindowOpen("terminal", isEngaged), [isEngaged]);
 
   return {
     isOpen,

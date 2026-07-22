@@ -134,3 +134,68 @@ export function User(props: IconProps) {
     </svg>
   );
 }
+
+/* --- Live resume ---------------------------------------------------------- */
+
+export function Moon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" />
+    </svg>
+  );
+}
+
+export function Sun(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.5 1.5m11.2 11.2 1.5 1.5m0-14.2-1.5 1.5M6.4 17.6l-1.5 1.5" />
+    </svg>
+  );
+}
+
+export function Layers(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="m12 3 9 5-9 5-9-5 9-5Z" />
+      <path d="m3 13 9 5 9-5" />
+    </svg>
+  );
+}
+
+export function Server(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="3" y="4" width="18" height="7" rx="1.8" />
+      <rect x="3" y="13" width="18" height="7" rx="1.8" />
+      <path d="M7 7.5h.01M7 16.5h.01" />
+    </svg>
+  );
+}
+
+export function Database(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <ellipse cx="12" cy="6" rx="8" ry="3" />
+      <path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6" />
+      <path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" />
+    </svg>
+  );
+}
+
+export function Cloud(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M7 19a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 17.7 9.2 4 4 0 0 1 17.5 19Z" />
+    </svg>
+  );
+}
+
+export function Badge(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="12" cy="9" r="5.5" />
+      <path d="m8.5 13.5-1 7 4.5-2.5 4.5 2.5-1-7" />
+    </svg>
+  );
+}

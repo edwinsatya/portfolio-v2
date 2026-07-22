@@ -56,6 +56,7 @@ export function novaBooted(): void {
   if (hasBooted) return;
   hasBooted = true;
   bootListeners.forEach((listener) => listener());
+  emitStatus();
 }
 
 /* -------------------------------------------------------------------------- */
@@ -110,33 +111,100 @@ export function celebrate(kind?: Celebration): void {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Chat open state                                                             */
+/* Resume window                                                               */
 /* -------------------------------------------------------------------------- */
 
-/* The tagline rotation pauses while the chat is up, and the two live on
-   opposite sides of the tree — same reason the rest of this file exists. */
+/* The nav's resume icon opens the live resume, and the two live on opposite
+   sides of the tree — same reason `onAskNova` exists. */
 
-let chatOpen = false;
-const chatListeners = new Set<() => void>();
+const resumeListeners = new Set<() => void>();
 
-export function setChatOpen(open: boolean): void {
-  if (chatOpen === open) return;
-  chatOpen = open;
-  chatListeners.forEach((listener) => listener());
-}
-
-export function subscribeChatOpen(listener: () => void): () => void {
-  chatListeners.add(listener);
+export function onOpenResume(listener: () => void): () => void {
+  resumeListeners.add(listener);
   return () => {
-    chatListeners.delete(listener);
+    resumeListeners.delete(listener);
   };
 }
 
-export function getChatOpen(): boolean {
-  return chatOpen;
+export function openResume(): void {
+  resumeListeners.forEach((listener) => listener());
 }
 
-/** The server never has a chat open. */
-export function getServerChatOpen(): boolean {
+/* -------------------------------------------------------------------------- */
+/* Stage occupancy                                                             */
+/* -------------------------------------------------------------------------- */
+
+/* The tagline rotation pauses and NOVA steps aside while a window has the
+   visitor's attention. Keyed rather than a single boolean: the terminal and the
+   resume can both be up, and either closing must not clear the other's claim. */
+
+const busyKeys = new Set<string>();
+const busyListeners = new Set<() => void>();
+
+export function setWindowOpen(key: string, open: boolean): void {
+  const was = busyKeys.size > 0;
+  if (open) busyKeys.add(key);
+  else busyKeys.delete(key);
+  if (was === busyKeys.size > 0) return;
+  busyListeners.forEach((listener) => listener());
+  emitStatus();
+}
+
+export function subscribeStageBusy(listener: () => void): () => void {
+  busyListeners.add(listener);
+  return () => {
+    busyListeners.delete(listener);
+  };
+}
+
+export function getStageBusy(): boolean {
+  return busyKeys.size > 0;
+}
+
+/** The server never has a window open. */
+export function getServerStageBusy(): boolean {
   return false;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Status                                                                      */
+/* -------------------------------------------------------------------------- */
+
+/* The readout along the bottom of the stage. Derived rather than stored: boot
+   and occupancy are already tracked above, so the only new input is whether an
+   answer is in flight. Ordered by what the visitor most needs to see — a reply
+   being composed outranks a window merely being open. */
+
+export type NovaStatus = "booting" | "online" | "engaged" | "thinking";
+
+let isThinking = false;
+const statusListeners = new Set<() => void>();
+
+function emitStatus(): void {
+  statusListeners.forEach((listener) => listener());
+}
+
+/** Called by the chat around a question, so the readout tracks real work. */
+export function setNovaThinking(thinking: boolean): void {
+  if (isThinking === thinking) return;
+  isThinking = thinking;
+  emitStatus();
+}
+
+export function subscribeNovaStatus(listener: () => void): () => void {
+  statusListeners.add(listener);
+  return () => {
+    statusListeners.delete(listener);
+  };
+}
+
+export function getNovaStatus(): NovaStatus {
+  if (isThinking) return "thinking";
+  if (busyKeys.size > 0) return "engaged";
+  return hasBooted ? "online" : "booting";
+}
+
+/** The server renders her mid-boot, which is where every visit starts. */
+export function getServerNovaStatus(): NovaStatus {
+  return "booting";
 }

@@ -344,6 +344,12 @@ export type Role = {
   title: string;
   period: string;
   current?: boolean;
+  /**
+   * Stack and highlights, shown as the monospace tag line on the right of each
+   * row in the live resume. The timeline section ignores these — it's a summary,
+   * and repeating the stack there would crowd it.
+   */
+  tags?: string[];
 };
 
 export const experience: Role[] = [
@@ -353,38 +359,107 @@ export const experience: Role[] = [
     title: "Frontend Developer",
     period: "Jun 2026 – Present",
     current: true,
+    tags: ["Loyalty Management System", "Enterprise Banking Platform"],
   },
   {
     company: "Tola Solution",
     project: "Happy Farm Project",
     title: "Full Stack Developer",
     period: "Nov 2025 – Mar 2026",
+    tags: ["Next.js", "Node.js", "PostgreSQL", "Farm Operations Platform"],
   },
   {
     company: "Magloft",
     title: "Full Stack Developer",
     period: "Jun 2023 – Feb 2025",
+    tags: ["Vue.js", "Node.js", "GraphQL", "Digital Publishing"],
   },
   {
     company: "Bountie",
     title: "Software Engineer",
     period: "May 2022 – Jun 2023",
+    tags: ["React", "Node.js", "PostgreSQL", "Gaming Platform"],
   },
   {
     company: "homecare24.id",
     title: "Front-end Developer",
     period: "Mar 2020 – May 2022",
+    tags: ["Healthcare Booking", "Front-End Development"],
   },
   {
     company: "Telkom Indonesia",
     title: "Network Fiber Optic Internship",
     period: "Sep 2013 – Jan 2014",
+    tags: ["Fiber Optic Networks", "Field Installation"],
   },
 ];
 
 export const certifications = [
   "Hacktiv8 Full Stack Web Developer",
   "AWS Certified Solutions Architect",
+];
+
+/* -------------------------------------------------------------------------- */
+/* Capability stack                                                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The live resume's card grid.
+ *
+ * Broader than `skillGroups`, which is the stage's own skills section and stays
+ * deliberately short — this is the resume view, where the AI work and the
+ * certifications belong alongside the frameworks. `icon` keys the glyph in
+ * `ResumeWindow`; adding a group means adding a case there too.
+ */
+export type Capability = {
+  title: string;
+  icon: "layers" | "server" | "database" | "sparkle" | "cloud" | "badge";
+  items: string[];
+};
+
+export const capabilityStack: Capability[] = [
+  {
+    title: "Frontend",
+    icon: "layers",
+    items: [
+      "React",
+      "Next.js",
+      "TypeScript",
+      "Vue.js",
+      "Angular.js",
+      "Tailwind CSS",
+    ],
+  },
+  {
+    title: "Backend",
+    icon: "server",
+    items: ["Node.js", "Express", "REST API", "GraphQL"],
+  },
+  {
+    title: "Database",
+    icon: "database",
+    items: ["MongoDB", "PostgreSQL", "MySQL"],
+  },
+  {
+    title: "AI Integration",
+    icon: "sparkle",
+    items: [
+      "OpenAI & Claude APIs",
+      "Chat Interfaces",
+      "Workflow Automation",
+      "Prompt Engineering",
+    ],
+  },
+  {
+    title: "Tools & Cloud",
+    icon: "cloud",
+    items: ["Git", "Docker", "AWS", "Figma"],
+  },
+  {
+    title: "Certifications",
+    icon: "badge",
+    items: [...certifications],
+  },
 ];
 
 /* -------------------------------------------------------------------------- */
