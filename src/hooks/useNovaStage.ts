@@ -7,6 +7,15 @@ import {
   onNovaBooted,
   type Celebration,
 } from "@/lib/nova-bus";
+import {
+  blendPose,
+  ease as easeBlend,
+  poseFor,
+  restingPose,
+  STATE_MS,
+  type NovaState,
+  type Pose,
+} from "@/lib/nova-pose";
 
 /** The anchor's CSS width. Everything scales from this to hero or dock size. */
 const BASE_WIDTH = 380;
@@ -42,17 +51,20 @@ const REACH = 380;
 const IDLE_AFTER = 3200;
 /** Length of the flight between hero and dock; matches the CSS transition. */
 const FLY_MS = 800;
-/** Wave duration; matches the keyframes in nova.css. */
-const WAVE_MS = 2100;
-/** Celebration durations, matching their keyframes. */
-const CELEBRATE_MS: Record<Celebration, number> = {
-  wave: 2100,
-  dance: 1900,
-  hop: 1050,
-};
 /** Randomised gap between idle waves. */
 const WAVE_MIN_MS = 15000;
 const WAVE_MAX_MS = 30000;
+/** How long the joyful face lingers after the last like. */
+const JOY_MS = 1400;
+/** Crossfade into a new move, from whatever pose is on screen. */
+const BLEND_IN_MS = 200;
+/** Longer on the way back, so settling reads as relaxing rather than stopping. */
+const BLEND_IDLE_MS = 400;
+/** Ceiling once the distance scaling is applied. */
+const BLEND_MAX_MS = 520;
+/** Intensity added per like while already celebrating, and its decay. */
+const INTENSITY_STEP = 0.34;
+const INTENSITY_DECAY_MS = 2600;
 
 /**
  * Owns every per-frame concern in one requestAnimationFrame loop: where NOVA
@@ -100,6 +112,26 @@ export function useNovaStage({ forceDock = false }: { forceDock?: boolean } = {}
     let slot: HTMLElement | null = null;
     let nav: HTMLElement | null = null;
     let frame = 0;
+    /* --- Animation state machine ---------------------------------------
+     * NOVA is always in exactly one state. A new trigger never hard-cuts the
+     * current pose: `blendFrom` snapshots whatever is on screen and the engine
+     * crossfades out of it, so entering *and* leaving a move are continuous.
+     */
+    let state: NovaState = "idle";
+    let stateStartedAt = 0;
+    let stateEndsAt = 0;
+    /** At most one follow-up; further likes only add hearts and intensity. */
+    let queued: NovaState | null = null;
+    /** Snapshot of the live pose when the last state change happened. */
+    let blendFrom: Pose = restingPose(0);
+    let blendStartedAt = 0;
+    let blendMs = BLEND_IN_MS;
+    /** 0–1. Rises with rapid likes, decays back down. */
+    let intensity = 0;
+    let intensityAt = 0;
+    /** The pose actually on screen this frame. */
+    let pose: Pose = restingPose(0);
+    let joyTimer: number | undefined;
 
     const timers = new Set<number>();
     const later = (fn: () => void, ms: number) => {
@@ -206,6 +238,44 @@ export function useNovaStage({ forceDock = false }: { forceDock?: boolean } = {}
         ready = true;
         stage.dataset.ready = "true";
       }
+
+      /* --- Pose -------------------------------------------------------
+       * Head and eyes are deliberately *not* part of this: they track the
+       * cursor from their own values below, so NOVA keeps watching you while
+       * her body dances.
+       */
+      intensity = Math.max(
+        0,
+        intensity - (now - intensityAt) / INTENSITY_DECAY_MS,
+      );
+      intensityAt = now;
+
+      // A finished move hands over to whatever is queued, else back to idle.
+      if (state !== "idle" && now >= stateEndsAt) {
+        enterState(queued ?? "idle", now);
+        queued = null;
+      }
+
+      if (reducedMotion.matches) {
+        // Held at a fixed rest pose — the engine's idle still breathes and
+        // sways, which is motion the visitor asked not to see. Evaluated at a
+        // constant time so nothing oscillates.
+        pose = restingPose(0);
+      } else {
+        const wantPose = poseFor(state, now, now - stateStartedAt, intensity);
+        const blend = easeBlend(Math.min(1, (now - blendStartedAt) / blendMs));
+        pose = blendPose(blendFrom, wantPose, blend);
+      }
+
+      svg.style.setProperty("--pose-arm-l", pose.armL.toFixed(2));
+      svg.style.setProperty("--pose-arm-r", pose.armR.toFixed(2));
+      svg.style.setProperty("--pose-fore-l", pose.foreL.toFixed(2));
+      svg.style.setProperty("--pose-fore-r", pose.foreR.toFixed(2));
+      svg.style.setProperty("--pose-body-y", pose.bodyY.toFixed(2));
+      svg.style.setProperty("--pose-body-rot", pose.bodyRot.toFixed(2));
+      svg.style.setProperty("--pose-sx", pose.bodySx.toFixed(3));
+      svg.style.setProperty("--pose-sy", pose.bodySy.toFixed(3));
+      svg.style.setProperty("--pose-chest", pose.chest.toFixed(3));
 
       /* Gaze — origin derived from the transform above, not measured. */
       const halfHeight = (BASE_HEIGHT * scale) / 2;
@@ -334,15 +404,81 @@ export function useNovaStage({ forceDock = false }: { forceDock?: boolean } = {}
     };
 
     /* ---------------------------------------------------------------- */
-    /* Waving                                                            */
+    /* Moves                                                             */
     /* ---------------------------------------------------------------- */
 
+    /**
+     * Switch state, blending out of the pose currently on screen.
+     *
+     * Nothing here reads a "current animation frame" — `pose` already holds
+     * exactly what's rendered, so starting the crossfade from it is what
+     * guarantees no teleport, whichever move is interrupted and whenever.
+     */
+    const enterState = (next: NovaState, now: number) => {
+      blendFrom = pose;
+      blendStartedAt = now;
+
+      // Distance-aware: a big swing gets longer to wind up than a small one.
+      // A fixed blend makes "hanging arms to overhead" cover 120° in the same
+      // time as a 5° adjustment, which is what still read as a lurch.
+      const first = poseFor(next, now, 0, intensity);
+      const travel = Math.max(
+        Math.abs(first.armL - pose.armL),
+        Math.abs(first.armR - pose.armR),
+        Math.abs(first.bodyRot - pose.bodyRot) * 3,
+      );
+      const base = next === "idle" ? BLEND_IDLE_MS : BLEND_IN_MS;
+      blendMs = Math.min(BLEND_MAX_MS, base + travel * 1.7);
+
+      state = next;
+      stateStartedAt = now;
+      stateEndsAt =
+        next === "idle" || next === "happy"
+          ? Infinity
+          : now + STATE_MS[next] * (1 - intensity * 0.12);
+      svg.dataset.state = next;
+    };
+
+    const busy = () => state !== "idle";
+
+    /**
+     * A like landed.
+     *
+     * Free: the face and the hearts. Rationed: the body. Spamming should read
+     * as NOVA getting more and more delighted, so extra likes raise `intensity`
+     * — bigger, slightly faster moves — rather than starting a second animation
+     * on limbs that are already swinging.
+     */
+    const runCelebration = (kind: Celebration) => {
+      const now = performance.now();
+
+      // Face first, always, however fast they click. Pure opacity, so it can
+      // retrigger endlessly without ever snapping.
+      window.clearTimeout(joyTimer);
+      svg.dataset.joy = "true";
+      joyTimer = later(() => {
+        delete svg.dataset.joy;
+      }, JOY_MS);
+
+      if (reducedMotion.matches) return;
+
+      if (!busy()) {
+        enterState(kind, now);
+        return;
+      }
+
+      // Already moving: intensify, and hold at most one follow-up.
+      intensity = Math.min(1, intensity + INTENSITY_STEP);
+      // Stretch the current move a touch so the extra energy has somewhere to
+      // go rather than queueing a pile of animations.
+      stateEndsAt = Math.min(stateEndsAt + 90, now + 2600);
+      if (!queued && kind !== state) queued = kind;
+    };
+
+    /** The idle wave. Never interrupts a celebration. */
     const wave = () => {
-      if (reducedMotion.matches || svg.dataset.wave === "true") return;
-      svg.dataset.wave = "true";
-      later(() => {
-        svg.dataset.wave = "false";
-      }, WAVE_MS);
+      if (reducedMotion.matches || busy()) return;
+      enterState("wave", performance.now());
     };
 
     // Idle waves, at a randomised interval so they never feel metronomic.
@@ -362,26 +498,6 @@ export function useNovaStage({ forceDock = false }: { forceDock?: boolean } = {}
 
     // Hello, once, after the boot screen clears.
     const greetOnBoot = () => later(wave, 400);
-
-    /* ---------------------------------------------------------------- */
-    /* Celebrations                                                      */
-    /* ---------------------------------------------------------------- */
-
-    const runCelebration = (kind: Celebration) => {
-      // Under reduced motion the joyful face is the whole celebration — no
-      // dancing, no hopping, no arm across the screen.
-      const shown = reducedMotion.matches ? "joy" : kind;
-      svg.dataset.celebrate = shown;
-      later(
-        () => {
-          // `delete`, not `= ""` — an empty string leaves the attribute in the
-          // DOM, and `[data-celebrate]` matches it, which would strand NOVA in
-          // her joyful face for the rest of the visit.
-          delete svg.dataset.celebrate;
-        },
-        reducedMotion.matches ? 1400 : CELEBRATE_MS[kind],
-      );
-    };
 
     /* ---------------------------------------------------------------- */
     /* Liking                                                            */

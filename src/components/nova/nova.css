@@ -48,12 +48,6 @@
   transition: transform 400ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.nova-lean {
-  transform: translateX(calc(var(--nova-look-x) * 5px));
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
 /* -------------------------------------------------------------------------- */
 /* Expressions                                                                 */
 /* -------------------------------------------------------------------------- */
@@ -183,18 +177,6 @@
   animation-delay: -0.8s;
 }
 
-.nova[data-mood="excited"] .nova-arm {
-  rotate: -24deg;
-}
-
-.nova[data-mood="excited"] .nova-arm-r {
-  rotate: 24deg;
-}
-
-.nova[data-mood="excited"] .nova-forearm {
-  rotate: -18deg;
-}
-
 /* --- proud: half-lidded eyes, chin up ------------------------------------- */
 
 .nova[data-mood="proud"] {
@@ -224,12 +206,8 @@
   filter: drop-shadow(0 0 10px var(--nova-tint));
 }
 
-/* --- waving: friendly face. The arm wave itself is `data-wave`, fired from
-       the stage loop, so it can also happen in any other mood. ------------- */
-
-.nova[data-mood="proud"] .nova-arm {
-  rotate: -6deg;
-}
+/* Moods are face-only. Limbs belong to the pose engine — a mood setting
+   `rotate` here would out-specify it and freeze the arm for the whole scene. */
 
 /* -------------------------------------------------------------------------- */
 /* Blinking                                                                    */
@@ -260,7 +238,6 @@
  */
 
 .nova-arm,
-.nova-arm-sway,
 .nova-forearm,
 .nova-leg,
 .nova-torso,
@@ -268,13 +245,11 @@
   transform-box: view-box;
 }
 
-.nova-arm-l,
-.nova-arm-l .nova-arm-sway {
+.nova-arm-l {
   transform-origin: 57.5px 194px;
 }
 
-.nova-arm-r,
-.nova-arm-r .nova-arm-sway {
+.nova-arm-r {
   transform-origin: 182.5px 194px;
 }
 
@@ -299,95 +274,82 @@
 }
 
 /* -------------------------------------------------------------------------- */
-/* Idle life                                                                   */
+/* Pose                                                                        */
 /* -------------------------------------------------------------------------- */
 
-/* Breathing. Everything above the hips rides this; the legs and shadow don't,
-   which is what keeps the feet planted. */
+/*
+ * Everything below reads numbers the pose engine writes each frame — there are
+ * no keyframe animations on the body at all. That's deliberate: a keyframe can
+ * only be swapped, and swapping one mid-swing teleports the limb to the next
+ * animation's first frame. Interpolated numbers blend, so every transition is
+ * continuous no matter when it lands.
+ *
+ * See `lib/nova-pose.ts` for the states and `useNovaStage` for the blending.
+ */
+
+.nova {
+  --pose-arm-l: 0;
+  --pose-arm-r: 0;
+  --pose-fore-l: 0;
+  --pose-fore-r: 0;
+  --pose-body-y: 0;
+  --pose-body-rot: 0;
+  --pose-sx: 1;
+  --pose-sy: 1;
+  --pose-chest: 1;
+}
+
+/* Whole body above the hips: lift and squash. */
 .nova-float {
-  animation: nova-breathe 4.6s ease-in-out infinite;
+  translate: 0 calc(var(--pose-body-y) * 1px);
+  scale: var(--pose-sx) var(--pose-sy);
   transform-box: view-box;
   transform-origin: 120px 250px;
 }
 
-/* A second, slower scale on the torso alone, so the chest leads the breath. */
+/* Torso breath, on top of the body lift. */
 .nova-torso {
-  animation: nova-chest 4.6s ease-in-out infinite;
+  scale: var(--pose-chest);
 }
 
-/* Relaxed hang with a tiny sway, offset between arms so they don't march. */
-.nova-arm-sway {
-  animation: nova-sway 5.2s ease-in-out infinite;
+.nova-arm-l {
+  rotate: calc(var(--pose-arm-l) * 1deg);
 }
 
-.nova-arm-r .nova-arm-sway {
-  animation-delay: -2.3s;
-  animation-duration: 5.9s;
+.nova-arm-r {
+  rotate: calc(var(--pose-arm-r) * 1deg);
 }
 
-.nova-forearm {
-  transition: rotate 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+.nova-forearm-l {
+  rotate: calc(var(--pose-fore-l) * 1deg);
 }
 
-.nova-arm {
-  transition: rotate 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+.nova-forearm-r {
+  rotate: calc(var(--pose-fore-r) * 1deg);
+}
+
+/* Body tilt pivots at the feet, and carries the gaze lean too. */
+.nova-lean {
+  transform: translateX(calc(var(--nova-look-x) * 5px));
+  rotate: calc(var(--pose-body-rot) * 1deg);
+  transform-box: view-box;
+  transform-origin: 120px 300px;
+}
+
+/* The shadow tightens as the body rises, so height reads on the ground. */
+.nova-shadow {
+  scale: calc(1 + var(--pose-body-y) * 0.012);
+  opacity: calc(0.16 + var(--pose-body-y) * 0.0016);
+  transform-box: view-box;
+  transform-origin: 120px 303px;
 }
 
 .nova-antenna {
   transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.nova-shadow {
-  animation: nova-shadow 4.6s ease-in-out infinite;
-  transform-box: view-box;
-  transform-origin: 120px 303px;
-}
-
 .nova-glowing {
   animation: nova-glow 2.8s ease-in-out infinite;
-}
-
-@keyframes nova-breathe {
-  0%,
-  100% {
-    translate: 0 0;
-  }
-  50% {
-    translate: 0 -4px;
-  }
-}
-
-@keyframes nova-chest {
-  0%,
-  100% {
-    scale: 1 1;
-  }
-  50% {
-    scale: 1.018 1.012;
-  }
-}
-
-@keyframes nova-sway {
-  0%,
-  100% {
-    rotate: 1.5deg;
-  }
-  50% {
-    rotate: -2.5deg;
-  }
-}
-
-/* Tightens as the body rises, so the breath reads as weight shifting. */
-@keyframes nova-shadow {
-  0%,
-  100% {
-    scale: 1;
-    opacity: 0.16;
-  }
-  50% {
-    scale: 0.94;
-    opacity: 0.12;
-  }
 }
 
 @keyframes nova-glow {
@@ -413,242 +375,36 @@
 }
 
 /* -------------------------------------------------------------------------- */
-/* Wave                                                                        */
+/* Joy                                                                         */
 /* -------------------------------------------------------------------------- */
 
-/* Driven by `data-wave` on the root: raise from the shoulder, flap three times
-   from the elbow, lower. Split across two joints on purpose — rotating the
-   whole arm alone reads as a plank rocking. */
-.nova[data-wave="true"] .nova-arm-r {
-  animation: nova-wave-shoulder 2.1s cubic-bezier(0.34, 1.4, 0.64, 1);
-}
-
-.nova[data-wave="true"] .nova-arm-r .nova-forearm-r {
-  animation: nova-wave-forearm 2.1s ease-in-out;
-}
-
-/* The sway would fight the raise, so it steps aside for the duration. */
-.nova[data-wave="true"] .nova-arm-r .nova-arm-sway {
-  animation: none;
-  rotate: 0deg;
-}
-
-@keyframes nova-wave-shoulder {
-  0% {
-    rotate: 0deg;
-  }
-  18%,
-  82% {
-    rotate: -142deg;
-  }
-  100% {
-    rotate: 0deg;
-  }
-}
-
-@keyframes nova-wave-forearm {
-  0%,
-  18% {
-    rotate: 0deg;
-  }
-  32% {
-    rotate: 26deg;
-  }
-  46% {
-    rotate: -14deg;
-  }
-  60% {
-    rotate: 26deg;
-  }
-  74% {
-    rotate: -10deg;
-  }
-  82%,
-  100% {
-    rotate: 0deg;
-  }
-}
-
-/* -------------------------------------------------------------------------- */
-/* Celebrations                                                                */
-/* -------------------------------------------------------------------------- */
-
-/* Joy overrides whatever face the current mood set — placed after the mood
-   blocks so it wins at equal specificity. */
-.nova[data-celebrate] .nova-eye {
+/*
+ * The delighted face is `data-joy`, kept separate from the body state on
+ * purpose: it's pure opacity, so rapid likes can retrigger it endlessly without
+ * ever snapping, and it outlives whichever move is playing. Placed after the
+ * mood rules so it wins at equal specificity.
+ */
+.nova[data-joy] .nova-eye {
   opacity: 0;
 }
 
-.nova[data-celebrate] .nova-eye-happy {
+.nova[data-joy] .nova-eye-happy {
   opacity: 1;
 }
 
-.nova[data-celebrate] .nova-mouth-smile,
-.nova[data-celebrate] .nova-mouth-flat,
-.nova[data-celebrate] .nova-mouth-open {
+.nova[data-joy] .nova-mouth-smile,
+.nova[data-joy] .nova-mouth-flat,
+.nova[data-joy] .nova-mouth-open {
   opacity: 0;
 }
 
-.nova[data-celebrate] .nova-mouth-grin {
+.nova[data-joy] .nova-mouth-grin {
   opacity: 1;
 }
 
-/* --- wave: reuses the greeting wave --------------------------------------- */
-
-.nova[data-celebrate="wave"] .nova-arm-r {
-  animation: nova-wave-shoulder 2.1s cubic-bezier(0.34, 1.4, 0.64, 1);
-}
-
-.nova[data-celebrate="wave"] .nova-arm-r .nova-forearm-r {
-  animation: nova-wave-forearm 2.1s ease-in-out;
-}
-
-.nova[data-celebrate="wave"] .nova-arm-r .nova-arm-sway {
-  animation: none;
-  rotate: 0deg;
-}
-
-/* --- dance: hips wiggle, arms up and swinging ----------------------------- */
-
-.nova[data-celebrate="dance"] .nova-lean {
-  animation: nova-dance-body 1.9s ease-in-out;
-  transform-box: view-box;
-  transform-origin: 120px 300px;
-}
-
-.nova[data-celebrate="dance"] .nova-arm-l {
-  animation: nova-dance-arm-l 1.9s ease-in-out;
-}
-
-.nova[data-celebrate="dance"] .nova-arm-r {
-  animation: nova-dance-arm-r 1.9s ease-in-out;
-}
-
-.nova[data-celebrate="dance"] .nova-arm-sway {
-  animation: none;
-}
-
-@keyframes nova-dance-body {
-  0%,
-  100% {
-    rotate: 0deg;
-  }
-  20% {
-    rotate: 5deg;
-  }
-  45% {
-    rotate: -5deg;
-  }
-  70% {
-    rotate: 4deg;
-  }
-  88% {
-    rotate: -2deg;
-  }
-}
-
-@keyframes nova-dance-arm-l {
-  0%,
-  100% {
-    rotate: 0deg;
-  }
-  15%,
-  85% {
-    rotate: 128deg;
-  }
-  40% {
-    rotate: 108deg;
-  }
-  65% {
-    rotate: 138deg;
-  }
-}
-
-@keyframes nova-dance-arm-r {
-  0%,
-  100% {
-    rotate: 0deg;
-  }
-  15%,
-  85% {
-    rotate: -128deg;
-  }
-  40% {
-    rotate: -138deg;
-  }
-  65% {
-    rotate: -108deg;
-  }
-}
-
-/* --- hop: up, then a squash on landing ------------------------------------ */
-
-.nova[data-celebrate="hop"] .nova-lean {
-  animation: nova-hop 1.05s cubic-bezier(0.3, 0.9, 0.4, 1);
-  transform-box: view-box;
-  transform-origin: 120px 300px;
-}
-
-.nova[data-celebrate="hop"] .nova-arm-l,
-.nova[data-celebrate="hop"] .nova-arm-r {
-  animation: nova-hop-arms 1.05s ease-out;
-}
-
-.nova[data-celebrate="hop"] .nova-arm-sway {
-  animation: none;
-}
-
-@keyframes nova-hop {
-  0% {
-    translate: 0 0;
-    scale: 1 1;
-  }
-  14% {
-    /* Crouch before the launch — the anticipation is what sells the jump. */
-    translate: 0 4px;
-    scale: 1.05 0.94;
-  }
-  45% {
-    translate: 0 -34px;
-    scale: 0.97 1.05;
-  }
-  74% {
-    translate: 0 0;
-    scale: 1 1;
-  }
-  84% {
-    /* Landing squash. */
-    translate: 0 5px;
-    scale: 1.07 0.92;
-  }
-  100% {
-    translate: 0 0;
-    scale: 1 1;
-  }
-}
-
-@keyframes nova-hop-arms {
-  0%,
-  100% {
-    rotate: 0deg;
-  }
-  45% {
-    rotate: -18deg;
-  }
-}
-
-.nova[data-celebrate="hop"] .nova-arm-r {
-  animation-name: nova-hop-arms-r;
-}
-
-@keyframes nova-hop-arms-r {
-  0%,
-  100% {
-    rotate: 0deg;
-  }
-  45% {
-    rotate: 18deg;
-  }
+/* Piling on likes brightens her up as well as speeding the move. */
+.nova[data-joy] .nova-lamp {
+  filter: drop-shadow(0 0 10px var(--nova-tint));
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1423,18 +1179,6 @@
     transition-duration: 110ms !important;
   }
 
-  /* No dancing, hopping, or waving — `data-celebrate` is set to "joy" under
-     reduced motion, which lands the happy face and nothing else. */
-  .nova[data-celebrate] .nova-lean,
-  .nova[data-celebrate] .nova-arm-l,
-  .nova[data-celebrate] .nova-arm-r,
-  .nova[data-celebrate] .nova-forearm-r {
-    animation: none;
-    rotate: 0deg;
-    translate: none;
-    scale: none;
-  }
-
   /* Hearts appear and fade where they are, rather than flying up the screen. */
   .love-heart {
     animation: nova-heart-still 1.2s ease-out forwards;
@@ -1455,15 +1199,10 @@
     }
   }
 
-  /* Breathing, sway, glow, sparkles, and the wave all stop. */
-  .nova-float,
-  .nova-torso,
-  .nova-arm-sway,
-  .nova-shadow,
+  /* The pose engine never leaves idle under reduced motion — no breathing,
+     no sway, no moves — so only the decorative extras need stopping here. */
   .nova-glowing,
   .nova-sparkle,
-  .nova[data-wave="true"] .nova-arm-r,
-  .nova[data-wave="true"] .nova-arm-r .nova-forearm-r,
   .nova[data-react="true"] .nova-bob {
     animation: none;
   }
