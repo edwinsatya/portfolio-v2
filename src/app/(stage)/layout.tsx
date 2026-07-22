@@ -1,6 +1,7 @@
 import { Nav } from "@/components/layout/Nav";
 import { NovaStage } from "@/components/nova/NovaStage";
 import { BootSequence } from "@/components/nova/BootSequence";
+import { MusicWidget } from "@/components/nova/MusicWidget";
 import { StageFrame } from "@/components/stage/StageFrame";
 
 /**
@@ -20,6 +21,8 @@ export default function StageLayout({
       <StageFrame>{children}</StageFrame>
       {/* Fixed layer above the stage — NOVA, her speech bubble, and the chat. */}
       <NovaStage />
+      {/* Sibling of the stage, not inside it — see the note in `music.css`. */}
+      <MusicWidget />
       <BootSequence />
     </>
   );

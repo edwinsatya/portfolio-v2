@@ -30,6 +30,47 @@ export const profile = {
   },
 } as const;
 
+/**
+ * What's been on repeat while building this.
+ *
+ * Played through YouTube's official embed — nothing is hosted here, and the
+ * artwork is YouTube's own thumbnail for the same video, so the widget has no
+ * assets of its own to keep in sync. First in the list is the one the resting
+ * card shows; the rest are reachable from the player.
+ *
+ * NOTE FOR EDWIN: `life-will-change` points at a translation channel's upload
+ * rather than an official one, so it can disappear without warning. Swap the id
+ * if you find it on a "- Topic" channel.
+ */
+export type Jam = {
+  title: string;
+  /** The game, not the vocalist — that's what a visitor recognises. */
+  artist: string;
+  youtubeId: string;
+};
+
+export const jams: Jam[] = [
+  {
+    title: "Full Moon Full Life",
+    artist: "Persona 3 Reload",
+    youtubeId: "hWhgrA2dhrk",
+  },
+  {
+    title: "Life Will Change",
+    artist: "Persona 5",
+    youtubeId: "CGwH6rZk7VM",
+  },
+  {
+    title: "I Believe",
+    artist: "Persona 5 Royal",
+    youtubeId: "LkuyO0cU3tQ",
+  },
+];
+
+export function jamThumbnail(youtubeId: string): string {
+  return `https://img.youtube.com/vi/${youtubeId}/mqdefault.jpg`;
+}
+
 export const stats = [
   { value: "6+", label: "Years building" },
   { value: "10+", label: "Projects shipped" },

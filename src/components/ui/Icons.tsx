@@ -199,3 +199,19 @@ export function Badge(props: IconProps) {
     </svg>
   );
 }
+
+export function Play(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M8 5.5v13l11-6.5z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function X(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M6 6l12 12M18 6 6 18" />
+    </svg>
+  );
+}

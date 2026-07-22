@@ -1,0 +1,498 @@
+/* -------------------------------------------------------------------------- */
+/* Music widget — "last jammed to", bottom-right                               */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Sits at z-index 45: above the resting NOVA layer (40) and the scenes, below
+ * the nav (50) and — crucially — below the terminal and resume, which ride up
+ * with `.nova-stage[data-chatting]` to 90. A window opening therefore covers the
+ * card with its scrim without anyone coordinating state.
+ */
+.music {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 45;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+
+  opacity: 0;
+  translate: 0 14px;
+  pointer-events: none;
+  transition:
+    opacity 420ms ease,
+    translate 520ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.music[data-shown="true"] {
+  opacity: 1;
+  translate: 0 0;
+  pointer-events: auto;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Resting card                                                                */
+/* -------------------------------------------------------------------------- */
+
+.music-card {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.9rem 0.5rem 0.5rem;
+  max-width: 15rem;
+
+  border: 1px solid var(--color-line);
+  border-radius: 1rem;
+  background: color-mix(in oklab, var(--color-surface) 88%, transparent);
+  backdrop-filter: blur(14px);
+  /* Same wide, faint, low shadow as the nav pill — the card should float on the
+     page rather than sit on a hard edge. */
+  box-shadow:
+    0 18px 40px -20px rgb(20 22 31 / 0.22),
+    0 4px 14px -8px rgb(20 22 31 / 0.1);
+
+  text-align: left;
+  transition:
+    border-color 180ms ease,
+    translate 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.music-card:hover {
+  border-color: var(--color-accent);
+  translate: 0 -2px;
+}
+
+/* The panel replaces the card in place. Kept mounted so the entrance transition
+   above doesn't replay every time the player closes. */
+.music:not([data-mode="closed"]) .music-card {
+  display: none;
+}
+
+.music-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 0.7rem;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.music-art img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* YouTube's mqdefault is 16:9 with the frame's own letterboxing — cover crops
+     to the middle, which is where the art actually is. */
+  object-fit: cover;
+}
+
+.music-art-play {
+  position: relative;
+  width: 1rem;
+  height: 1rem;
+  color: #fff;
+  /* Legible over whatever the thumbnail happens to be. */
+  filter: drop-shadow(0 1px 3px rgb(0 0 0 / 0.7));
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.music-card:hover .music-art-play,
+.music-card:focus-visible .music-art-play {
+  opacity: 1;
+}
+
+.music-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.music-label {
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-faint);
+}
+
+.music-title,
+.music-artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.music-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.music-artist {
+  font-size: 0.72rem;
+  color: var(--color-muted);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Dismiss                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/* Revealed on hover, but never on keyboard-only reach — `:focus-within` keeps it
+   available to anyone tabbing through, who has no way to hover. */
+.music-dismiss {
+  position: absolute;
+  top: -0.45rem;
+  right: -0.45rem;
+
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-faint);
+
+  opacity: 0;
+  scale: 0.8;
+  pointer-events: none;
+  transition:
+    opacity 160ms ease,
+    scale 160ms ease,
+    color 160ms ease;
+}
+
+.music:hover .music-dismiss,
+.music:focus-within .music-dismiss {
+  opacity: 1;
+  scale: 1;
+  pointer-events: auto;
+}
+
+.music-dismiss:hover {
+  color: var(--color-ink);
+}
+
+/* Nothing to dismiss around while the player is up — the panel has its own close
+   control, and two ✕ within a centimetre of each other is a trap. */
+.music:not([data-mode="closed"]) .music-dismiss {
+  display: none;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Player panel                                                                */
+/* -------------------------------------------------------------------------- */
+
+.music-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(20rem, calc(100vw - 2.5rem));
+  padding: 0.6rem;
+
+  border: 1px solid var(--color-line);
+  border-radius: 1rem;
+  background: color-mix(in oklab, var(--color-surface) 94%, transparent);
+  backdrop-filter: blur(14px);
+  box-shadow:
+    0 24px 50px -24px rgb(20 22 31 / 0.3),
+    0 6px 18px -10px rgb(20 22 31 / 0.12);
+}
+
+.music-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.15rem 0.15rem 0.5rem;
+}
+
+.music-panel-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.music-panel-btn {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  color: var(--color-faint);
+  transition:
+    color 150ms ease,
+    background 150ms ease;
+}
+
+.music-panel-btn:hover {
+  color: var(--color-ink);
+  background: color-mix(in oklab, var(--color-line) 60%, transparent);
+}
+
+/* Drawn rather than another icon export: it has to rotate between the two
+   states, and two corners of a border is the whole shape. */
+.music-chevron {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 1.6px solid currentColor;
+  border-bottom: 1.6px solid currentColor;
+  rotate: 45deg;
+  translate: 0 -1px;
+  transition: rotate 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.music[data-mode="mini"] .music-chevron {
+  rotate: -135deg;
+  translate: 0 1px;
+}
+
+.music-frame {
+  aspect-ratio: 16 / 9;
+  border-radius: 0.7rem;
+  overflow: hidden;
+  background: var(--color-chrome);
+}
+
+.music-frame iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+.music-caption {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding: 0.55rem 0.15rem 0.1rem;
+  font-size: 0.78rem;
+  color: var(--color-muted);
+}
+
+.music-caption strong {
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Queue                                                                       */
+/* -------------------------------------------------------------------------- */
+
+.music-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--color-line);
+}
+
+.music-track {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.32rem 0.4rem;
+  border-radius: 0.5rem;
+  text-align: left;
+  color: var(--color-muted);
+  transition:
+    background 150ms ease,
+    color 150ms ease;
+}
+
+.music-track:hover {
+  background: color-mix(in oklab, var(--color-line) 45%, transparent);
+  color: var(--color-ink);
+}
+
+.music-track[data-current="true"] {
+  color: var(--color-accent-ink);
+}
+
+.music-track-index {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  color: var(--color-faint);
+}
+
+.music-track[data-current="true"] .music-track-index {
+  color: inherit;
+}
+
+.music-track-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.music-track-artist {
+  font-size: 0.62rem;
+  color: var(--color-faint);
+  white-space: nowrap;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Minimised — a mini bar that keeps playing                                   */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The same panel, laid out as a row. Nothing unmounts on the way down: the
+ * iframe is the same element in both modes, which is the entire point — a
+ * minimise that reloaded the embed would restart the song.
+ */
+.music[data-mode="mini"] .music-panel {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  width: auto;
+  max-width: min(19rem, calc(100vw - 2.5rem));
+  padding: 0.45rem 0.5rem;
+}
+
+.music[data-mode="mini"] .music-body {
+  order: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.music[data-mode="mini"] .music-panel-head {
+  order: 2;
+  padding: 0;
+}
+
+/* No room for the label beside a video and a title. */
+.music[data-mode="mini"] .music-panel-head .music-label,
+.music[data-mode="mini"] .music-list {
+  display: none;
+}
+
+.music[data-mode="mini"] .music-frame {
+  width: 5.5rem;
+  flex-shrink: 0;
+  border-radius: 0.45rem;
+}
+
+.music[data-mode="mini"] .music-caption {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  padding: 0;
+  min-width: 0;
+  font-size: 0.7rem;
+}
+
+.music[data-mode="mini"] .music-caption strong,
+.music[data-mode="mini"] .music-caption span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 8rem;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Phones: a circular button, and the player as a bottom sheet                 */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 639px) {
+  /* Clears the bottom tab bar. The chips and the dock pills are bottom-*left*,
+     so the right edge is the one free corner down here. */
+  .music {
+    right: 0.85rem;
+    bottom: calc(4.9rem + env(safe-area-inset-bottom));
+  }
+
+  /* The card collapses to its artwork — the label and title have nowhere to go
+     on a 390px viewport without crowding the tab bar. */
+  .music-card {
+    max-width: none;
+    padding: 0;
+    border-radius: 999px;
+    gap: 0;
+  }
+
+  .music-meta {
+    display: none;
+  }
+
+  .music-art {
+    width: 2.9rem;
+    height: 2.9rem;
+    border-radius: 999px;
+  }
+
+  /* No hover on touch, so the play glyph is always on — it's the only thing
+     saying the circle is a button. */
+  .music-art-play {
+    opacity: 1;
+  }
+
+  .music-dismiss {
+    opacity: 1;
+    scale: 1;
+    pointer-events: auto;
+  }
+
+  /* Bottom sheet: full width, pinned to the bottom edge. Only the expanded
+     player takes the screen — the mini bar stays a small thing in the corner. */
+  .music[data-mode="open"] {
+    right: 0;
+    left: 0;
+    bottom: 0;
+    align-items: stretch;
+  }
+
+  .music[data-mode="open"] .music-panel {
+    width: 100%;
+    padding: 0.75rem 0.9rem;
+    padding-bottom: calc(0.9rem + env(safe-area-inset-bottom));
+    border-inline: 0;
+    border-bottom: 0;
+    border-radius: 1.25rem 1.25rem 0 0;
+    background: var(--color-surface);
+  }
+
+  .music[data-mode="mini"] .music-panel {
+    max-width: calc(100vw - 1.7rem);
+    background: var(--color-surface);
+  }
+
+  .music[data-mode="mini"] .music-caption strong,
+  .music[data-mode="mini"] .music-caption span {
+    max-width: 7rem;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .music,
+  .music-card,
+  .music-dismiss,
+  .music-art-play,
+  .music-chevron,
+  .music-track {
+    transition: none;
+  }
+
+  .music {
+    translate: none;
+  }
+
+  .music-card:hover {
+    translate: none;
+  }
+}
