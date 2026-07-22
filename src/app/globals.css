@@ -1022,6 +1022,13 @@ html.stage-root body {
   }
 }
 
+/* The dock pill parks in the bottom-left corner, exactly where this sits. Lift
+   the whole stage foot while it's out so the two don't overlap — `:has` because
+   the pill is rendered on the fixed NOVA layer, not inside the stage. */
+body:has(.term-dock[data-open="true"]) .stage {
+  padding-bottom: 4rem;
+}
+
 .stage-hint {
   margin-top: 0.7rem;
   font-family: var(--font-mono);

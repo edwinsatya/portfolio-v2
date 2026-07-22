@@ -26,6 +26,11 @@ const DOCK_WIDTH = 118;
 const DOCK_WIDTH_SMALL = 86;
 const DOCK_MARGIN = 20;
 const SMALL_SCREEN = 640;
+/** Size NOVA steps aside to when the terminal is up — about 45% of full. */
+const SIDELINE_WIDTH = 172;
+const SIDELINE_MARGIN = 28;
+/** Length of the step aside and back. */
+const SIDELINE_MS = 400;
 
 /** Vertical position of NOVA's eyes and antenna within the viewBox, 0–1. */
 const EYE_LINE = 109 / 320;
@@ -76,7 +81,10 @@ const INTENSITY_DECAY_MS = 2600;
  * each frame is a single layout read followed only by writes — reading back
  * after a write would force a synchronous reflow every frame.
  */
-export function useNovaStage({ forceDock = false }: { forceDock?: boolean } = {}) {
+export function useNovaStage({
+  /** Terminal is up and has the visitor's attention: NOVA steps aside. */
+  sidelined = false,
+}: { sidelined?: boolean } = {}) {
   const stageRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -87,10 +95,10 @@ export function useNovaStage({ forceDock = false }: { forceDock?: boolean } = {}
   const [docked, setDocked] = useState(false);
 
   // Read by the loop, which is set up once and never re-created.
-  const forceDockRef = useRef(forceDock);
+  const sidelinedRef = useRef(sidelined);
   useEffect(() => {
-    forceDockRef.current = forceDock;
-  }, [forceDock]);
+    sidelinedRef.current = sidelined;
+  }, [sidelined]);
 
   useEffect(() => {
     const stage = stageRef.current;
@@ -108,6 +116,7 @@ export function useNovaStage({ forceDock = false }: { forceDock?: boolean } = {}
     let lastPointerAt = 0;
     let nextWanderAt = 0;
     let isDocked = false;
+    let isSidelined = false;
     let ready = false;
     let slot: HTMLElement | null = null;
     let nav: HTMLElement | null = null;
@@ -199,16 +208,23 @@ export function useNovaStage({ forceDock = false }: { forceDock?: boolean } = {}
       const vh = window.innerHeight;
 
       // Dock once the hero slot has scrolled up into the top quarter — or
-      // immediately if the hero isn't on this page at all. Opening the chat
-      // forces it too, so NOVA is always beside her own panel.
-      const shouldDock =
-        forceDockRef.current || !slotRect || slotRect.bottom < vh * 0.28;
+      // immediately if the hero isn't on this page at all.
+      const shouldDock = !slotRect || slotRect.bottom < vh * 0.28;
+
+      // Stepping aside for the terminal is desktop-only: on phones the terminal
+      // is a full-screen sheet, so there is nowhere to step aside *to*, and
+      // lifting her above it would float a robot over the transcript.
+      const shouldSideline = sidelinedRef.current && vw >= SMALL_SCREEN;
 
       let centerX: number;
       let centerY: number;
       let scale: number;
 
-      if (shouldDock || !slotRect) {
+      if (shouldSideline) {
+        scale = SIDELINE_WIDTH / BASE_WIDTH;
+        centerX = vw - SIDELINE_MARGIN - SIDELINE_WIDTH / 2;
+        centerY = vh - SIDELINE_MARGIN - (SIDELINE_WIDTH * ASPECT) / 2;
+      } else if (shouldDock || !slotRect) {
         const dockWidth = vw < SMALL_SCREEN ? DOCK_WIDTH_SMALL : DOCK_WIDTH;
         scale = dockWidth / BASE_WIDTH;
         centerX = vw - DOCK_MARGIN - dockWidth / 2;
@@ -228,6 +244,16 @@ export function useNovaStage({ forceDock = false }: { forceDock?: boolean } = {}
         later(() => {
           anchor.dataset.flying = "false";
         }, FLY_MS);
+      }
+
+      // Stepping aside gets its own, shorter transition.
+      if (shouldSideline !== isSidelined) {
+        isSidelined = shouldSideline;
+        anchor.dataset.sideline = String(shouldSideline);
+        anchor.dataset.stepping = "true";
+        later(() => {
+          anchor.dataset.stepping = "false";
+        }, SIDELINE_MS);
       }
 
       anchor.style.transform = `translate(${centerX - BASE_WIDTH / 2}px, ${

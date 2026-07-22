@@ -31,7 +31,10 @@ export function NovaStage() {
     isFirstVisit: (visit.previous?.visitCount ?? 0) === 0,
   });
 
-  const { stageRef, anchorRef, svgRef, bubbleRef } = useNovaStage();
+  // NOVA steps aside to the corner while the terminal has the visitor.
+  const { stageRef, anchorRef, svgRef, bubbleRef } = useNovaStage({
+    sidelined: chat.isEngaged,
+  });
 
   const { mood, line, open } = useSceneReactions();
   const tapRef = useRef<HTMLButtonElement>(null);
@@ -56,7 +59,12 @@ export function NovaStage() {
   );
 
   return (
-    <div ref={stageRef} className="nova-stage" data-chatting={chat.isOpen}>
+    <div
+      ref={stageRef}
+      className="nova-stage"
+      data-chatting={chat.isEngaged}
+      data-window={chat.isOpen ? chat.windowState : undefined}
+    >
       <div ref={anchorRef} className="nova-anchor">
         <Nova ref={svgRef} mood={mood} />
 
@@ -89,11 +97,14 @@ export function NovaStage() {
 
       <NovaTerminal
         isOpen={chat.isOpen}
+        windowState={chat.windowState}
         lines={chat.lines}
         isThinking={chat.isThinking}
-        suggestions={chat.suggestions}
         onSend={chat.send}
         onClose={chat.close}
+        onMinimize={chat.minimize}
+        onToggleMaximize={chat.toggleMaximize}
+        onRestore={chat.restore}
         onScene={chat.goToScene}
       />
     </div>

@@ -1,4 +1,11 @@
-import { greetings, profile, projects, services, skillGroups } from "./profile";
+import {
+  experience,
+  greetings,
+  profile,
+  projects,
+  services,
+  skillGroups,
+} from "./profile";
 
 /**
  * Everything NOVA can answer, as data.
@@ -46,6 +53,9 @@ const picks = (() => {
   if (names.length <= 1) return names[0] ?? "coming soon";
   return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 })();
+
+/** The role flagged `current` in the experience list, if there is one. */
+const currentRole = experience.find((role) => role.current);
 
 const frontend = skillGroups[0].items.slice(0, 4).join(", ");
 const backend = skillGroups[1].items.slice(0, 3).join(", ");
@@ -131,6 +141,32 @@ export const novaIntents: NovaIntent[] = [
       ),
     scene: "work",
     followUps: ["What's his tech stack?", "Is he available?", "How do I contact him?"],
+  },
+  {
+    // "What's he building right now?" is one of the terminal's fixed chips, so
+    // it has to land on a real answer rather than the fallback.
+    id: "current",
+    keywords: [
+      "right now",
+      "building right now",
+      "working on",
+      "currently",
+      "current",
+      "these days",
+      "at the moment",
+      "latest",
+      "nowadays",
+    ],
+    answer: ({ name }) =>
+      currentRole
+        ? `Right now he's ${currentRole.title} at ${currentRole.company}${
+            currentRole.project ? ` on the ${currentRole.project}` : ""
+          } — and shipping AI-powered web apps on the side.${
+            name ? ` That's the short version, ${name}.` : ""
+          }`
+        : "He's focused on shipping AI-powered web apps at the moment.",
+    scene: "work",
+    followUps: ["Show me his best work", "What's his stack?", "Is he open to work?"],
   },
   {
     id: "experience",
@@ -289,6 +325,18 @@ export const HERO_CHIPS = [
   "what has he built?",
   "is he available?",
   "show me his best work",
+];
+
+/**
+ * The fixed question row inside the terminal. Always available, unlike the
+ * old per-answer follow-ups — the visitor can reach any of them at any point.
+ */
+export const TERMINAL_CHIPS = [
+  "Show me his best work",
+  "What's he building right now?",
+  "Is he open to work?",
+  "How do I hire him?",
+  "What's his stack?",
 ];
 
 /** Asked in the chat on a first visit, in place of the old hero bubble. */

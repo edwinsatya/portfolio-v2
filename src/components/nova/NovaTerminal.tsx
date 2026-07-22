@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { COMMANDS, type TerminalLine } from "@/hooks/useNovaChat";
+import { COMMANDS, type TerminalLine, type WindowState } from "@/hooks/useNovaChat";
+import { TERMINAL_CHIPS } from "@/content/nova-qa";
 import { scenes } from "@/content/scenes";
 
 /** Characters per tick while a reply types itself out. */
@@ -9,11 +10,14 @@ const TYPE_MS = 12;
 
 type NovaTerminalProps = {
   isOpen: boolean;
+  windowState: WindowState;
   lines: TerminalLine[];
   isThinking: boolean;
-  suggestions: string[];
   onSend: (text: string) => void;
   onClose: () => void;
+  onMinimize: () => void;
+  onToggleMaximize: () => void;
+  onRestore: () => void;
   onScene: (sceneId: string) => void;
 };
 
@@ -30,13 +34,17 @@ type NovaTerminalProps = {
  */
 export function NovaTerminal({
   isOpen,
+  windowState,
   lines,
   isThinking,
-  suggestions,
   onSend,
   onClose,
+  onMinimize,
+  onToggleMaximize,
+  onRestore,
   onScene,
 }: NovaTerminalProps) {
+  const minimized = windowState === "minimized";
   const [draft, setDraft] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const logRef = useRef<HTMLDivElement>(null);
@@ -45,19 +53,19 @@ export function NovaTerminal({
 
   // Focus the prompt on open, and hand focus back to whatever opened it.
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !minimized) {
       restoreTo.current = document.activeElement as HTMLElement | null;
       // After the open transition has started, so focus doesn't scroll the page.
       const timer = window.setTimeout(() => inputRef.current?.focus(), 60);
       return () => window.clearTimeout(timer);
     }
     restoreTo.current?.focus?.();
-  }, [isOpen]);
+  }, [isOpen, minimized]);
 
   // Escape closes; Tab cycles inside the dialog rather than escaping to the page
   // behind it.
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || minimized) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -88,13 +96,23 @@ export function NovaTerminal({
 
     document.addEventListener("keydown", onKeyDown, true);
     return () => document.removeEventListener("keydown", onKeyDown, true);
-  }, [isOpen, onClose]);
+  }, [isOpen, minimized, onClose]);
 
   // Keep the newest line in view.
   useEffect(() => {
     const log = logRef.current;
     if (log) log.scrollTop = log.scrollHeight;
   }, [lines, isThinking]);
+
+  /*
+   * The opening lines are pinned above the question row; everything said since
+   * scrolls below it. Splitting on the first `input` is what keeps the chips
+   * between the header and the conversation, as in the reference, rather than
+   * floating above the version banner.
+   */
+  const firstInput = lines.findIndex((l) => l.kind === "input");
+  const header = firstInput === -1 ? lines : lines.slice(0, firstInput);
+  const body = firstInput === -1 ? [] : lines.slice(firstInput);
 
   function submit(text: string) {
     onSend(text);
@@ -103,11 +121,32 @@ export function NovaTerminal({
   }
 
   return (
+    <>
+      {/* Minimised: a dock pill, the way a real window collapses. The transcript
+          is untouched — restoring picks the session back up. */}
+      <button
+        type="button"
+        className="term-dock"
+        data-open={isOpen && minimized}
+        aria-hidden={!(isOpen && minimized)}
+        inert={!(isOpen && minimized)}
+        onClick={onRestore}
+      >
+        <span className="term-dock-lights" aria-hidden>
+          <i />
+          <i />
+          <i />
+        </span>
+        NOVA_AI · TERMINAL
+        <span className="term-dock-live" aria-hidden />
+      </button>
+
     <div
       className="term-layer"
-      data-open={isOpen}
-      aria-hidden={!isOpen}
-      inert={!isOpen}
+      data-open={isOpen && !minimized}
+      data-window={windowState}
+      aria-hidden={!isOpen || minimized}
+      inert={!isOpen || minimized}
     >
       {/* Clicking the dimmed page closes, the way clicking off a window does. */}
       <button
@@ -133,9 +172,35 @@ export function NovaTerminal({
               className="term-light term-light-close"
               onClick={onClose}
               aria-label="Close terminal"
-            />
-            <span className="term-light term-light-min" aria-hidden />
-            <span className="term-light term-light-max" aria-hidden />
+            >
+              <svg viewBox="0 0 12 12" aria-hidden>
+                <path d="M3.5 3.5l5 5M8.5 3.5l-5 5" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className="term-light term-light-min"
+              onClick={onMinimize}
+              aria-label="Minimise terminal"
+            >
+              <svg viewBox="0 0 12 12" aria-hidden>
+                <path d="M3 6h6" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className="term-light term-light-max"
+              onClick={onToggleMaximize}
+              aria-label={
+                windowState === "maximized"
+                  ? "Restore terminal size"
+                  : "Maximise terminal"
+              }
+            >
+              <svg viewBox="0 0 12 12" aria-hidden>
+                <path d="M6 3v6M3 6h6" />
+              </svg>
+            </button>
           </div>
 
           <span className="term-spine" aria-hidden>
@@ -191,6 +256,28 @@ export function NovaTerminal({
           </span>
         </header>
 
+        <div className="term-head-lines">
+          {header.map((entry) => (
+            <TerminalRow key={entry.id} entry={entry} onScene={onScene} />
+          ))}
+        </div>
+
+        {/* Fixed question row, directly under the header lines and always
+            available — unlike the old per-answer follow-ups, which vanished
+            once you'd asked something. */}
+        <div className="term-chips">
+          {TERMINAL_CHIPS.map((chip) => (
+            <button
+              key={chip}
+              type="button"
+              onClick={() => submit(chip)}
+              className="term-chip"
+            >
+              {chip}
+            </button>
+          ))}
+        </div>
+
         <div
           ref={logRef}
           className="term-log"
@@ -198,7 +285,7 @@ export function NovaTerminal({
           aria-live="polite"
           aria-atomic="false"
         >
-          {lines.map((entry) => (
+          {body.map((entry) => (
             <TerminalRow key={entry.id} entry={entry} onScene={onScene} />
           ))}
 
@@ -208,21 +295,6 @@ export function NovaTerminal({
             </p>
           )}
         </div>
-
-        {suggestions.length > 0 && !isThinking && (
-          <div className="term-chips">
-            {suggestions.map((suggestion) => (
-              <button
-                key={suggestion}
-                type="button"
-                onClick={() => submit(suggestion)}
-                className="term-chip"
-              >
-                {suggestion}
-              </button>
-            ))}
-          </div>
-        )}
 
         <form
           className="term-form"
@@ -253,6 +325,7 @@ export function NovaTerminal({
         </form>
       </div>
     </div>
+    </>
   );
 }
 

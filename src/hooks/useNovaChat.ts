@@ -37,6 +37,9 @@ const THINKING_MS = 520;
 /** Commands the terminal understands, shown in the header and on error. */
 export const COMMANDS = ["/work", "/about", "/contact", "/cv", "/clear"] as const;
 
+/** How the terminal window is presented. Mirrors the traffic lights. */
+export type WindowState = "normal" | "minimized" | "maximized";
+
 const BOOT_LINES: Omit<TerminalLine, "id">[] = [
   { kind: "boot", text: "nova_ai v1.0 · cognition_layer online" },
   { kind: "hint", text: `type a question, or one of: ${COMMANDS.join(" ")}` },
@@ -67,6 +70,7 @@ export function useNovaChat({
 }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const [windowState, setWindowState] = useState<WindowState>("normal");
   const [lines, setLines] = useState<TerminalLine[]>([]);
   const [isThinking, setIsThinking] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_SUGGESTIONS);
@@ -87,6 +91,9 @@ export function useNovaChat({
   const open = useCallback(
     (withQuestion = false) => {
       setIsOpen(true);
+      // Reopening from the dock restores the window rather than leaving it
+      // collapsed, which would look like the click did nothing.
+      setWindowState((w) => (w === "minimized" ? "normal" : w));
       setLines((current) => {
         if (current.length > 0) return current;
         const asksName = isFirstVisit && !name && !withQuestion;
@@ -105,7 +112,24 @@ export function useNovaChat({
     [name, isFirstVisit],
   );
 
-  const close = useCallback(() => setIsOpen(false), []);
+  const close = useCallback(() => {
+    setIsOpen(false);
+    // Next open starts at a normal window; a maximised one left behind would
+    // be a surprise.
+    setWindowState("normal");
+  }, []);
+
+  /** Yellow light. Collapses to the dock pill, keeping the transcript. */
+  const minimize = useCallback(() => setWindowState("minimized"), []);
+
+  /** Green light. Toggles between near-full-viewport and normal. */
+  const toggleMaximize = useCallback(
+    () => setWindowState((w) => (w === "maximized" ? "normal" : "maximized")),
+    [],
+  );
+
+  /** Clicking the dock pill. */
+  const restore = useCallback(() => setWindowState("normal"), []);
   const toggle = useCallback(
     () => (isOpen ? close() : open()),
     [isOpen, open, close],
@@ -230,16 +254,27 @@ export function useNovaChat({
     [open, send],
   );
 
-  // The tagline rotation pauses while the terminal is up.
-  useEffect(() => setChatOpen(isOpen), [isOpen]);
+  /**
+   * "Occupying the visitor" — drives NOVA stepping aside and the tagline
+   * rotation pausing. A minimised terminal is docked out of the way, so it
+   * doesn't count even though it's still open.
+   */
+  const isEngaged = isOpen && windowState !== "minimized";
+
+  useEffect(() => setChatOpen(isEngaged), [isEngaged]);
 
   return {
     isOpen,
+    windowState,
+    isEngaged,
     lines,
     isThinking,
     suggestions,
     open,
     close,
+    minimize,
+    toggleMaximize,
+    restore,
     toggle,
     send,
     goToScene,
