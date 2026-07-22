@@ -40,7 +40,7 @@ export function Nav() {
           <button
             type="button"
             onClick={() => askNova()}
-            className="nav-icon"
+            className="nav-icon nav-icon-chat"
             aria-label="Talk to NOVA"
           >
             <ChatBubble className="size-4" />
@@ -56,8 +56,6 @@ export function Nav() {
             <FileText className="size-4" />
           </a>
         </span>
-
-        <span aria-hidden className="site-nav-rule" />
 
         <ul className="site-nav-items">
           {scenes.map((scene) => {
