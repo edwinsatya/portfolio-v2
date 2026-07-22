@@ -31,13 +31,14 @@ export type Pose = {
   chest: number;
 };
 
-export type NovaState = "idle" | "wave" | "dance" | "hop" | "happy";
+export type NovaState = "idle" | "wave" | "dance" | "hop" | "happy" | "yawn";
 
 /** How long each move runs at rest intensity. */
 export const STATE_MS: Record<Exclude<NovaState, "idle" | "happy">, number> = {
   wave: 2100,
   dance: 1900,
   hop: 1050,
+  yawn: 2200,
 };
 
 const TAU = Math.PI * 2;
@@ -72,19 +73,57 @@ export function blendPose(from: Pose, to: Pose, t: number): Pose {
  * Driven by absolute time rather than time-since-entry, so returning to idle
  * rejoins the breath already in progress instead of restarting it — the body
  * never hitches when a celebration ends.
+ *
+ * `droop` (0–1) is how flat the battery is. It slows the breath, sinks the body,
+ * and lets the arms hang dead rather than swinging — the same idle, tired. It's
+ * a continuous parameter rather than a separate "tired" state so that charging
+ * back up walks her out of it frame by frame instead of snapping her upright.
  */
-function idle(now: number): Pose {
-  const breath = Math.sin((now / 4600) * TAU);
+function idle(now: number, droop = 0): Pose {
+  // The whole clock slows down, so the bob and the sway stretch together.
+  const slow = 1 + droop * 1.35;
+  const breath = Math.sin((now / (4600 * slow)) * TAU);
+  const sway = 1 - droop * 0.75;
+
   return {
-    armL: 1.5 + Math.sin((now / 5200) * TAU) * 2,
-    armR: 1.5 + Math.sin((now / 5900) * TAU + Math.PI) * 2,
-    foreL: 0,
-    foreR: 0,
-    bodyY: -2 + breath * 2,
+    armL: 1.5 + Math.sin((now / (5200 * slow)) * TAU) * 2 * sway + droop * 3,
+    armR:
+      1.5 + Math.sin((now / (5900 * slow)) * TAU + Math.PI) * 2 * sway - droop * 3,
+    foreL: droop * 5,
+    foreR: -droop * 5,
+    // Sinks on her legs, and the breath shallows out.
+    bodyY: -2 + breath * 2 * (1 - droop * 0.55) + droop * 4,
     bodyRot: 0,
-    bodySx: 1,
-    bodySy: 1,
-    chest: 1 + ((breath + 1) / 2) * 0.018,
+    bodySx: 1 + droop * 0.012,
+    bodySy: 1 - droop * 0.02,
+    chest: 1 + ((breath + 1) / 2) * 0.018 * (1 - droop * 0.4),
+  };
+}
+
+/**
+ * The yawn: a slow stretch up, a hold, and a heavier slump than she started in.
+ *
+ * Only ever played on a low battery, where the arms are already hanging — which
+ * is why it's built on the drooped idle rather than the upright one.
+ */
+function yawn(now: number, elapsed: number, droop: number): Pose {
+  const base = idle(now, droop);
+  const p = Math.min(1, elapsed / STATE_MS.yawn);
+
+  // Up over the first third, held, down over the last quarter — slower at both
+  // ends than a wave, because a tired stretch has no snap in it.
+  const stretch =
+    p < 0.34 ? ease(p / 0.34) : p > 0.74 ? ease((1 - p) / 0.26) : 1;
+
+  return {
+    ...base,
+    armL: lerp(base.armL, 96, stretch),
+    armR: lerp(base.armR, -96, stretch),
+    foreL: lerp(base.foreL, 26, stretch),
+    foreR: lerp(base.foreR, -26, stretch),
+    bodyY: base.bodyY - 3 * stretch,
+    bodySy: base.bodySy + 0.02 * stretch,
+    chest: base.chest + 0.02 * stretch,
   };
 }
 
@@ -175,12 +214,19 @@ function happy(now: number, _elapsed: number, intensity: number): Pose {
   return { ...base, bodyY: base.bodyY - 1.5 * (0.5 + intensity * 0.5) };
 }
 
-/** The pose a state wants right now. */
+/**
+ * The pose a state wants right now.
+ *
+ * `droop` only reaches the states that can play on a flat battery. The
+ * celebrations can't — she refuses them below 20% — so threading it into them
+ * would be describing a pose that never renders.
+ */
 export function poseFor(
   state: NovaState,
   now: number,
   elapsed: number,
   intensity: number,
+  droop = 0,
 ): Pose {
   switch (state) {
     case "wave":
@@ -191,8 +237,10 @@ export function poseFor(
       return hop(now, elapsed, intensity);
     case "happy":
       return happy(now, elapsed, intensity);
+    case "yawn":
+      return yawn(now, elapsed, droop);
     default:
-      return idle(now);
+      return idle(now, droop);
   }
 }
 

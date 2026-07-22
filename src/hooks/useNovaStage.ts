@@ -5,8 +5,10 @@ import {
   fireLike,
   onCelebrate,
   onNovaBooted,
+  setNovaPort,
   type Celebration,
 } from "@/lib/nova-bus";
+import { getPower } from "@/lib/power";
 import {
   blendPose,
   ease as easeBlend,
@@ -35,6 +37,8 @@ const SIDELINE_MS = 400;
 /** Vertical position of NOVA's eyes and antenna within the viewBox, 0–1. */
 const EYE_LINE = 109 / 320;
 const HEAD_TOP = 19 / 320;
+/** Her chest lamp, which doubles as the charging port. */
+const PORT_LINE = 215 / 320;
 
 /** Clearance the bubble keeps from every viewport edge. */
 const EDGE_PAD = 12;
@@ -59,6 +63,10 @@ const FLY_MS = 800;
 /** Randomised gap between idle waves. */
 const WAVE_MIN_MS = 15000;
 const WAVE_MAX_MS = 30000;
+/** Randomised gap between yawns, once the battery is flat. Rarer than a wave —
+    a yawn every fifteen seconds reads as a tic rather than as tiredness. */
+const YAWN_MIN_MS = 18000;
+const YAWN_MAX_MS = 34000;
 /** How long the joyful face lingers after the last like. */
 const JOY_MS = 1400;
 /** Crossfade into a new move, from whatever pose is on screen. */
@@ -282,13 +290,35 @@ export function useNovaStage({
         queued = null;
       }
 
+      /* How tired the body reads, updated every frame so a charge walks her
+         back upright continuously rather than in steps. */
+      const power = getPower();
+      const droop = power.droop;
+
+      if (svg.dataset.power !== power.state) svg.dataset.power = power.state;
+      svg.style.setProperty("--nova-droop", droop.toFixed(2));
+
+      // The port shows itself the moment a plug is picked up, so the visitor
+      // can see where they're aiming before they get there.
+      if (power.dragging || power.charging) svg.dataset.port = "true";
+      else delete svg.dataset.port;
+      if (power.charging) svg.dataset.charging = "true";
+      else delete svg.dataset.charging;
+
       if (reducedMotion.matches) {
         // Held at a fixed rest pose — the engine's idle still breathes and
         // sways, which is motion the visitor asked not to see. Evaluated at a
-        // constant time so nothing oscillates.
-        pose = restingPose(0);
+        // constant time so nothing oscillates. The slump still applies: it's a
+        // posture, not a movement.
+        pose = restingPose(0, droop);
       } else {
-        const wantPose = poseFor(state, now, now - stateStartedAt, intensity);
+        const wantPose = poseFor(
+          state,
+          now,
+          now - stateStartedAt,
+          intensity,
+          droop,
+        );
         const blend = easeBlend(Math.min(1, (now - blendStartedAt) / blendMs));
         pose = blendPose(blendFrom, wantPose, blend);
       }
@@ -348,6 +378,11 @@ export function useNovaStage({
         "--nova-head-y",
         `${Math.round(antennaTop)}`,
       );
+
+      // Where the charging cable lands. Published in JS rather than as a custom
+      // property: the charger draws a curve through it and would otherwise have
+      // to read back computed style every frame.
+      setNovaPort(centerX, boxTop + BASE_HEIGHT * scale * PORT_LINE);
 
       /* Bubble — placed by collision, not by fixed offsets.
          Prefers sitting above NOVA's antenna. Where that would put it under the
@@ -478,6 +513,11 @@ export function useNovaStage({
     const runCelebration = (kind: Celebration) => {
       const now = performance.now();
 
+      // Flat battery: no delight, no dance. A tired robot that still beams and
+      // grins on every click would undo the whole state — the like still lands
+      // and still throws hearts, she just hasn't the power to react to it.
+      if (getPower().state !== "normal") return;
+
       // Face first, always, however fast they click. Pure opacity, so it can
       // retrigger endlessly without ever snapping.
       window.clearTimeout(joyTimer);
@@ -501,9 +541,10 @@ export function useNovaStage({
       if (!queued && kind !== state) queued = kind;
     };
 
-    /** The idle wave. Never interrupts a celebration. */
+    /** The idle wave. Never interrupts a celebration, or a flat battery. */
     const wave = () => {
       if (reducedMotion.matches || busy()) return;
+      if (getPower().state !== "normal") return;
       enterState("wave", performance.now());
     };
 
@@ -519,6 +560,27 @@ export function useNovaStage({
           scheduleWave();
         },
         WAVE_MIN_MS + Math.random() * (WAVE_MAX_MS - WAVE_MIN_MS),
+      );
+    };
+
+    /*
+     * The yawn — the low-battery counterpart to the wave, and it runs on the
+     * same one-shot schedule for the same reason: a fixed interval would read
+     * as a mechanism rather than as a robot getting sleepy.
+     *
+     * Only in `low`. In `reserve` she's asleep on her feet, and a stretch would
+     * undo the nap; while charging she's on her way back up.
+     */
+    const scheduleYawn = () => {
+      later(
+        () => {
+          const power = getPower();
+          if (power.state === "low" && !power.charging && !busy()) {
+            enterState("yawn", performance.now());
+          }
+          scheduleYawn();
+        },
+        YAWN_MIN_MS + Math.random() * (YAWN_MAX_MS - YAWN_MIN_MS),
       );
     };
 
@@ -567,7 +629,10 @@ export function useNovaStage({
     // in place, not movement across the screen, and without it NOVA reads as
     // switched off. The wave loop does not.
     scheduleBlink();
-    if (!reducedMotion.matches) scheduleWave();
+    if (!reducedMotion.matches) {
+      scheduleWave();
+      scheduleYawn();
+    }
 
     return () => {
       cancelAnimationFrame(frame);

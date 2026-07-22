@@ -13,6 +13,8 @@ import { profile } from "@/content/profile";
 import { matchIntent, scriptedResponder, type NovaResponder } from "@/lib/nova-brain";
 import { celebrate, onAskNova, setNovaThinking, setWindowOpen } from "@/lib/nova-bus";
 import { sanitizeName, setVisitorName } from "@/lib/memory";
+import { getPower, setLevel } from "@/lib/power";
+import { setTheme } from "@/lib/theme";
 
 /**
  * One line of terminal output.
@@ -34,8 +36,22 @@ export type TerminalLine = {
 /** Minimum beat before a reply lands, so answers don't snap in instantly. */
 const THINKING_MS = 520;
 
-/** Commands the terminal understands, shown in the header and on error. */
-export const COMMANDS = ["/work", "/about", "/contact", "/cv", "/clear"] as const;
+/**
+ * Commands the terminal understands, shown in the header and on error.
+ *
+ * The theme pair also answer to `/dark` and `/light`; the aliases are handled
+ * but deliberately not listed, since printing all seven would bury the four
+ * commands that actually navigate.
+ */
+export const COMMANDS = [
+  "/work",
+  "/about",
+  "/contact",
+  "/cv",
+  "/dark-mode",
+  "/light-mode",
+  "/clear",
+] as const;
 
 /** How the terminal window is presented. Mirrors the traffic lights. */
 export type WindowState = "normal" | "minimized" | "maximized";
@@ -47,6 +63,27 @@ const BOOT_LINES: Omit<TerminalLine, "id">[] = [
 
 let nextId = 0;
 const line = (l: Omit<TerminalLine, "id">): TerminalLine => ({ id: nextId++, ...l });
+
+/** Prefixed onto her answers when she's running on reserve. */
+const SLEEPY_PREFIXES = [
+  "*yawn* ",
+  "mm… ",
+  "hang on, waking up… ",
+  "sorry, low power. ",
+];
+
+/**
+ * Colours a reply with how tired she is.
+ *
+ * A prefix rather than a rewritten answer: the content still has to be correct
+ * and complete on a flat battery — she's sleepy, not unhelpful — so tiredness
+ * lands in the delivery and nowhere else. Only in reserve, and only sometimes,
+ * because a tic on every single line stops reading as character.
+ */
+function sleepy(text: string): string {
+  if (getPower().state !== "reserve" || Math.random() > 0.55) return text;
+  return SLEEPY_PREFIXES[Math.floor(Math.random() * SLEEPY_PREFIXES.length)] + text;
+}
 
 /**
  * Terminal state for the NOVA chat.
@@ -154,6 +191,27 @@ export function useNovaChat({
       const cmd = raw.toLowerCase().split(/\s+/)[0];
       push({ kind: "input", text: raw });
 
+      /*
+       * Hidden: `/set-battery-42`, and the spaced form for convenience.
+       *
+       * Deliberately absent from `COMMANDS`, so it appears in neither the
+       * header hint nor the "command not found" list — a visitor who never
+       * types it will never learn it exists. It's here because the drain is
+       * tuned to ~17 minutes and the low-power states are otherwise untestable
+       * without sitting through it.
+       *
+       * Matched before the switch: the value is part of the command word, so
+       * there is no fixed string for a `case` to match on.
+       */
+      const battery = /^\/set-battery[-\s](\d{1,3})$/.exec(raw.trim().toLowerCase());
+      if (battery) {
+        const applied = setLevel(Number(battery[1]));
+        // `status` rather than `reply` — dim and italic, so it reads as the
+        // debug output it is rather than as NOVA saying something.
+        push({ kind: "status", text: `// battery set to ${applied}%` });
+        return true;
+      }
+
       switch (cmd) {
         case "/work":
         case "/about":
@@ -165,6 +223,42 @@ export function useNovaChat({
           push({ kind: "reply", text: "opening resume in a new tab…" });
           window.open(profile.links.resume, "_blank", "noopener,noreferrer");
           return true;
+
+        case "/dark-mode":
+        case "/dark": {
+          const result = setTheme("dark");
+          push({
+            kind: "reply",
+            text:
+              result === "already"
+                ? "lights are already out."
+                : "lights out. much easier on my optics.",
+          });
+          return true;
+        }
+
+        case "/light-mode":
+        case "/light": {
+          const result = setTheme("light");
+          if (result === "refused") {
+            // The one command a flat battery turns down. Phrased as her
+            // refusing rather than as the site failing — it's a state she's in,
+            // and the fix is on screen.
+            push({
+              kind: "error",
+              text: "// ERROR: insufficient power. charge me first.",
+            });
+            return true;
+          }
+          push({
+            kind: "reply",
+            text:
+              result === "already"
+                ? "lights are already on."
+                : "lights on. blinding, but you're the boss.",
+          });
+          return true;
+        }
 
         case "/clear":
           // Back to a fresh prompt, header and all. The name ask doesn't
@@ -230,7 +324,7 @@ export function useNovaChat({
           if (reply) {
             push({
               kind: "reply",
-              text: reply.text,
+              text: sleepy(reply.text),
               scene: reply.scene,
               fresh: true,
             });

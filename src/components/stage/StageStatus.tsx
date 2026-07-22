@@ -7,13 +7,16 @@ import {
   subscribeNovaStatus,
   type NovaStatus,
 } from "@/lib/nova-bus";
+import { batteryCells } from "@/lib/power";
+import { usePower } from "@/hooks/usePower";
 
 /**
  * The machine readout along the bottom of the stage.
  *
  * Decorative in shape but honest in content: the bar and the caption both come
  * from NOVA's actual state on the bus — booting until the boot screen clears,
- * engaged while a window has the visitor, thinking while an answer is in flight.
+ * engaged while a window has the visitor, thinking while an answer is in flight
+ * — and the caption now carries her battery beside it.
  */
 
 /** Caption, and how much of the bar fills. */
@@ -30,14 +33,24 @@ export function StageStatus() {
     getNovaStatus,
     getServerNovaStatus,
   );
+  const power = usePower();
   const { label, fill } = READOUT[status];
 
   return (
-    <div aria-hidden className="stage-status" data-status={status}>
+    <div
+      aria-hidden
+      className="stage-status"
+      data-status={status}
+      data-power={power.state}
+      data-charging={power.charging}
+    >
       <div className="stage-status-bar">
         <div style={{ width: fill }} />
       </div>
-      <p className="mono-label mt-2 text-center text-faint">{label}</p>
+      <p className="mono-label stage-status-read mt-2 text-center text-faint">
+        {label} · {power.charging && <span className="stage-status-bolt">⚡</span>}
+        {batteryCells(power.level)} {power.level}%
+      </p>
     </div>
   );
 }

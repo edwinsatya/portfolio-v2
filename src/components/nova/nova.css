@@ -210,6 +210,221 @@
    `rotate` here would out-specify it and freeze the arm for the whole scene. */
 
 /* -------------------------------------------------------------------------- */
+/* Power                                                                       */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Everything below reads `--nova-droop`, a 0–1 number the stage loop writes each
+ * frame, and `data-power` for the two things that are genuinely states rather
+ * than degrees — the forced flat mouth, and the nap.
+ *
+ * Placed after the mood rules and before the blink, which is the order the three
+ * want: a mood sets the face, tiredness drags it down, and a blink still wins
+ * over both. The body's slump is not here at all — that's the pose engine, so it
+ * blends with whatever move is playing instead of fighting it.
+ */
+
+.nova {
+  --nova-droop: 0;
+  /* How much of her glow is left. Read by every lamp and the bloom. */
+  --nova-glow: calc(1 - var(--nova-droop) * 0.62);
+  /* Base strength of the bloom, before `--nova-glow` dims it. Raised by the
+     dark theme further down. */
+  --nova-bloom: 13%;
+}
+
+/* Lids at half mast. Scaled from the bottom edge, the same trick `proud` uses —
+   an eye that shrinks towards its own centre reads as *small*, not as sleepy. */
+.nova[data-power="low"] .nova-eye,
+.nova[data-power="reserve"] .nova-eye {
+  transform: scaleY(calc(1 - var(--nova-droop) * 0.6));
+  transform-origin: center bottom;
+}
+
+/* Reserve: shut. A hair thicker than a blink so it reads as resting rather than
+   as a frame caught mid-blink. */
+.nova[data-power="reserve"] .nova-eye {
+  transform: scaleY(0.1);
+}
+
+/* Too tired to hold a smile — but only once she's genuinely low, not on the
+   first flicker of droop. */
+.nova[data-power="low"] .nova-eye-happy,
+.nova[data-power="reserve"] .nova-eye-happy,
+.nova[data-power="low"] .nova-mouth-smile,
+.nova[data-power="reserve"] .nova-mouth-smile,
+.nova[data-power="low"] .nova-mouth-grin,
+.nova[data-power="reserve"] .nova-mouth-grin,
+.nova[data-power="low"] .nova-sparkle,
+.nova[data-power="reserve"] .nova-sparkle {
+  opacity: 0;
+}
+
+.nova[data-power="low"] .nova-eye,
+.nova[data-power="reserve"] .nova-eye {
+  opacity: 1;
+}
+
+.nova[data-power="low"] .nova-mouth-flat,
+.nova[data-power="reserve"] .nova-mouth-flat {
+  opacity: 1;
+}
+
+/* The yawn is the one time the mouth opens on a flat battery. */
+.nova[data-state="yawn"] .nova-mouth-flat {
+  opacity: 0;
+}
+
+.nova[data-state="yawn"] .nova-mouth-open {
+  opacity: 1;
+  /* Stretches vertically into the yawn rather than just appearing. */
+  transform: scale(0.85, 1.5);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* The visor cools off as she runs down: the tint desaturates towards a dead
+   slate, and every glow that reads from it dims with it. */
+.nova[data-power="low"],
+.nova[data-power="reserve"] {
+  --nova-tint: color-mix(in oklab, var(--color-accent) 55%, #6f7a8c);
+  --nova-tilt: 5deg;
+}
+
+.nova[data-power="reserve"] {
+  --nova-tint: color-mix(in oklab, var(--color-accent) 28%, #6f7a8c);
+  --nova-tilt: 9deg;
+}
+
+/* Dimming the drop-shadow rather than the fill: the lamps carry inline `opacity`
+   attributes (the chin pair sit at 0.55), and a CSS `opacity` here would
+   flatten those to one value. */
+.nova[data-power="low"] .nova-lamp,
+.nova[data-power="reserve"] .nova-lamp {
+  filter: drop-shadow(
+    0 0 calc(6px * var(--nova-glow))
+      color-mix(in oklab, var(--nova-tint) calc(65% * var(--nova-glow)), transparent)
+  );
+}
+
+.nova[data-power="low"] .nova-eyes,
+.nova[data-power="reserve"] .nova-eyes {
+  filter: drop-shadow(
+    0 0 calc(7px * var(--nova-glow))
+      color-mix(in oklab, var(--nova-tint) calc(70% * var(--nova-glow)), transparent)
+  );
+}
+
+/* The pulse slows to a tired breath, and slower still in reserve. */
+.nova[data-power="low"] .nova-glowing {
+  animation-duration: 5.2s;
+}
+
+.nova[data-power="reserve"] .nova-glowing {
+  animation-duration: 7.5s;
+}
+
+/* --- Sleep particles ------------------------------------------------------ */
+
+.nova-zzz {
+  opacity: 0;
+  transition: opacity 500ms ease;
+}
+
+.nova[data-power="reserve"] .nova-zzz {
+  opacity: 1;
+}
+
+.nova-z {
+  fill: var(--nova-tint);
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 600;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.nova[data-power="reserve"] .nova-z {
+  animation: nova-zzz 3.6s ease-in-out infinite;
+}
+
+.nova-z-mid {
+  animation-delay: -1.2s;
+}
+
+.nova-z-late {
+  animation-delay: -2.4s;
+}
+
+/* Transform and opacity only, like every other move on the stage. */
+@keyframes nova-zzz {
+  0% {
+    transform: translate(0, 6px) scale(0.65);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate(9px, -22px) scale(1.15);
+    opacity: 0;
+  }
+}
+
+/* --- Charging port -------------------------------------------------------- */
+
+/* Invisible until there's a plug in play — she isn't a robot with a hole in her
+   chest the rest of the time. */
+.nova-port {
+  opacity: 0;
+  transition: opacity 260ms ease;
+}
+
+.nova[data-port="true"] .nova-port {
+  opacity: 1;
+}
+
+.nova-port-ring {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 1.6;
+  stroke-dasharray: 4 3.5;
+  opacity: 0.85;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: nova-port-spin 6s linear infinite;
+}
+
+.nova-port-bolt {
+  fill: var(--color-accent);
+  opacity: 0;
+}
+
+/* Once the cable is in, the ring stops hunting and the bolt lights up. */
+.nova[data-charging="true"] .nova-port-ring {
+  animation: nova-port-pulse 900ms ease-in-out infinite;
+  stroke-dasharray: none;
+}
+
+.nova[data-charging="true"] .nova-port-bolt {
+  opacity: 1;
+  animation: nova-port-pulse 900ms ease-in-out infinite;
+}
+
+@keyframes nova-port-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes nova-port-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
 /* Blinking                                                                    */
 /* -------------------------------------------------------------------------- */
 
@@ -495,12 +710,50 @@
   filter: blur(9px);
 }
 
+/* Ambient light on the page behind her. Strength is a variable so the two
+   things that change it can compose: the dark theme turns it up (there's a black
+   page for it to read against), and `--nova-glow` turns it down as she runs
+   flat. A pair of competing selectors could only ever pick one. */
 .nova-bloom-start {
-  stop-color: color-mix(in oklab, var(--nova-tint) 13%, transparent);
+  stop-color: color-mix(
+    in oklab,
+    var(--nova-tint) calc(var(--nova-bloom) * var(--nova-glow)),
+    transparent
+  );
 }
 
 .nova-bloom-end {
   stop-color: transparent;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Dark theme                                                                  */
+/* -------------------------------------------------------------------------- */
+
+/* NOVA is a dark-metal robot, so her shell needs nothing here — but the two
+   things that describe her relationship to the *page* both invert. */
+
+html[data-theme="dark"] .nova {
+  --nova-bloom: 24%;
+  /* A drop shadow does nothing against near-black; the depth has to come from
+     the light she casts instead. */
+  filter: drop-shadow(0 18px 30px rgb(0 0 0 / 0.55));
+}
+
+/* On a light page a glowing pool reads as fog and a grounded shadow reads as an
+   object standing on a surface. On a dark one it's exactly the other way round —
+   a black shadow on black is nothing at all. */
+html[data-theme="dark"] .nova-shadow {
+  fill: color-mix(in oklab, var(--nova-tint) 75%, #0a0b11);
+  opacity: 0.22;
+  filter: blur(12px);
+}
+
+/* The speech bubble sits on the page, not on NOVA, so it follows the page. */
+html[data-theme="dark"] .nova-speech {
+  box-shadow:
+    0 18px 40px -18px rgb(0 0 0 / 0.6),
+    0 2px 6px -3px rgb(0 0 0 / 0.4);
 }
 
 /* -------------------------------------------------------------------------- */

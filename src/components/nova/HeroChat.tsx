@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { ROTATING_LINES } from "@/content/nova-qa";
+import { LOW_POWER_LINES, ROTATING_LINES } from "@/content/nova-qa";
+import { usePower } from "@/hooks/usePower";
 import {
   askNova,
   fireLike,
@@ -38,13 +39,22 @@ export function HeroChat({
   line: string;
   chips: string[];
 }) {
+  const power = usePower();
+  const lowPower = power.state !== "normal";
+
   return (
     <div className="stage-chat">
       <p className="mono-label text-accent-ink">Nova</p>
 
       {/* Keyed by scene: React remounts the rotator so it restarts from that
-          scene's own line, rather than resuming mid-cycle. */}
-      <LineRotator key={sceneId} line={line} />
+          scene's own line, rather than resuming mid-cycle. Also keyed by the
+          power state, so dropping into low battery swaps the script at once
+          instead of finishing the cheerful line she was halfway through. */}
+      <LineRotator
+        key={`${sceneId}-${lowPower}`}
+        line={line}
+        lowPower={lowPower}
+      />
 
       {/* Phones only — on desktop the chips read as clickable on their own. */}
       <p className="stage-ask-hint" aria-hidden>
@@ -82,9 +92,14 @@ export function HeroChat({
  * has the chat open (they're busy), and resumes with the remaining time intact
  * rather than restarting the clock.
  */
-function LineRotator({ line }: { line: string }) {
-  // Scene line first, then the rotating ones.
-  const lines = useMemo(() => [line, ...ROTATING_LINES], [line]);
+function LineRotator({ line, lowPower }: { line: string; lowPower: boolean }) {
+  // Scene line first, then the rotating ones — unless she's flat, in which case
+  // the low-power set replaces the lot, scene line included. A tired robot
+  // narrating the section she's standing in would be the wrong voice entirely.
+  const lines = useMemo(
+    () => (lowPower ? LOW_POWER_LINES : [line, ...ROTATING_LINES]),
+    [line, lowPower],
+  );
   const [index, setIndex] = useState(0);
   const [visible, setVisible] = useState(false);
   const [hovered, setHovered] = useState(false);

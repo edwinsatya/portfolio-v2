@@ -2,11 +2,14 @@
 
 import { useEffect, useRef } from "react";
 import { addLike } from "@/lib/likes";
-import { celebrate, fireLike, onLike } from "@/lib/nova-bus";
+import { celebrate, fireLike, onCelebrate, onLike } from "@/lib/nova-bus";
+import { onCharged, spendOnCelebration, startPowerClock } from "@/lib/power";
+import { initTheme } from "@/lib/theme";
 import { DockPill } from "./DockPill";
 import { LoveBurst } from "./LoveBurst";
 import { Nova } from "./Nova";
 import { NovaTerminal } from "./NovaTerminal";
+import { PowerSocket } from "./PowerSocket";
 import { ResumeWindow } from "./ResumeWindow";
 import { useNovaChat } from "@/hooks/useNovaChat";
 import { useNovaMemory } from "@/hooks/useNovaMemory";
@@ -63,6 +66,28 @@ export function NovaStage() {
     [],
   );
 
+  /*
+   * The battery clock. Started here rather than inside `usePower` because it is
+   * a side effect on the whole app — every component that reads the level would
+   * otherwise start one, and the drain would scale with how many of them happen
+   * to be mounted.
+   */
+  useEffect(() => startPowerClock(), []);
+
+  // Wakes the theme store, which is what subscribes it to the battery. Without
+  // this a visitor who never types `/dark-mode` would drain to 20% and never
+  // get battery saver — see the note on `initTheme`.
+  useEffect(() => initTheme(), []);
+
+  // Moving costs her something. Subscribed to the bus rather than folded into
+  // the like handler above, because celebrations also come from the music
+  // widget, the name flow, and a returning-visitor greeting.
+  useEffect(() => onCelebrate(() => spendOnCelebration()), []);
+
+  // Back to full: the cable pops out on its own (see `power.ts`) and she
+  // celebrates properly, which she has the power for again.
+  useEffect(() => onCharged(() => celebrate("dance")), []);
+
   return (
     <div
       ref={stageRef}
@@ -99,6 +124,10 @@ export function NovaStage() {
       </div>
 
       <LoveBurst />
+
+      {/* Inside the stage layer so it rides up with it: a window opening covers
+          the cable with its scrim, the same way it covers the music widget. */}
+      <PowerSocket />
 
       <NovaTerminal
         isOpen={chat.isOpen}

@@ -1,0 +1,291 @@
+/* -------------------------------------------------------------------------- */
+/* Charging cable — socket on the left edge, plug on the end of it             */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Sits at z-index 46, one above the music widget and below the nav (50). Same
+ * reasoning as the widget's: a terminal or resume opening rides the stage up to
+ * 90 and covers this with its scrim, without anyone coordinating state.
+ *
+ * The layer itself never takes a click — only the socket and the plug opt in.
+ */
+.power {
+  position: fixed;
+  inset: 0;
+  z-index: 46;
+  pointer-events: none;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Socket                                                                      */
+/* -------------------------------------------------------------------------- */
+
+/* Flush with the left edge, half a socket showing — it reads as a fitting in the
+   wall rather than as a button someone left lying on the page. */
+.power-socket {
+  position: absolute;
+  left: 0;
+  top: var(--power-y, 50%);
+  translate: 0 -50%;
+
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 2.4rem;
+
+  border: 1px solid var(--color-line);
+  border-left: 0;
+  border-radius: 0 0.7rem 0.7rem 0;
+  background: color-mix(in oklab, var(--color-surface) 88%, transparent);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px -14px rgb(20 22 31 / 0.4);
+
+  pointer-events: auto;
+  cursor: pointer;
+  /* Dormant while she's fine: present for anyone who wants to top her up early,
+     but not asking for attention. */
+  opacity: 0.4;
+  transition:
+    opacity 300ms ease,
+    border-color 300ms ease,
+    box-shadow 300ms ease;
+}
+
+.power-socket:hover {
+  opacity: 1;
+  border-color: var(--color-accent);
+}
+
+/* Once she's actually low it stops being subtle. */
+.power[data-urgent="true"] .power-socket {
+  opacity: 1;
+  border-color: var(--color-accent);
+  box-shadow:
+    0 8px 24px -14px rgb(20 22 31 / 0.4),
+    0 0 18px -4px color-mix(in oklab, var(--color-accent) 55%, transparent);
+}
+
+.power-socket:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+/* The two pin holes. */
+.power-socket-face {
+  display: flex;
+  gap: 0.28rem;
+}
+
+.power-socket-face i {
+  width: 0.18rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: var(--color-faint);
+}
+
+.power[data-urgent="true"] .power-socket-face i {
+  background: var(--color-accent);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Cable                                                                       */
+/* -------------------------------------------------------------------------- */
+
+/* Full-viewport canvas so the curve can be drawn in plain page coordinates —
+   the draw loop already has NOVA's position in those, and re-basing it into a
+   local box every frame would be arithmetic for nothing. */
+.power-cable {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.power-cable-line {
+  fill: none;
+  stroke: var(--color-faint);
+  stroke-width: 3;
+  stroke-linecap: round;
+  opacity: 0.45;
+  transition:
+    stroke 300ms ease,
+    opacity 300ms ease;
+}
+
+.power[data-urgent="true"] .power-cable-line,
+.power[data-dragging="true"] .power-cable-line {
+  stroke: var(--color-accent);
+  opacity: 0.75;
+}
+
+/* Live current, once it's plugged in. A dash offset animation rather than
+   anything that moves the path — the cable itself must stay put. */
+.power[data-charging="true"] .power-cable-line {
+  stroke: var(--color-accent);
+  opacity: 1;
+  stroke-dasharray: 10 8;
+  animation: power-flow 700ms linear infinite;
+}
+
+@keyframes power-flow {
+  to {
+    stroke-dashoffset: -18;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Plug                                                                        */
+/* -------------------------------------------------------------------------- */
+
+/* Positioned entirely by the draw loop, which writes a `transform` in viewport
+   pixels. `translate: -50% -50%` on the inner body centres the glyph on that
+   point without the loop having to know how big the plug is. */
+.power-plug {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: auto;
+  /* Or the browser scrolls the page instead of letting the drag through. */
+  touch-action: none;
+  cursor: grab;
+  /* Dormant alongside the socket while she's fine. Without this the plug — a
+     light chip on a light page — is the most prominent thing on the left edge,
+     advertising a fix for a problem the visitor doesn't have yet. */
+  opacity: 0.45;
+  transition: opacity 300ms ease;
+}
+
+.power-plug:hover,
+.power[data-urgent="true"] .power-plug,
+.power[data-dragging="true"] .power-plug,
+.power[data-charging="true"] .power-plug {
+  opacity: 1;
+}
+
+.power-plug-body {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  translate: -50% -50%;
+
+  border: 1px solid var(--color-line);
+  border-radius: 0.5rem;
+  background: var(--color-surface);
+  color: var(--color-faint);
+  box-shadow: 0 6px 16px -8px rgb(20 22 31 / 0.45);
+
+  transition:
+    scale 200ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    border-color 200ms ease,
+    color 200ms ease,
+    background-color 200ms ease;
+}
+
+.power-plug:hover .power-plug-body,
+.power[data-urgent="true"] .power-plug-body {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.power[data-dragging="true"] .power-plug {
+  cursor: grabbing;
+}
+
+/* Over the drop zone: the plug swells and lights up, which is the confirmation
+   that letting go now will connect. NOVA's own port ring lights at the same
+   moment — see `nova.css`. */
+.power[data-near="true"] .power-plug-body {
+  scale: 1.35;
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+
+/* Plugged in: the plug is part of NOVA now, so it stops advertising itself. */
+.power[data-charging="true"] .power-plug-body {
+  scale: 0.85;
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* No cable to fling under reduced motion — the socket button is the whole
+   interaction there, so the loose end stays parked and inert. */
+@media (prefers-reduced-motion: reduce) {
+  .power-plug {
+    pointer-events: none;
+  }
+
+  .power[data-charging="true"] .power-cable-line {
+    animation: none;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Hint                                                                        */
+/* -------------------------------------------------------------------------- */
+
+/* Below the socket rather than beside it. Beside puts it straight through the
+   resting plug — which sits at the socket's mouth, not tucked inside it — and a
+   label overlapping the thing it's describing is worse than no label. */
+.power-hint {
+  position: absolute;
+  left: 0.4rem;
+  top: calc(var(--power-y, 50%) + 1.9rem);
+  max-width: 7.5rem;
+
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  line-height: 1.5;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-accent-ink);
+
+  opacity: 0;
+  transition: opacity 320ms ease;
+}
+
+/* Only while she needs charging and isn't already on the cable. */
+.power[data-urgent="true"] .power-hint {
+  opacity: 1;
+}
+
+/* Instructions for a drag are noise on a device that can't hover, and the wrong
+   instruction entirely under reduced motion — where the plug is inert. */
+.power-hint-tap {
+  display: none;
+}
+
+@media (hover: none) {
+  .power-hint-drag {
+    display: none;
+  }
+
+  .power-hint-tap {
+    display: inline;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .power-hint-drag {
+    display: none;
+  }
+
+  .power-hint-tap {
+    display: inline;
+  }
+}
+
+/* Phones: tighter, and narrower still — at 390px wide the scene content starts
+   not far off the left edge. */
+@media (max-width: 639px) {
+  .power-hint {
+    left: 0.3rem;
+    max-width: 5.5rem;
+    font-size: 0.5rem;
+    letter-spacing: 0.1em;
+  }
+}

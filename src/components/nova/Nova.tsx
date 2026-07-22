@@ -223,6 +223,17 @@ export function Nova({ mood = "greeting", className = "", ref }: NovaProps) {
                 opacity="0.17"
               />
               <circle className="nova-lamp nova-glowing" cx="120" cy="215" r="9.5" />
+
+              {/* The charging port. Her chest lamp already sits here, so the
+                  socket is a ring around it rather than a new part — it only
+                  becomes visible once there's a plug in play. */}
+              <g className="nova-port" aria-hidden>
+                <circle className="nova-port-ring" cx="120" cy="215" r="15" />
+                <path
+                  className="nova-port-bolt"
+                  d="M122.5 206.5l-6 9h4.5l-3 8 6.5-9.5h-4.5z"
+                />
+              </g>
             </g>
 
             {/* ---- Head. Geometry unchanged from the original design. ---- */}
@@ -358,6 +369,20 @@ export function Nova({ mood = "greeting", className = "", ref }: NovaProps) {
               {/* Chin lamps */}
               <circle className="nova-lamp" cx="88" cy="157" r="2.5" opacity="0.55" />
               <circle className="nova-lamp" cx="152" cy="157" r="2.5" opacity="0.55" />
+            </g>
+
+            {/* Sleep particles, shown only in reserve. Outside the head group
+                so they drift straight up rather than swinging with her gaze. */}
+            <g className="nova-zzz" aria-hidden>
+              <text className="nova-z" x="196" y="60">
+                z
+              </text>
+              <text className="nova-z nova-z-mid" x="206" y="44">
+                z
+              </text>
+              <text className="nova-z nova-z-late" x="216" y="30">
+                z
+              </text>
             </g>
           </g>
         </g>

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import { profile } from "@/content/profile";
 import { siteUrl } from "@/lib/site";
+import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
 // Display face — a little character in the headings, still readable small.
@@ -67,7 +68,9 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#ecedf4",
-  colorScheme: "light",
+  // Both, now that the site has a real dark theme — `lib/theme.ts` writes the
+  // resolved one onto `<html>` so form controls and the address bar follow it.
+  colorScheme: "light dark",
 };
 
 export default function RootLayout({
@@ -79,7 +82,24 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${display.variable} ${body.variable} ${mono.variable} stage-root h-full antialiased`}
+      // Rendered so the tokens resolve even if the script below never runs — a
+      // strict CSP blocks inline scripts, and a themeless page would fall back
+      // to unstyled colours rather than to light.
+      data-theme="light"
+      // The script rewrites that attribute before React hydrates, so the
+      // server's markup and the DOM disagree by construction. This is the one
+      // attribute that is *meant* to differ.
+      suppressHydrationWarning
     >
+      <head>
+        {/*
+          Blocking, and deliberately so: it has to run before the first paint or
+          a returning dark-theme visitor gets a full white flash of the page
+          they explicitly turned off. It reads one localStorage key and sets one
+          attribute — a few hundred microseconds against a visible flash.
+        */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+      </head>
       <body className="min-h-full">
         {/* Reveal-on-scroll starts hidden and is unhidden by JS. With scripting
             off nothing would ever unhide it, so force everything visible. */}

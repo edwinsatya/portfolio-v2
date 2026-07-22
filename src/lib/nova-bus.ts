@@ -111,6 +111,32 @@ export function celebrate(kind?: Celebration): void {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Charging port                                                               */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Where the cable plugs in, in viewport pixels — NOVA's chest lamp.
+ *
+ * Written by the stage loop, which already computes her transform every frame,
+ * and read by the charger overlay. A plain module variable rather than a CSS
+ * custom property (the pattern the love burst uses) because the charger needs
+ * the number in JS to draw a bezier through it, and `getComputedStyle` every
+ * frame would be a synchronous style flush per frame.
+ */
+
+let portX = 0;
+let portY = 0;
+
+export function setNovaPort(x: number, y: number): void {
+  portX = x;
+  portY = y;
+}
+
+export function getNovaPort(): { x: number; y: number } {
+  return { x: portX, y: portY };
+}
+
+/* -------------------------------------------------------------------------- */
 /* Resume window                                                               */
 /* -------------------------------------------------------------------------- */
 

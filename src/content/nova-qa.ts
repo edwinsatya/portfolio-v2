@@ -321,6 +321,19 @@ export const ROTATING_LINES = [
   "psst — he's open to new work right now.",
 ];
 
+/**
+ * What she says once the battery is under 20%.
+ *
+ * Replaces the rotation outright rather than joining it — a robot alternating
+ * between "so sleepy" and a chirpy sales pitch for Edwin would undercut both.
+ * She still keeps working, which is the point of the last one.
+ */
+export const LOW_POWER_LINES = [
+  "running on fumes here...",
+  "so sleepy... got a charger?",
+  "battery low. i'll keep watch anyway.",
+];
+
 export const HERO_CHIPS = [
   "what has he built?",
   "is he available?",

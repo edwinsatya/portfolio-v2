@@ -6,6 +6,8 @@ import { sceneFromSegment } from "@/content/scenes";
 import { HeroChat } from "@/components/nova/HeroChat";
 import { LikeCounter } from "@/components/nova/LikeCounter";
 import { StageStatus } from "@/components/stage/StageStatus";
+import { batteryCells } from "@/lib/power";
+import { usePower } from "@/hooks/usePower";
 
 /**
  * The constant frame around every scene: identity top-left, blurred wordmark
@@ -34,10 +36,7 @@ export function StageFrame({ children }: { children: React.ReactNode }) {
         </p>
         {/* Machine readout under the identity, phones only — desktop already
             has the NOVA ONLINE strip along the bottom. */}
-        <p className="stage-status-line" aria-hidden>
-          <i />
-          System status: nominal
-        </p>
+        <StatusLine />
       </header>
 
       {/* Giant blurred wordmark, behind everything, on NOVA's centre line. */}
@@ -75,5 +74,24 @@ export function StageFrame({ children }: { children: React.ReactNode }) {
         <StageStatus />
       </div>
     </div>
+  );
+}
+
+/**
+ * The phone-only readout under the identity.
+ *
+ * Split into its own component so the battery's per-percent updates re-render
+ * one line rather than the whole frame — `StageFrame` also owns the wordmark,
+ * the scene slot, and the foot, none of which care about the battery.
+ */
+function StatusLine() {
+  const power = usePower();
+
+  return (
+    <p className="stage-status-line" data-power={power.state} aria-hidden>
+      <i />
+      {power.charging ? "Charging " : ""}
+      {batteryCells(power.level)} {power.level}%
+    </p>
   );
 }
