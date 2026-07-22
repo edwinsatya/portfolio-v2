@@ -76,7 +76,7 @@ export function NovaStage() {
           so the two transforms never fight. The chat replaces it while open —
           two things talking at once would just be noise. */}
       <div ref={bubbleRef} className="nova-speech-anchor">
-        <div className="nova-speech" data-open={open && !chat.isOpen}>
+        <div className="nova-speech" data-open={open}>
           {/* Ambient narration that repeats what the section heading already
               says — announcing it would talk over the visitor's own navigation. */}
           <p id="nova-says" aria-hidden="true">

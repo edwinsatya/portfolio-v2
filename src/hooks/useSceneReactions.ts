@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSelectedLayoutSegment } from "next/navigation";
 import { greetings, type NovaMood } from "@/content/profile";
 import { sceneFromSegment } from "@/content/scenes";
-import { celebrate } from "@/lib/nova-bus";
+import { celebrate, getChatOpen, subscribeChatOpen } from "@/lib/nova-bus";
 import { onForget } from "@/lib/memory";
 import { useNovaMemory } from "./useNovaMemory";
 
@@ -73,6 +73,25 @@ export function useSceneReactions() {
 
     return () => window.clearTimeout(timer);
   }, [previous, scene.id]);
+
+  /*
+   * Opening the terminal retires the bubble for good.
+   *
+   * It used to be merely hidden while the terminal was up, which meant closing
+   * the terminal within the bubble's four seconds brought it back for whatever
+   * time was left — a flash of a greeting the visitor had already read. Once
+   * something else has their attention the greeting has been missed; cancelling
+   * it is the honest outcome.
+   */
+  useEffect(
+    () =>
+      subscribeChatOpen(() => {
+        if (!getChatOpen()) return;
+        window.clearTimeout(dismissTimer.current);
+        setOpen(false);
+      }),
+    [],
+  );
 
   // Memory wiped from the chat or elsewhere: say so, and allow greeting again.
   useEffect(

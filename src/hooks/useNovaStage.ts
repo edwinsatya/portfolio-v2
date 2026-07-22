@@ -153,13 +153,15 @@ export function useNovaStage({ forceDock = false }: { forceDock?: boolean } = {}
       const slotRect = slot?.getBoundingClientRect() ?? null;
       const navBottom = nav?.getBoundingClientRect().bottom ?? NAV_FALLBACK;
 
-      // Only measured while the bubble is actually up; the rest of the time its
-      // size is irrelevant and measuring it would be wasted layout work.
+      // Measured every frame, open or not. The bubble hides with `visibility`,
+      // which keeps its layout box, so these are real numbers throughout —
+      // and treating a closed bubble as zero-sized made the placement below
+      // solve to a different spot, so it visibly jumped at both ends of the
+      // fade. It's the same batched read either way.
       const bubble = bubbleRef.current;
       const speech = bubble?.firstElementChild as HTMLElement | null;
-      const bubbleVisible = speech?.dataset.open === "true";
-      const bubbleWidth = bubbleVisible ? speech!.offsetWidth : 0;
-      const bubbleHeight = bubbleVisible ? speech!.offsetHeight : 0;
+      const bubbleWidth = speech?.offsetWidth ?? 0;
+      const bubbleHeight = speech?.offsetHeight ?? 0;
 
       const vw = window.innerWidth;
       const vh = window.innerHeight;
