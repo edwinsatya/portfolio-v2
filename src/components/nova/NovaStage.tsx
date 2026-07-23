@@ -135,7 +135,10 @@ export function NovaStage() {
         obscured={resume.isEngaged}
         lines={chat.lines}
         isThinking={chat.isThinking}
+        prefill={chat.prefill}
         onSend={chat.send}
+        onPrint={chat.print}
+        onClear={chat.clear}
         onClose={chat.close}
         onMinimize={chat.minimize}
         onToggleMaximize={chat.toggleMaximize}

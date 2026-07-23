@@ -1586,6 +1586,47 @@ html[data-power="critical"] .term-layer {
   caret-color: transparent;
 }
 
+/*
+ * The inline suggestion.
+ *
+ * Laid over the input rather than appended to its value, which is what keeps it
+ * a *suggestion*: the field still contains only what the visitor typed, so
+ * submitting without accepting sends their text and nothing else. The leading
+ * span reprints the typed characters in transparent ink purely to push the tail
+ * to the right offset — exact, because the face is monospace and both halves
+ * inherit it from `.term`.
+ */
+.term-ghost {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  white-space: pre;
+  overflow: hidden;
+  /* Clicks belong to the input underneath; only the tail opts back in. */
+  pointer-events: none;
+}
+
+.term-ghost-typed {
+  color: transparent;
+}
+
+.term-ghost-rest {
+  font: inherit;
+  color: color-mix(in oklab, var(--term-dim) 80%, transparent);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.term-ghost-rest:hover {
+  color: var(--term-dim);
+}
+
+/* Phones only: ↑↓ don't exist on a touch keyboard, so history needs buttons. */
+.term-hist {
+  display: none;
+}
+
 .term-caret {
   position: absolute;
   left: 0;
@@ -1690,6 +1731,31 @@ html[data-power="critical"] .term-layer {
 
   .term-form {
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  .term-hist {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 0.25rem;
+  }
+
+  .term-hist-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    border: 1px solid var(--term-line);
+    border-radius: 0.35rem;
+    background: var(--term-bg-soft);
+    color: var(--term-dim);
+    font-size: 0.75rem;
+    line-height: 1;
+  }
+
+  .term-hist-btn:active {
+    color: var(--term-green-soft);
+    border-color: color-mix(in oklab, var(--term-green) 40%, transparent);
   }
 }
 

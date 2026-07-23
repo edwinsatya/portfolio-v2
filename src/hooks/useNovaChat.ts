@@ -13,6 +13,7 @@ import { profile } from "@/content/profile";
 import { matchIntent, scriptedResponder, type NovaResponder } from "@/lib/nova-brain";
 import {
   celebrate,
+  getStageBusy,
   noPower,
   onAskNova,
   setNovaThinking,
@@ -37,6 +38,16 @@ export type TerminalLine = {
   scene?: string;
   /** Newly-landed replies type themselves; replayed history does not. */
   fresh?: boolean;
+  /**
+   * Part of the opening block, pinned above the question row rather than
+   * scrolling in the log below it.
+   *
+   * Flagged rather than inferred from position: the prompt can now print lines
+   * of its own — a tab-completion list, a `^C` — before the visitor has
+   * submitted anything, and "everything before the first input" would strand
+   * those up in the header for the rest of the session.
+   */
+  head?: boolean;
 };
 
 /** Minimum beat before a reply lands, so answers don't snap in instantly. */
@@ -57,15 +68,51 @@ export const COMMANDS = [
   "/dark-mode",
   "/light-mode",
   "/clear",
+  "/help",
 ] as const;
+
+export type Command = (typeof COMMANDS)[number];
+
+/**
+ * One line each, for `/help`.
+ *
+ * Kept beside `COMMANDS` rather than in `nova-qa.ts`: these describe what the
+ * terminal *does*, not what NOVA knows, and the record is typed off the tuple
+ * so adding a command without documenting it fails the build.
+ */
+const COMMAND_HELP: Record<Command, string> = {
+  "/work": "jump to the work scene",
+  "/about": "jump to the about scene",
+  "/contact": "jump to the contact scene",
+  "/cv": "open edwin's resume in a new tab",
+  "/dark-mode": "lights out",
+  "/light-mode": "lights on — needs power",
+  "/clear": "wipe the screen (ctrl+l)",
+  "/help": "print this list",
+};
 
 /** How the terminal window is presented. Mirrors the traffic lights. */
 export type WindowState = "normal" | "minimized" | "maximized";
 
 const BOOT_LINES: Omit<TerminalLine, "id">[] = [
-  { kind: "boot", text: "nova_ai v1.0 · cognition_layer online" },
-  { kind: "hint", text: `type a question, or one of: ${COMMANDS.join(" ")}` },
+  { kind: "boot", head: true, text: "nova_ai v1.0 · cognition_layer online" },
+  {
+    kind: "hint",
+    head: true,
+    text: "type a question, or /help for commands · ↑↓ history · tab completes",
+  },
 ];
+
+/**
+ * Text seeded into the prompt from outside the terminal.
+ *
+ * The nonce is what makes it an *event* rather than a value: pressing `/` twice
+ * has to reseed the prompt both times, and two identical `{ text: "/" }` objects
+ * would be indistinguishable to the effect that consumes them.
+ */
+export type Prefill = { text: string; nonce: number };
+
+let nextPrefill = 0;
 
 let nextId = 0;
 const line = (l: Omit<TerminalLine, "id">): TerminalLine => ({ id: nextId++, ...l });
@@ -149,6 +196,7 @@ export function useNovaChat({
   const [lines, setLines] = useState<TerminalLine[]>([]);
   const [isThinking, setIsThinking] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_SUGGESTIONS);
+  const [prefill, setPrefill] = useState<Prefill | null>(null);
 
   // Guards against a second question being sent while the first is in flight.
   const busy = useRef(false);
@@ -158,6 +206,20 @@ export function useNovaChat({
   const push = useCallback((l: Omit<TerminalLine, "id">) => {
     setLines((current) => [...current, line(l)]);
   }, []);
+
+  /**
+   * Prints a line nobody asked NOVA for — a tab-completion list, a `^C`.
+   *
+   * Exposed so the prompt can write to the transcript without going through
+   * `send`, which would treat the text as a question and set her thinking.
+   */
+  const print = useCallback(
+    (text: string, kind: TerminalLine["kind"] = "hint") => push({ kind, text }),
+    [push],
+  );
+
+  /** Back to a fresh prompt, header and all. `/clear` and Ctrl+L both land here. */
+  const clear = useCallback(() => setLines(BOOT_LINES.map(line)), []);
 
   /**
    * `withQuestion` means the visitor arrived via a suggestion chip, so they want
@@ -184,6 +246,7 @@ export function useNovaChat({
           ...BOOT_LINES.map(line),
           line({
             kind: "comment",
+            head: true,
             text: asksName
               ? `// ${CHAT_NAME_ASK}`
               : `// ${CHAT_GREETING(name).toLowerCase()}`,
@@ -305,10 +368,23 @@ export function useNovaChat({
           return true;
         }
 
+        case "/help": {
+          // Padded into a column, which `.term-line`'s `pre-wrap` and the
+          // monospace face turn into an actual aligned table.
+          const width = Math.max(...COMMANDS.map((c) => c.length));
+          push({
+            kind: "hint",
+            text: COMMANDS.map(
+              (c) => `  ${c.padEnd(width)}   ${COMMAND_HELP[c]}`,
+            ).join("\n"),
+          });
+          return true;
+        }
+
         case "/clear":
           // Back to a fresh prompt, header and all. The name ask doesn't
           // return — they've already been asked once.
-          setLines(BOOT_LINES.map(line));
+          clear();
           return true;
 
         default:
@@ -319,7 +395,7 @@ export function useNovaChat({
           return true;
       }
     },
-    [push, goToScene],
+    [push, goToScene, clear],
   );
 
   const send = useCallback(
@@ -396,6 +472,54 @@ export function useNovaChat({
     [open, send],
   );
 
+  /*
+   * `/` and `T` from anywhere on the page.
+   *
+   * `/` seeds the prompt with a slash, because someone reaching for it is
+   * reaching for a command; `T` opens to an empty line. Deliberately bare keys
+   * with no modifier — the whole point is that they're as quick as they are in
+   * a real shell — which is why the guards below matter more than usual: a
+   * visitor mid-sentence in the contact form must never have a `t` eaten.
+   */
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+
+      const wantsPrompt = event.key === "/";
+      if (!wantsPrompt && event.key !== "t" && event.key !== "T") return;
+
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.isContentEditable ||
+        ["INPUT", "TEXTAREA", "SELECT"].includes(target?.tagName ?? "")
+      ) {
+        return;
+      }
+
+      // The boot screen swallows the first key as a skip; opening a terminal
+      // out from under it would be two things happening on one press.
+      if (document.documentElement.dataset.booting) return;
+      // Something already has the visitor — the resume window, or the terminal
+      // itself. A minimised terminal doesn't count: `/` restores it.
+      if (getStageBusy()) return;
+
+      // Firefox binds `/` to quick-find; Safari and Chrome don't, but the
+      // preventDefault is cheap and the inconsistency wouldn't be.
+      event.preventDefault();
+
+      if (isDead()) {
+        noPower();
+        return;
+      }
+
+      open();
+      setPrefill({ text: wantsPrompt ? "/" : "", nonce: nextPrefill++ });
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
   /**
    * "Occupying the visitor" — drives NOVA stepping aside and the tagline
    * rotation pausing. A minimised terminal is docked out of the way, so it
@@ -428,6 +552,7 @@ export function useNovaChat({
     lines,
     isThinking,
     suggestions,
+    prefill,
     open,
     close,
     minimize,
@@ -435,6 +560,8 @@ export function useNovaChat({
     restore,
     toggle,
     send,
+    print,
+    clear,
     goToScene,
   };
 }

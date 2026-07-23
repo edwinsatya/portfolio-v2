@@ -62,6 +62,14 @@ export function StageStatus() {
         {label} · {power.charging && <span className="stage-status-bolt">⚡</span>}
         {batteryCells(power.level)} {power.level}%
       </p>
+
+      {/* The one place the page admits it has a shell. Dropped at 0%, where the
+          key does nothing but produce the no-power toast. */}
+      {power.state !== "dead" && (
+        <p className="stage-term-hint">
+          Press <kbd>/</kbd> for terminal
+        </p>
+      )}
     </div>
   );
 }

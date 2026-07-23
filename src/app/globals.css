@@ -1143,6 +1143,35 @@ html.stage-root body {
   transition: color 300ms ease;
 }
 
+/* The shell affordance, under the readout. Quiet on purpose: it's a shortcut
+   for the people who reach for shortcuts, not a call to action. */
+.stage-term-hint {
+  margin-top: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--color-faint);
+  opacity: 0.7;
+}
+
+.stage-term-hint kbd {
+  display: inline-block;
+  padding: 0.05rem 0.28rem;
+  border: 1px solid var(--color-line);
+  border-radius: 0.25rem;
+  font: inherit;
+  color: var(--color-muted);
+}
+
+/* No keyboard, no slash. The mobile prompt is the terminal icon in the nav. */
+@media (hover: none) {
+  .stage-term-hint {
+    display: none;
+  }
+}
+
 .stage-status[data-power="low"] .stage-status-read,
 .stage-status-line[data-power="low"] {
   color: var(--color-accent-ink);
