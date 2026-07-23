@@ -1,13 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import { addLike } from "@/lib/likes";
+import { celebrate, fireLike, onCelebrate, onLike } from "@/lib/nova-bus";
+import { onCharged, spendOnCelebration, startPowerClock } from "@/lib/power";
+import { initTheme } from "@/lib/theme";
+import { DockPill } from "./DockPill";
+import { LoveBurst } from "./LoveBurst";
 import { Nova } from "./Nova";
-import { NovaChat } from "./NovaChat";
-import { greetings } from "@/content/profile";
+import { NovaTerminal } from "./NovaTerminal";
+import { PowerSocket } from "./PowerSocket";
+import { ResumeWindow } from "./ResumeWindow";
 import { useNovaChat } from "@/hooks/useNovaChat";
 import { useNovaMemory } from "@/hooks/useNovaMemory";
 import { useNovaStage } from "@/hooks/useNovaStage";
-import { useSectionReactions } from "@/hooks/useSectionReactions";
+import { useResumeWindow } from "@/hooks/useResumeWindow";
+import { useSceneReactions } from "@/hooks/useSceneReactions";
 
 /**
  * The fixed layer NOVA lives on.
@@ -19,46 +27,110 @@ import { useSectionReactions } from "@/hooks/useSectionReactions";
  * with themselves mid-handoff.
  *
  * The layer is pointer-events: none, so nothing here can intercept a click meant
- * for the page. Three things opt back in: the robot herself (tap to chat), the
- * name prompt, and the chat panel.
+ * for the page. Two things opt back in: the robot herself (tap to chat) and the
+ * chat panel.
  */
 export function NovaStage() {
   const { visit } = useNovaMemory();
-  const chat = useNovaChat({ name: visit.name });
-
-  // Chatting pulls her out of the hero and down to the corner, so the panel is
-  // always beside her rather than stranded across the page.
-  const { stageRef, anchorRef, svgRef, bubbleRef } = useNovaStage({
-    forceDock: chat.isOpen,
+  const chat = useNovaChat({
+    name: visit.name,
+    isFirstVisit: (visit.previous?.visitCount ?? 0) === 0,
   });
 
-  const { mood, line, open, asksName, submitName, skipName } =
-    useSectionReactions();
-  const [draft, setDraft] = useState("");
+  const resume = useResumeWindow();
+
+  // NOVA steps aside to the corner while either window has the visitor.
+  const { stageRef, anchorRef, svgRef, bubbleRef } = useNovaStage({
+    sidelined: chat.isEngaged || resume.isEngaged,
+  });
+
+  const { mood, line, open } = useSceneReactions();
   const tapRef = useRef<HTMLButtonElement>(null);
 
-  // Whichever way the panel closes — Escape, the X, or tapping NOVA again —
-  // focus goes back to the robot rather than being dropped on the document.
+  // Whichever way the panel closes — Escape or the X — focus goes back to the
+  // robot rather than being dropped on the document. It goes back quietly: this
+  // is a handoff the visitor already knows about, and a ring appearing around
+  // NOVA the moment the terminal disappears reads as a glitch. Tabbing to her
+  // still shows one — the flag is cleared the moment focus leaves.
   const wasOpen = useRef(false);
   useEffect(() => {
-    if (wasOpen.current && !chat.isOpen) tapRef.current?.focus();
+    if (wasOpen.current && !chat.isOpen) {
+      const tap = tapRef.current;
+      if (tap) {
+        tap.dataset.quietFocus = "true";
+        tap.focus();
+      }
+    }
     wasOpen.current = chat.isOpen;
   }, [chat.isOpen]);
 
+  // One place records a like and picks a celebration, whatever fired it — the
+  // L key, the counter, the tagline, or NOVA herself.
+  useEffect(
+    () =>
+      onLike(() => {
+        addLike();
+        celebrate();
+      }),
+    [],
+  );
+
+  /*
+   * The battery clock. Started here rather than inside `usePower` because it is
+   * a side effect on the whole app — every component that reads the level would
+   * otherwise start one, and the drain would scale with how many of them happen
+   * to be mounted.
+   */
+  useEffect(() => startPowerClock(), []);
+
+  // Wakes the theme store, which is what subscribes it to the battery. Without
+  // this a visitor who never types `/dark-mode` would drain to 20% and never
+  // get battery saver — see the note on `initTheme`.
+  useEffect(() => initTheme(), []);
+
+  // Moving costs her something. Subscribed to the bus rather than folded into
+  // the like handler above, because celebrations also come from the music
+  // widget, the name flow, and a returning-visitor greeting.
+  useEffect(() => onCelebrate(() => spendOnCelebration()), []);
+
+  // Back to full: the cable pops out on its own (see `power.ts`) and she
+  // celebrates properly, which she has the power for again.
+  useEffect(() => onCharged(() => celebrate("dance")), []);
+
   return (
-    <div ref={stageRef} className="nova-stage" data-chatting={chat.isOpen}>
+    <div
+      ref={stageRef}
+      className="nova-stage"
+      data-chatting={chat.isEngaged || resume.isEngaged}
+      data-window={chat.isOpen ? chat.windowState : undefined}
+    >
       <div ref={anchorRef} className="nova-anchor">
         <Nova ref={svgRef} mood={mood} />
 
         {/* Invisible hit area over the robot's silhouette, so the click target
-            is NOVA rather than the whole bloom around her. */}
+            is NOVA rather than the whole bloom around her. Clicking her likes —
+            the chat is opened from the nav's chat icon and the chips. */}
         <button
           ref={tapRef}
           type="button"
-          onClick={chat.toggle}
+          onClick={() => fireLike()}
+          /* A mouse click likes her; it has no reason to leave focus parked on
+             her afterwards. Without this the next key press — `L` to like
+             again, most obviously — flips the browser's focus-visible
+             heuristic and draws a ring nobody asked for. Keyboard focus is
+             untouched: Tab still reaches her, Enter still likes. */
+          onMouseDown={(event) => event.preventDefault()}
+          /* The quiet flag lasts until focus genuinely moves off her. Leaving
+             the window fires a blur too, but focus never went anywhere — she
+             is still the active element and gets it straight back on return,
+             which is how the ring used to reappear after an app switch. */
+          onBlur={(event) => {
+            const tap = event.currentTarget;
+            if (!document.hasFocus() || document.activeElement === tap) return;
+            delete tap.dataset.quietFocus;
+          }}
           className="nova-tap"
-          aria-expanded={chat.isOpen}
-          aria-label={chat.isOpen ? "Close chat with NOVA" : "Talk to NOVA"}
+          aria-label="Like NOVA"
         />
       </div>
 
@@ -66,59 +138,62 @@ export function NovaStage() {
           so the two transforms never fight. The chat replaces it while open —
           two things talking at once would just be noise. */}
       <div ref={bubbleRef} className="nova-speech-anchor">
-        <div
-          className="nova-speech"
-          data-open={open && !chat.isOpen}
-          data-interactive={asksName && !chat.isOpen}
-        >
+        <div className="nova-speech" data-open={open}>
           {/* Ambient narration that repeats what the section heading already
-              says — announcing it would talk over the visitor's own navigation.
-              When it's the name question it stays exposed, as the input's
-              description rather than a second copy of the same sentence. */}
-          <p id="nova-says" aria-hidden={!asksName}>
+              says — announcing it would talk over the visitor's own navigation. */}
+          <p id="nova-says" aria-hidden="true">
             {line}
           </p>
-
-          {asksName && !chat.isOpen && (
-            <form
-              className="nova-ask"
-              onSubmit={(event) => {
-                event.preventDefault();
-                submitName(draft);
-              }}
-            >
-              <input
-                id="nova-name"
-                name="nova-name"
-                type="text"
-                value={draft}
-                maxLength={24}
-                autoComplete="given-name"
-                placeholder={greetings.namePlaceholder}
-                aria-label={greetings.namePlaceholder}
-                aria-describedby="nova-says"
-                onChange={(event) => setDraft(event.target.value)}
-                className="nova-ask-input"
-              />
-              <button type="submit" className="nova-ask-save">
-                {greetings.nameSubmit}
-              </button>
-              <button type="button" onClick={skipName} className="nova-ask-skip">
-                {greetings.nameSkip}
-              </button>
-            </form>
-          )}
         </div>
       </div>
 
-      <NovaChat
+      <LoveBurst />
+
+      {/* Inside the stage layer so it rides up with it: a window opening covers
+          the cable with its scrim, the same way it covers the music widget. */}
+      <PowerSocket />
+
+      <NovaTerminal
         isOpen={chat.isOpen}
-        messages={chat.messages}
+        windowState={chat.windowState}
+        obscured={resume.isEngaged}
+        lines={chat.lines}
         isThinking={chat.isThinking}
-        suggestions={chat.suggestions}
+        prefill={chat.prefill}
         onSend={chat.send}
+        onPrint={chat.print}
+        onClear={chat.clear}
         onClose={chat.close}
+        onMinimize={chat.minimize}
+        onToggleMaximize={chat.toggleMaximize}
+        onScene={chat.goToScene}
       />
+
+      <ResumeWindow
+        isOpen={resume.isOpen}
+        windowState={resume.windowState}
+        theme={resume.theme}
+        onClose={resume.close}
+        onMinimize={resume.minimize}
+        onToggleMaximize={resume.toggleMaximize}
+        onToggleTheme={resume.toggleTheme}
+      />
+
+      {/* Both windows collapse into the same strip, so two minimised windows sit
+          side by side rather than on top of one another. */}
+      <div className="nova-dock-strip">
+        <DockPill
+          label="NOVA_AI · TERMINAL"
+          open={chat.isOpen && chat.windowState === "minimized"}
+          onClick={chat.restore}
+        />
+        <DockPill
+          label="NOVA · LIVE_RESUME"
+          tone="paper"
+          open={resume.isOpen && resume.windowState === "minimized"}
+          onClick={resume.restore}
+        />
+      </div>
     </div>
   );
 }

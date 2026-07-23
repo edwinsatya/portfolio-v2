@@ -9,6 +9,8 @@
  * when the memory changes without anyone reaching for an effect.
  */
 
+import { clearLikes } from "./likes";
+
 const STORAGE_KEY = "nova.memory.v1";
 const MAX_NAME_LENGTH = 24;
 
@@ -237,6 +239,9 @@ export function onForget(listener: () => void): () => void {
 /** Wipes everything and drops back to the first-visit state. */
 export function forgetVisitor(): void {
   clearStoredMemory();
+  // Likes are visitor data too — "forget me" that leaves a like count behind
+  // would be a lie.
+  clearLikes();
 
   emit({
     previous: EMPTY_MEMORY,

@@ -29,7 +29,7 @@ function ProjectCard({
         </h3>
 
         {project.featured && (
-          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-accent/25 bg-accent/10 px-2.5 py-1 text-[0.68rem] text-accent">
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-accent/25 bg-accent/10 px-2.5 py-1 text-[0.68rem] text-accent-ink">
             <Sparkle className="size-3" />
             NOVA’s pick
           </span>
@@ -62,7 +62,7 @@ function ProjectCard({
               href={project.live}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm text-ink transition-colors hover:text-accent"
+              className="inline-flex items-center gap-1.5 text-sm text-ink transition-colors hover:text-accent-ink"
             >
               Live site
               <ArrowUpRight className="size-3.5" />
@@ -73,7 +73,7 @@ function ProjectCard({
               href={project.source}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-accent"
+              className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-accent-ink"
             >
               <Github className="size-3.5" />
               Source

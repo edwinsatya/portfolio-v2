@@ -13,7 +13,7 @@ enhancement layered on top, never a dependency.
 | --------- | ------------------------------------ |
 | Framework | Next.js 16 (App Router) + TypeScript |
 | Styling   | Tailwind CSS v4                      |
-| Fonts     | Space Grotesk (display) + Inter (body) |
+| Fonts     | Space Grotesk (display) + Inter (body) + JetBrains Mono (UI labels) |
 | Deploy    | Vercel                               |
 
 ## Getting started
@@ -69,6 +69,45 @@ the flag.
 
 Step 7 is a one-function change — see the chat section below.
 
+## Theme and type
+
+Light throughout: a lavender-white page (`--color-bg`) with a CSS-only particle
+field, dark ink, and cyan reserved for NOVA's glow. Two accent tokens exist on
+purpose — `--color-accent` is the glow, `--color-accent-ink` is the darkened
+version for text and icons, because raw cyan on a light surface fails contrast
+at small sizes. Primary buttons and the nav's active pill use `--color-chrome`
+(near-black) for the same reason.
+
+`faint` is deliberately darker than a dark theme would allow: existing sections
+use it for real content — skill captions, dates, contact copy — not just
+decoration, so it has to clear 4.5:1 rather than merely look subtle.
+
+JetBrains Mono carries every UI label via the `.mono-label` class: nav, chips,
+status readouts, boot messages, eyebrows. Body copy stays Inter.
+
+## Landing
+
+NOVA is the subject, so [`Hero.tsx`](src/components/sections/Hero.tsx) renders
+almost nothing visible — a name block, a blurred `edwin.dev` wordmark for depth,
+the empty slot the fixed stage pins the robot over, and the chat entry. Stats
+moved to About, where the surrounding copy gives them context.
+
+[`BootSequence.tsx`](src/components/nova/BootSequence.tsx) plays a monospace
+power-on before the hero: ~2.6s first visit, ~0.9s on a return
+("RESUMING SESSION — WELCOME BACK, <NAME>"). It's an overlay, not a gate — the
+page beneath is fully rendered the whole time, it dismisses on any input, and a
+deep link skips it entirely. While it runs, `html[data-booting]` lifts NOVA
+above it and hides the nav, so you watch the robot boot rather than a blank page.
+
+[`HeroChat.tsx`](src/components/nova/HeroChat.tsx) cycles NOVA's line every 6–8s
+— the current scene's line first, then the scene-agnostic ones in
+`ROTATING_LINES`. Each line materialises word by word, blurred to sharp, via a
+per-word `transition-delay`; no JS runs per frame. The full sentence is always in
+the DOM for screen readers and reduced motion. Its chips call `askNova()` from
+[`lib/nova-bus.ts`](src/lib/nova-bus.ts), which opens the panel and sends the
+question. Opening *with* a question skips the name ask — otherwise NOVA would
+ask your name and then immediately talk over herself answering the chip.
+
 ## NOVA
 
 Drawn as inline SVG in [`components/nova/Nova.tsx`](src/components/nova/Nova.tsx) —
@@ -87,6 +126,23 @@ Four files:
 | [`hooks/useNovaStage.ts`](src/hooks/useNovaStage.ts) | One `requestAnimationFrame` loop: dock position, gaze easing, idle wander, blinks, click reaction, bubble placement. |
 | [`hooks/useSectionReactions.ts`](src/hooks/useSectionReactions.ts) | Turns the active section into a mood and a debounced, once-per-visit line. |
 | [`nova/nova.css`](src/components/nova/nova.css) | All choreography — how far each part moves, and what every mood looks like. |
+
+**The rig:** NOVA has a full body — head, torso, two-segment arms, legs. Every
+limb is a group with `transform-box: view-box` and a `transform-origin` sitting
+exactly on its joint; the JOINTS table at the top of `nova.css` lists the
+coordinates. Change the SVG geometry and those origins must move with it, or
+limbs will swing from the wrong pivot. Arms are two segments so the wave can
+bend at the elbow rather than rocking like a plank.
+
+**Idle life:** breathing (torso + everything above the hips; legs and shadow
+stay planted), arm sway offset between sides, blinking, and a look-around that
+picks a new gaze target every 2–4s once the cursor has been still for 3.2s.
+Touch devices never see a cursor, so they run look-around permanently. A wave
+fires once after boot and then every 15–30s while idle — never mid-cursor-track,
+where it would read as a twitch.
+
+All of it is `transform`/`opacity`/`filter` only. Measured under cursor tracking
+plus a wave: zero frames over 32ms, 23ms of total layout time across 6 seconds.
 
 **Editing the tour:** `sections[]` in `profile.ts` carries a `mood` and a `line`
 per section. Change the line and NOVA says something else; change the mood and

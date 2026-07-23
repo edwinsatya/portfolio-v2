@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk, Inter } from "next/font/google";
+import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import { profile } from "@/content/profile";
 import { siteUrl } from "@/lib/site";
+import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
 // Display face — a little character in the headings, still readable small.
@@ -14,6 +15,13 @@ const display = Space_Grotesk({
 // Body face — gets out of the way.
 const body = Inter({
   variable: "--font-body",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+// Machine voice — every UI label, nav item, chip, and boot message.
+const mono = JetBrains_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
   display: "swap",
 });
@@ -59,8 +67,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#06070b",
-  colorScheme: "dark",
+  themeColor: "#ecedf4",
+  // Both, now that the site has a real dark theme — `lib/theme.ts` writes the
+  // resolved one onto `<html>` so form controls and the address bar follow it.
+  colorScheme: "light dark",
 };
 
 export default function RootLayout({
@@ -71,8 +81,25 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${display.variable} ${body.variable} h-full antialiased`}
+      className={`${display.variable} ${body.variable} ${mono.variable} stage-root h-full antialiased`}
+      // Rendered so the tokens resolve even if the script below never runs — a
+      // strict CSP blocks inline scripts, and a themeless page would fall back
+      // to unstyled colours rather than to light.
+      data-theme="light"
+      // The script rewrites that attribute before React hydrates, so the
+      // server's markup and the DOM disagree by construction. This is the one
+      // attribute that is *meant* to differ.
+      suppressHydrationWarning
     >
+      <head>
+        {/*
+          Blocking, and deliberately so: it has to run before the first paint or
+          a returning dark-theme visitor gets a full white flash of the page
+          they explicitly turned off. It reads one localStorage key and sets one
+          attribute — a few hundred microseconds against a visible flash.
+        */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+      </head>
       <body className="min-h-full">
         {/* Reveal-on-scroll starts hidden and is unhidden by JS. With scripting
             off nothing would ever unhide it, so force everything visible. */}
@@ -81,7 +108,7 @@ export default function RootLayout({
         </noscript>
         <a
           href="#about"
-          className="sr-only rounded-full bg-accent px-4 py-2 font-medium text-bg focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-100"
+          className="sr-only rounded-full bg-chrome px-4 py-2 font-medium text-bg focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-100"
         >
           Skip to content
         </a>

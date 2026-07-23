@@ -37,7 +37,7 @@ export function Services() {
                   key={detail}
                   className="flex items-center gap-2.5 text-sm text-muted"
                 >
-                  <Check className="size-3.5 shrink-0 text-accent" />
+                  <Check className="size-3.5 shrink-0 text-accent-ink" />
                   {detail}
                 </li>
               ))}

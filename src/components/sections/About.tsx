@@ -1,4 +1,4 @@
-import { profile, certifications } from "@/content/profile";
+import { profile, certifications, stats } from "@/content/profile";
 import { Section } from "@/components/ui/Section";
 import { Reveal } from "@/components/ui/Reveal";
 import { Check } from "@/components/ui/Icons";
@@ -37,6 +37,22 @@ export function About() {
         </Reveal>
 
         <div className="space-y-8">
+          <Reveal>
+            <dl className="grid grid-cols-3 gap-4 border-b border-line pb-8">
+              {stats.map((stat) => (
+                <div key={stat.label}>
+                  <dt className="sr-only">{stat.label}</dt>
+                  <dd className="font-display text-3xl font-semibold sm:text-4xl">
+                    {stat.value}
+                  </dd>
+                  <p className="mono-label mt-1.5 leading-snug text-faint">
+                    {stat.label}
+                  </p>
+                </div>
+              ))}
+            </dl>
+          </Reveal>
+
           <Reveal delay={0.1}>
             <dl className="panel divide-y divide-line rounded-2xl">
               {facts.map((fact) => (
@@ -61,7 +77,7 @@ export function About() {
                   key={certification}
                   className="flex items-start gap-3 text-sm text-muted"
                 >
-                  <span className="mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent">
+                  <span className="mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent-ink">
                     <Check className="size-3" />
                   </span>
                   {certification}

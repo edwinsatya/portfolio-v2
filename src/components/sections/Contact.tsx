@@ -51,14 +51,14 @@ export function Contact() {
                     rel="noopener noreferrer"
                     className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-surface/60"
                   >
-                    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-line text-muted transition-colors group-hover:border-accent/40 group-hover:text-accent">
+                    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-line text-muted transition-colors group-hover:border-accent/40 group-hover:text-accent-ink">
                       <Icon className="size-4" />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-xs text-faint">{label}</span>
                       <span className="block truncate text-sm">{value}</span>
                     </span>
-                    <ArrowUpRight className="size-4 shrink-0 text-faint transition-colors group-hover:text-accent" />
+                    <ArrowUpRight className="size-4 shrink-0 text-faint transition-colors group-hover:text-accent-ink" />
                   </a>
                 </li>
               ))}

@@ -1,4 +1,11 @@
-import { profile, projects, services, skillGroups } from "./profile";
+import {
+  experience,
+  greetings,
+  profile,
+  projects,
+  services,
+  skillGroups,
+} from "./profile";
 
 /**
  * Everything NOVA can answer, as data.
@@ -27,8 +34,8 @@ export type NovaIntent = {
    */
   keywords: string[];
   answer: (context: NovaAnswerContext) => string;
-  /** Section to smooth-scroll to after answering. */
-  scrollTo?: string;
+  /** Scene to navigate to after answering. Renders as a NAVIGATE_TO button. */
+  scene?: string;
   /** Chips offered once this answer has been given. */
   followUps?: string[];
 };
@@ -46,6 +53,9 @@ const picks = (() => {
   if (names.length <= 1) return names[0] ?? "coming soon";
   return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 })();
+
+/** The role flagged `current` in the experience list, if there is one. */
+const currentRole = experience.find((role) => role.current);
 
 const frontend = skillGroups[0].items.slice(0, 4).join(", ");
 const backend = skillGroups[1].items.slice(0, 3).join(", ");
@@ -85,7 +95,7 @@ export const novaIntents: NovaIntent[] = [
       `${profile.bio}${
         name ? ` Short version, ${name}: he builds the whole thing, front to back.` : ""
       }`,
-    scrollTo: "about",
+    scene: "about",
     followUps: ["What's his tech stack?", "Where has he worked?", "Is he available?"],
   },
   {
@@ -103,7 +113,7 @@ export const novaIntents: NovaIntent[] = [
     ],
     answer: () =>
       `Front end it's ${frontend}. Behind it, ${backend}. Databases: MongoDB, PostgreSQL, MySQL. Plus Git, Docker and AWS to hold it all together.`,
-    scrollTo: "skills",
+    scene: "work",
     followUps: ["Show me his best work", "What can he build?", "Where has he worked?"],
   },
   {
@@ -126,11 +136,37 @@ export const novaIntents: NovaIntent[] = [
     answer: ({ name }) =>
       greet(
         name,
-        `Happily, {name} — ${projectCount} of them. My picks are ${picks}. Scrolling you there now.`,
-        `${projectCount} of them, and my picks are ${picks}. Scrolling you there now.`,
+        `Happily, {name} — ${projectCount} of them. My picks are ${picks}.`,
+        `${projectCount} of them, and my picks are ${picks}.`,
       ),
-    scrollTo: "projects",
+    scene: "work",
     followUps: ["What's his tech stack?", "Is he available?", "How do I contact him?"],
+  },
+  {
+    // "What's he building right now?" is one of the terminal's fixed chips, so
+    // it has to land on a real answer rather than the fallback.
+    id: "current",
+    keywords: [
+      "right now",
+      "building right now",
+      "working on",
+      "currently",
+      "current",
+      "these days",
+      "at the moment",
+      "latest",
+      "nowadays",
+    ],
+    answer: ({ name }) =>
+      currentRole
+        ? `Right now he's ${currentRole.title} at ${currentRole.company}${
+            currentRole.project ? ` on the ${currentRole.project}` : ""
+          } — and shipping AI-powered web apps on the side.${
+            name ? ` That's the short version, ${name}.` : ""
+          }`
+        : "He's focused on shipping AI-powered web apps at the moment.",
+    scene: "work",
+    followUps: ["Show me his best work", "What's his stack?", "Is he open to work?"],
   },
   {
     id: "experience",
@@ -150,7 +186,7 @@ export const novaIntents: NovaIntent[] = [
     ],
     answer: () =>
       "Six years across five teams: Tola Solution on the Happy Farm platform, Magloft, Bountie, homecare24.id, and a fiber-optic internship at Telkom Indonesia before any of it.",
-    scrollTo: "experience",
+    scene: "work",
     followUps: ["What's his tech stack?", "Show me his best work", "Is he available?"],
   },
   {
@@ -172,7 +208,7 @@ export const novaIntents: NovaIntent[] = [
       `Three things: ${services
         .map((service) => service.title)
         .join(", ")}. Pick whichever sounds like your problem.`,
-    scrollTo: "services",
+    scene: "contact",
     followUps: ["Is he available?", "Show me his best work", "How do I contact him?"],
   },
   {
@@ -200,7 +236,7 @@ export const novaIntents: NovaIntent[] = [
         "Yes — he's taking on new projects and roles, and he usually replies inside 24 hours. Rates depend on the shape of the work, {name}, so email him and he'll give you a straight answer.",
         "Yes — he's taking on new projects and roles, and he usually replies inside 24 hours. Rates depend on the shape of the work, so email him and he'll give you a straight answer.",
       ),
-    scrollTo: "contact",
+    scene: "contact",
     followUps: ["How do I contact him?", "What can he build?", "Can I see his CV?"],
   },
   {
@@ -221,15 +257,15 @@ export const novaIntents: NovaIntent[] = [
       `Easiest is email: ${profile.email}. He's on GitHub and LinkedIn too, and all three are monitored.${
         name ? ` Tell him ${name} sent you.` : ""
       }`,
-    scrollTo: "contact",
+    scene: "contact",
     followUps: ["Is he available?", "Can I see his CV?", "Show me his best work"],
   },
   {
     id: "resume",
     keywords: ["resume", "cv", "curriculum", "download"],
     answer: () =>
-      "There's a resume link in the contact section — and a Resume button up in the nav, if you're in a hurry.",
-    scrollTo: "contact",
+      "Type /cv and I'll open it, or grab the Resume button up in the nav.",
+    scene: "contact",
     followUps: ["Where has he worked?", "Is he available?", "How do I contact him?"],
   },
   {
@@ -268,6 +304,81 @@ export const DEFAULT_SUGGESTIONS = [
   "Show me his best work",
   "Is he available?",
 ];
+
+/** Everything NOVA says about the visitor themselves, in one place. */
+export const greetingsFor = greetings;
+
+/** The typewriter line in the hero, and the chips beneath it. */
+export const HERO_LINE = `i'm nova — ${profile.firstName.toLowerCase()}'s ai. ask me anything about his work.`;
+
+/**
+ * Lines NOVA cycles through on top of the current scene's own line. Kept
+ * scene-agnostic — they're true wherever the visitor happens to be.
+ */
+export const ROTATING_LINES = [
+  "he ships full-stack — i just take the credit.",
+  "ten projects in. ask me which one's the best.",
+  "psst — he's open to new work right now.",
+];
+
+/**
+ * Her one mention of the older portfolio.
+ *
+ * Kept out of `ROTATING_LINES` because it isn't one: the rotation repeats for
+ * as long as the visitor stays, and a robot bringing up the previous build
+ * every couple of minutes would read as her wanting them to leave. Shown once
+ * per session, then dropped from the pool — see `lib/legacy.ts`.
+ */
+export const CLASSIC_BUILD_LINE =
+  "there's also a classic me — type /v1 if you're curious.";
+
+/**
+ * What she says once the battery is under 20%.
+ *
+ * Replaces the rotation outright rather than joining it — a robot alternating
+ * between "so sleepy" and a chirpy sales pitch for Edwin would undercut both.
+ * She still keeps working, which is the point of the last one.
+ */
+export const LOW_POWER_LINES = [
+  "running on fumes here...",
+  "so sleepy... got a charger?",
+  "battery low. i'll keep watch anyway.",
+];
+
+/**
+ * The last five percent.
+ *
+ * Broken rather than merely tired — the ellipses and the stutter are doing the
+ * work the animation can't, which is telling you she is about to stop rather
+ * than that she is slow.
+ */
+export const CRITICAL_LINES = [
+  "c-critical... power...",
+  "can't... keep eyes open...",
+  "systems... shutting... d—",
+];
+
+export const HERO_CHIPS = [
+  "what has he built?",
+  "is he available?",
+  "show me his best work",
+];
+
+/**
+ * The fixed question row inside the terminal. Always available, unlike the
+ * old per-answer follow-ups — the visitor can reach any of them at any point.
+ */
+export const TERMINAL_CHIPS = [
+  "Show me his best work",
+  "What's he building right now?",
+  "Is he open to work?",
+  "How do I hire him?",
+  "What's his stack?",
+];
+
+/** Asked in the chat on a first visit, in place of the old hero bubble. */
+export const CHAT_NAME_ASK =
+  "hey! i'm NOVA. before we start — what should I call you?";
 
 export const CHAT_GREETING = (name: string | null) =>
   name
