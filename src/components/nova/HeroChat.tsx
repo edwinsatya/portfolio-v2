@@ -1,8 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { LOW_POWER_LINES, ROTATING_LINES } from "@/content/nova-qa";
+import {
+  CRITICAL_LINES,
+  LOW_POWER_LINES,
+  ROTATING_LINES,
+} from "@/content/nova-qa";
 import { usePower } from "@/hooks/usePower";
+import type { PowerState } from "@/lib/power";
 import {
   askNova,
   fireLike,
@@ -40,7 +45,6 @@ export function HeroChat({
   chips: string[];
 }) {
   const power = usePower();
-  const lowPower = power.state !== "normal";
 
   return (
     <div className="stage-chat">
@@ -48,12 +52,12 @@ export function HeroChat({
 
       {/* Keyed by scene: React remounts the rotator so it restarts from that
           scene's own line, rather than resuming mid-cycle. Also keyed by the
-          power state, so dropping into low battery swaps the script at once
-          instead of finishing the cheerful line she was halfway through. */}
+          power state, so dropping a band swaps the script at once instead of
+          finishing the line she was halfway through. */}
       <LineRotator
-        key={`${sceneId}-${lowPower}`}
+        key={`${sceneId}-${power.state}`}
         line={line}
-        lowPower={lowPower}
+        state={power.state}
       />
 
       {/* Phones only — on desktop the chips read as clickable on their own. */}
@@ -92,14 +96,17 @@ export function HeroChat({
  * has the chat open (they're busy), and resumes with the remaining time intact
  * rather than restarting the clock.
  */
-function LineRotator({ line, lowPower }: { line: string; lowPower: boolean }) {
-  // Scene line first, then the rotating ones — unless she's flat, in which case
-  // the low-power set replaces the lot, scene line included. A tired robot
-  // narrating the section she's standing in would be the wrong voice entirely.
-  const lines = useMemo(
-    () => (lowPower ? LOW_POWER_LINES : [line, ...ROTATING_LINES]),
-    [line, lowPower],
-  );
+function LineRotator({ line, state }: { line: string; state: PowerState }) {
+  /* Scene line first, then the rotating ones — unless she's flat, in which case
+     the power set replaces the lot, scene line included. A tired robot
+     narrating the section she's standing in would be the wrong voice entirely,
+     and a dying one more so. `dead` keeps the critical script: she stopped
+     mid-sentence, and what's on screen is where she stopped. */
+  const lines = useMemo(() => {
+    if (state === "critical" || state === "dead") return CRITICAL_LINES;
+    if (state === "low") return LOW_POWER_LINES;
+    return [line, ...ROTATING_LINES];
+  }, [line, state]);
   const [index, setIndex] = useState(0);
   const [visible, setVisible] = useState(false);
   const [hovered, setHovered] = useState(false);

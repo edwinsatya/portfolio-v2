@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { onOpenResume, setWindowOpen } from "@/lib/nova-bus";
+import { noPower, onOpenResume, setWindowOpen } from "@/lib/nova-bus";
+import { isDead, onPowerEvent } from "@/lib/power";
 
 /** How the resume window is presented. Mirrors the traffic lights. */
 export type WindowState = "normal" | "minimized" | "maximized";
@@ -24,6 +25,12 @@ export function useResumeWindow() {
   const [theme, setTheme] = useState<ResumeTheme>("light");
 
   const open = useCallback(() => {
+    // Locked at 0%, same as the terminal: the resume is NOVA rendering a
+    // document, and she has nothing to render it with.
+    if (isDead()) {
+      noPower();
+      return;
+    }
     setIsOpen(true);
     // Reopening from the dock restores the window rather than leaving it
     // collapsed, which would look like the click did nothing.
@@ -55,6 +62,15 @@ export function useResumeWindow() {
   );
 
   useEffect(() => onOpenResume(open), [open]);
+
+  // Shuts with everything else when she runs out. See the note in `useNovaChat`.
+  useEffect(
+    () =>
+      onPowerEvent((event) => {
+        if (event === "died") close();
+      }),
+    [close],
+  );
 
   /**
    * "Occupying the visitor" — drives NOVA stepping aside and the tagline

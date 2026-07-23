@@ -132,6 +132,98 @@ html[data-theme="dark"][data-power="saver"] {
 }
 
 /*
+ * Critical — a phone at 1%.
+ *
+ * Saver turns the colours down; this turns the *panel* down with them. The page
+ * itself gets darker and every surface loses its separation from it, so the UI
+ * reads as something running on the last of its light rather than as a design
+ * choice. Still legible: she's dying, the site isn't broken.
+ */
+html[data-theme="dark"][data-power="critical"] {
+  --color-bg: #06070c;
+  --color-bg-soft: #0a0c13;
+  --color-surface: #10131c;
+  --color-line: #1d2130;
+
+  --color-ink: #8d93a5;
+  --color-muted: #6a7083;
+  --color-faint: #565c6d;
+  --color-accent: #1f7f92;
+  --color-accent-ink: #2f93a6;
+  --color-violet: #5b5089;
+  --color-chrome: #8d93a5;
+  --color-love: #94465f;
+
+  --glass-edge: rgb(255 255 255 / 0.03);
+  --wash: #101322;
+  --dust-opacity: 0.16;
+  --wordmark-opacity: 0.04;
+}
+
+/*
+ * Dead — nothing left to light the screen with.
+ *
+ * Every token collapses towards the background, which is what makes the page
+ * "fade to barely visible" without a scrim over it: a covering overlay would
+ * have to be punched through for each thing that must stay readable, and this
+ * way the three that matter — NOVA, the charger, the battery readout — simply
+ * opt back out by naming their own colour. Same mechanism as saver, taken to
+ * its end.
+ */
+html[data-theme="dark"][data-power="dead"] {
+  --color-bg: #04050a;
+  --color-bg-soft: #05060c;
+  --color-surface: #080a10;
+  --color-line: #12141d;
+
+  --color-ink: #262a37;
+  --color-muted: #21242f;
+  --color-faint: #1d202a;
+  --color-accent: #1a3a44;
+  --color-accent-ink: #1e4653;
+  --color-violet: #262340;
+  --color-chrome: #262a37;
+  --color-love: #35202c;
+
+  --glass-edge: rgb(255 255 255 / 0.015);
+  --wash: #070910;
+  --dust-opacity: 0.06;
+  --wordmark-opacity: 0.015;
+}
+
+/*
+ * The feature locks.
+ *
+ * Everything a visitor could click at 0% is either turned off here or answers
+ * with the "// NO POWER" toast. The nav and the music widget keep their pointer
+ * events on purpose — the toast is the whole point of clicking them, and a
+ * control that swallows the click silently reads as a broken page rather than
+ * as a flat robot. The stage has nothing that owes an answer, so it goes inert.
+ */
+html[data-power="dead"] .stage {
+  pointer-events: none;
+}
+
+html[data-power="dead"] .site-nav,
+html[data-power="dead"] .music {
+  opacity: 0.08;
+}
+
+/* Enough of a lift to confirm the thing is still there, nowhere near enough to
+   compete with the charger. */
+html[data-power="dead"] .site-nav:hover,
+html[data-power="dead"] .site-nav:focus-within,
+html[data-power="dead"] .music:hover,
+html[data-power="dead"] .music:focus-within {
+  opacity: 0.24;
+}
+
+html[data-power="dead"] .site-nav,
+html[data-power="dead"] .music {
+  transition: opacity 700ms ease;
+}
+
+/*
  * The 400ms crossfade between themes.
  *
  * A blunt `*` rule, applied for one beat by `runTransition()` and removed again.
@@ -1056,9 +1148,21 @@ html.stage-root body {
   color: var(--color-accent-ink);
 }
 
-.stage-status[data-power="reserve"] .stage-status-read,
-.stage-status-line[data-power="reserve"] {
+.stage-status[data-power="critical"] .stage-status-read,
+.stage-status-line[data-power="critical"] {
   color: var(--color-love);
+}
+
+/*
+ * The readout is the one piece of page chrome that survives 0%.
+ *
+ * A literal colour rather than a token, because every token has just collapsed
+ * into the background — and the number is part of the show. Watching it climb
+ * back from 0 is how the revival is legible at all before she can move.
+ */
+.stage-status[data-power="dead"] .stage-status-read,
+.stage-status-line[data-power="dead"] {
+  color: #5c6579;
 }
 
 .stage-status[data-charging="true"] .stage-status-read {
@@ -1075,9 +1179,14 @@ html.stage-root body {
   box-shadow: 0 0 6px var(--color-accent-ink);
 }
 
-.stage-status-line[data-power="reserve"] i {
+.stage-status-line[data-power="critical"] i {
   background: var(--color-love);
   box-shadow: 0 0 6px var(--color-love);
+}
+
+.stage-status-line[data-power="dead"] i {
+  background: #3a4152;
+  box-shadow: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

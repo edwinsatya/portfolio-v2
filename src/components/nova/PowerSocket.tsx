@@ -12,6 +12,9 @@ const SNAP_RADIUS = 130;
 const SOCKET_Y = 0.5;
 /** How long the cable takes to snap back to the socket when it's let go. */
 const RECOIL_MS = 420;
+/** Where the plug lies at 0%, relative to the socket, in px. See the draw loop. */
+const REACH_OUT = 132;
+const REACH_DROP = 44;
 
 /**
  * The charging cable.
@@ -57,16 +60,33 @@ export function PowerSocket() {
     let recoilAt = 0;
     let wasAttached = false;
     let drawn = "";
+    /** 0 parked at the socket, 1 laid out across the page. See `restX`. */
+    let laidOut = 0;
 
     const draw = (now: number) => {
       frame = requestAnimationFrame(draw);
 
-      const { charging, dragging } = getPower();
+      const { charging, dragging, state } = getPower();
       const attached = charging || dragging;
 
       const originX = 0;
       const originY = window.innerHeight * SOCKET_Y;
-      const restX = originX + 26;
+
+      /* Parked at the socket's mouth normally — but at 0% the cable *is* the
+         instruction, and a 26px stub is not a cable anyone can see. It lays
+         itself out across the page instead, leaving an arc that leads away from
+         the wall and a plug at the end of it with somewhere obvious to grab.
+
+         Eased rather than switched, so dying pays the cable out and reviving
+         reels it back in. Snapped when it's within a thousandth, or the string
+         below would keep changing by sub-pixel amounts forever and the loop
+         would never go quiet. */
+      const wantOut = state === "dead" ? 1 : 0;
+      laidOut += (wantOut - laidOut) * 0.06;
+      if (Math.abs(wantOut - laidOut) < 0.001) laidOut = wantOut;
+
+      const restX = originX + 26 + laidOut * (REACH_OUT - 26);
+      const restY = originY + laidOut * REACH_DROP;
 
       // Let go this frame: start the recoil from where the end was sitting.
       if (wasAttached && !attached) {
@@ -78,7 +98,7 @@ export function PowerSocket() {
       // Where the free end wants to be: the visitor's hand while dragging,
       // NOVA's chest once it's plugged in, and the socket the rest of the time.
       let endX = restX;
-      let endY = originY;
+      let endY = restY;
 
       if (dragging && held.current) {
         endX = held.current.x;
@@ -95,7 +115,7 @@ export function PowerSocket() {
           // Ease-out, so it whips away from NOVA and settles into the socket.
           const k = 1 - Math.pow(1 - t, 3);
           endX = recoilFrom.x + (restX - recoilFrom.x) * k;
-          endY = recoilFrom.y + (originY - recoilFrom.y) * k;
+          endY = recoilFrom.y + (restY - recoilFrom.y) * k;
         }
       }
 
@@ -155,10 +175,14 @@ export function PowerSocket() {
     };
 
     const onPointerDown = (event: PointerEvent) => {
-      if (getPower().charging) return;
       // Reduced motion gets the click path instead — see `toggle`. Flinging a
       // cable across the viewport is precisely what that preference turns off.
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      // Pulling the plug out mid-charge is the other half of the interaction:
+      // the charge stops where it is, and she holds whatever state that level
+      // describes. Previously the plug went inert once connected, which left
+      // clicking the socket as the only way to disconnect.
+      stopCharging();
       event.preventDefault();
       plug.setPointerCapture(event.pointerId);
       held.current = { x: event.clientX, y: event.clientY };
@@ -211,11 +235,15 @@ export function PowerSocket() {
   };
 
   const urgent = power.state !== "normal" && !power.charging;
+  // At 0% the charger stops being an affordance and becomes the only thing on
+  // the page worth looking at. See `.power[data-dead]` in power.css.
+  const dead = power.state === "dead";
 
   return (
     <div
       className="power"
       data-urgent={urgent}
+      data-dead={dead}
       data-charging={power.charging}
       data-dragging={power.dragging}
       data-near={near}
@@ -257,11 +285,28 @@ export function PowerSocket() {
       </div>
 
       {/* Only while she actually needs it — a permanent instruction to charge a
-          robot who is fine would just be clutter. */}
+          robot who is fine would just be clutter. At 0% it steps aside for the
+          full-width instruction in `PowerVoid`, which says the same thing where
+          it can't be missed. */}
       <p className="power-hint" aria-hidden>
         <span className="power-hint-drag">⚡ Drag the charger to NOVA</span>
         <span className="power-hint-tap">⚡ Tap the charger</span>
       </p>
+
+      {/* The 0% instruction.
+          Mounted only while it applies, rather than hidden with opacity: it
+          carries `role="status"`, and a permanently-rendered live region would
+          announce that NOVA is out of power on a page where she is fine.
+          Announced at all — unlike the hint above — because by this point the
+          page has no other working control, so a screen-reader user has to be
+          told what the one remaining one is. */}
+      {dead && !power.charging && (
+        <p className="power-revive" role="status">
+          ⚡ Nova is out of power —{" "}
+          <span className="power-revive-drag">drag the charger to revive</span>
+          <span className="power-revive-tap">click the charger to revive</span>
+        </p>
+      )}
     </div>
   );
 }

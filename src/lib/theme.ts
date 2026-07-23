@@ -52,35 +52,62 @@ function writeStored(theme: Theme): void {
 let chosen: Theme = "light";
 let loaded = false;
 
-type Snapshot = { chosen: Theme; effective: Theme; saver: boolean };
+/**
+ * How hard the battery is dimming the page.
+ *
+ * Three steps rather than one boolean, because the low-power states aren't
+ * degrees of the same thing: `saver` is a phone in battery saver, `critical` is
+ * a phone at 1% with the panel turned down, and `dead` is a screen with nothing
+ * left to light it. Each is a token block in `globals.css`.
+ */
+type Tone = "none" | "saver" | "critical" | "dead";
 
-let snapshot: Snapshot = { chosen: "light", effective: "light", saver: false };
+type Snapshot = { chosen: Theme; effective: Theme; saver: boolean; tone: Tone };
+
+let snapshot: Snapshot = {
+  chosen: "light",
+  effective: "light",
+  saver: false,
+  tone: "none",
+};
 
 const listeners = new Set<() => void>();
 
 /** Low battery forces dark and dims it, unless she's plugged in and recovering. */
-function forced(): boolean {
-  const power = getPower();
-  return power.state !== "normal";
+function toneFor(): Tone {
+  switch (getPower().state) {
+    case "dead":
+      return "dead";
+    case "critical":
+      return "critical";
+    case "low":
+      return "saver";
+    default:
+      return "none";
+  }
 }
 
 function compute(): Snapshot {
-  const saver = forced();
-  return { chosen, effective: saver ? "dark" : chosen, saver };
+  const tone = toneFor();
+  const saver = tone !== "none";
+  return { chosen, effective: saver ? "dark" : chosen, saver, tone };
 }
 
 /**
  * Writes the theme onto `<html>`.
  *
  * Two attributes rather than one: `data-theme` picks the palette, `data-power`
- * layers the battery-saver dimming on top. A manually chosen dark theme is
- * therefore full-contrast dark, and a forced one is the dimmed variant — which
- * is exactly the difference the spec draws.
+ * layers the battery dimming on top. A manually chosen dark theme is therefore
+ * full-contrast dark, and a forced one is one of the dimmed variants — which is
+ * exactly the difference the spec draws.
+ *
+ * `data-power` is also what the feature locks key off at `dead`, so a single
+ * attribute carries both the palette and the fact that nothing is clickable.
  */
 function apply(next: Snapshot): void {
   const root = document.documentElement;
   root.dataset.theme = next.effective;
-  if (next.saver) root.dataset.power = "saver";
+  if (next.saver) root.dataset.power = next.tone;
   else delete root.dataset.power;
 
   // Address bar and form controls follow the page.
@@ -95,12 +122,13 @@ function emit(animate: boolean): void {
   if (
     snapshot.chosen === next.chosen &&
     snapshot.effective === next.effective &&
-    snapshot.saver === next.saver
+    snapshot.tone === next.tone
   ) {
     return;
   }
 
-  const changed = snapshot.effective !== next.effective || snapshot.saver !== next.saver;
+  const changed =
+    snapshot.effective !== next.effective || snapshot.tone !== next.tone;
   snapshot = next;
 
   if (changed) {
@@ -173,7 +201,12 @@ export function getTheme(): Snapshot {
 
 /* Hoisted for the same reason as `SERVER_POWER`: a server snapshot is compared
    by identity, so a fresh object every render loops forever. */
-const SERVER_THEME: Snapshot = { chosen: "light", effective: "light", saver: false };
+const SERVER_THEME: Snapshot = {
+  chosen: "light",
+  effective: "light",
+  saver: false,
+  tone: "none",
+};
 
 /** The server always renders light; the head script corrects it before paint. */
 export function getServerTheme(): Snapshot {
@@ -195,7 +228,7 @@ export function setTheme(next: Theme): ThemeResult {
 
   // Going *back* to light while running on fumes is the one refusal. Choosing
   // dark is always allowed — it costs her nothing.
-  if (next === "light" && forced()) return "refused";
+  if (next === "light" && toneFor() !== "none") return "refused";
 
   const was = chosen;
   chosen = next;

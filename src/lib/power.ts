@@ -10,19 +10,31 @@
  * level the clock integrates; the snapshot rounds it. That split is what keeps
  * listeners quiet: draining a whole percent takes ~13s, so a 250ms clock emits
  * roughly once every fifty ticks instead of on every one.
+ *
+ * The *shape* of her body — how drooped, how collapsed — is deliberately not in
+ * the snapshot. Those are read once per animation frame by the stage loop, which
+ * wants the fractional level: rounding them into the snapshot would quantise a
+ * collapse that plays out over five percent into five visible steps.
  */
 
 const STORAGE_KEY = "nova.power.v1";
 
 /** Returning visitors never land on a drained robot. */
 const LOAD_FLOOR = 60;
-/** She runs down but never dies — 0% would just be a broken-looking page. */
-const RESERVE_FLOOR = 5;
 
 /** Battery saver kicks in here. */
 export const LOW_AT = 20;
-/** Standing nap here. */
-export const RESERVE_AT = 5;
+/** Running on fumes: she can barely stand. */
+export const CRITICAL_AT = 5;
+
+/**
+ * Where the body starts to collapse, a few percent above `CRITICAL_AT`.
+ *
+ * Offset for the same reason `droop` starts above `LOW_AT`: a posture that
+ * arrives exactly with the state it belongs to reads as a switch flipping, and
+ * a beat of warning is what makes the state change feel earned.
+ */
+const SLUMP_FROM = 8;
 
 /**
  * Passive drain, tuned so a ~17-minute browse takes 100% down to 20%.
@@ -48,23 +60,33 @@ const MAX_STEP_MS = 1000;
 /** How often the level is written back to storage. */
 const PERSIST_MS = 5000;
 
-export type PowerState = "normal" | "low" | "reserve";
+export type PowerState = "normal" | "low" | "critical" | "dead";
 
 export type Power = {
-  /** 5–100, rounded. */
+  /** 0–100, rounded. */
   level: number;
   charging: boolean;
   /** The plug is in the visitor's hand. Drives NOVA's port glowing. */
   dragging: boolean;
   state: PowerState;
-  /**
-   * 0–1, how tired she looks. Continuous rather than derived from `state` so
-   * charging reads as *progressively* waking up rather than a switch flipping
-   * at 20%. Starts creeping in a little above the low threshold, which gives
-   * the battery-saver switch a beat of warning.
-   */
-  droop: number;
 };
+
+/**
+ * The one-shot beats worth animating.
+ *
+ * Everything continuous — the sag, the dimming, the vignette — falls out of the
+ * level on its own. These are the moments that need a *gesture*, and a gesture
+ * can't be derived from a number that's already moved past it.
+ */
+export type PowerEvent =
+  /** Hit 0%. Powers down. */
+  | "died"
+  /** Charging lifted her off 0%. The revival spark. */
+  | "spark"
+  /** Charging crossed out of critical. She starts genuinely waking up. */
+  | "waking"
+  /** Charging crossed back over `LOW_AT`. "I'm back!" */
+  | "revived";
 
 /* -------------------------------------------------------------------------- */
 /* Storage                                                                     */
@@ -100,15 +122,33 @@ const clamp = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(max, value));
 
 function stateFor(level: number): PowerState {
-  if (level <= RESERVE_AT) return "reserve";
+  if (level <= 0) return "dead";
+  if (level <= CRITICAL_AT) return "critical";
   if (level <= LOW_AT) return "low";
   return "normal";
 }
 
-/** 0 at 28%, 1 at 8%. See the note on `Power.droop`. */
-function droopFor(level: number, state: PowerState): number {
-  if (state === "reserve") return 1;
+/**
+ * How tired she looks, 0–1.
+ *
+ * Continuous rather than derived from `state` so charging reads as
+ * *progressively* waking up rather than a switch flipping at 20%. Starts
+ * creeping in a little above the low threshold, which gives the battery-saver
+ * switch a beat of warning.
+ */
+function droopFor(level: number): number {
   return clamp((28 - level) / 20, 0, 1);
+}
+
+/**
+ * How far the body has collapsed, 0–1: 0 at `SLUMP_FROM`, 1 at flat.
+ *
+ * Distinct from `droop`, which has already saturated by the time this starts.
+ * Tiredness is a posture she can hold; this is her losing the ability to hold
+ * it, and it's what the revival walks back out of percent by percent.
+ */
+function slumpFor(level: number): number {
+  return clamp((SLUMP_FROM - level) / SLUMP_FROM, 0, 1);
 }
 
 let raw = 100;
@@ -126,7 +166,6 @@ let snapshot: Power = {
   charging: false,
   dragging: false,
   state: "normal",
-  droop: 0,
 };
 
 const listeners = new Set<() => void>();
@@ -134,19 +173,36 @@ const listeners = new Set<() => void>();
 function emit(): void {
   const level = Math.round(raw);
   const state = stateFor(level);
-  const droop = Math.round(droopFor(level, state) * 100) / 100;
 
   if (
     snapshot.level === level &&
     snapshot.charging === charging &&
-    snapshot.dragging === dragging &&
-    snapshot.droop === droop
+    snapshot.dragging === dragging
   ) {
     return;
   }
 
-  snapshot = { level, charging, dragging, state, droop };
+  const was = snapshot.state;
+  snapshot = { level, charging, dragging, state };
   listeners.forEach((listener) => listener());
+
+  // After the store listeners, so anything reacting to an event already sees
+  // the new level rather than the one it just left.
+  if (was !== state) announce(was, state);
+}
+
+/** Turns a state change into the one-shot beat it deserves, if any. */
+function announce(was: PowerState, now: PowerState): void {
+  if (now === "dead") {
+    fireEvent("died");
+    return;
+  }
+  // Every other beat is part of the revival, and only means anything on the
+  // way up — `/set-battery-40` is a jump, not a resurrection.
+  if (!charging) return;
+  if (was === "dead") fireEvent("spark");
+  else if (was === "critical") fireEvent("waking");
+  else if (was === "low" && now === "normal") fireEvent("revived");
 }
 
 /**
@@ -155,12 +211,16 @@ function emit(): void {
  * Lazy rather than at module load: this runs on the server too, where there is
  * no storage, and a snapshot taken before hydration must match what the server
  * rendered.
+ *
+ * The floor is the safety rail on the whole death arc — a first-time or
+ * returning visitor can never *land* on a dead or critical NOVA, however flat
+ * she was when they closed the tab. She only ever dies live, in front of them.
  */
 function load(): void {
   if (loaded || typeof window === "undefined") return;
   loaded = true;
   const stored = readStored();
-  raw = stored === null ? 100 : clamp(Math.max(stored, LOAD_FLOOR), RESERVE_FLOOR, 100);
+  raw = stored === null ? 100 : clamp(Math.max(stored, LOAD_FLOOR), 0, 100);
   emit();
 }
 
@@ -184,12 +244,61 @@ const SERVER_POWER: Power = {
   charging: false,
   dragging: false,
   state: "normal",
-  droop: 0,
 };
 
 /** The server can't read storage, and a full battery is the honest default. */
 export function getServerPower(): Power {
   return SERVER_POWER;
+}
+
+/**
+ * Nothing on the page answers while she's flat.
+ *
+ * One predicate rather than four `state === "dead"` comparisons scattered
+ * around, so the feature locks all read as the same rule — and all lift the
+ * moment the level does.
+ */
+export function isDead(): boolean {
+  return getPower().state === "dead";
+}
+
+/* -------------------------------------------------------------------------- */
+/* Body shape — per-frame, fractional                                          */
+/* -------------------------------------------------------------------------- */
+
+/* Read by the stage loop every frame rather than through the snapshot: these
+   want the un-rounded level. Returned as two scalars rather than one object so
+   sixty frames a second allocate nothing. */
+
+/** 0–1, how tired the body reads. See `droopFor`. */
+export function getDroop(): number {
+  load();
+  return droopFor(raw);
+}
+
+/** 0–1, how far the body has collapsed. See `slumpFor`. */
+export function getSlump(): number {
+  load();
+  return slumpFor(raw);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Events                                                                      */
+/* -------------------------------------------------------------------------- */
+
+const eventListeners = new Set<(event: PowerEvent) => void>();
+
+export function onPowerEvent(
+  listener: (event: PowerEvent) => void,
+): () => void {
+  eventListeners.add(listener);
+  return () => {
+    eventListeners.delete(listener);
+  };
+}
+
+function fireEvent(event: PowerEvent): void {
+  eventListeners.forEach((listener) => listener(event));
 }
 
 /* -------------------------------------------------------------------------- */
@@ -207,7 +316,7 @@ export function spendOnCelebration(): void {
   if (charging) return;
   if (performance.now() - chargedAt < CHARGE_GRACE_MS) return;
   const cost = CELEBRATION_MIN + Math.random() * (CELEBRATION_MAX - CELEBRATION_MIN);
-  raw = Math.max(RESERVE_FLOOR, raw - cost);
+  raw = Math.max(0, raw - cost);
   emit();
 }
 
@@ -216,7 +325,7 @@ export function spendOnCelebration(): void {
  *
  * A development affordance, reached only from the hidden `/set-battery-N`
  * terminal command — the drain is tuned to ~17 minutes, and waiting that out to
- * look at the low-power states is not a workflow. Clamped to the same 5–100
+ * look at the low-power states is not a workflow. Clamped to the same 0–100
  * range the clock respects, so it can't put the store somewhere the clock
  * couldn't, and it persists like any other change.
  *
@@ -224,7 +333,7 @@ export function spendOnCelebration(): void {
  */
 export function setLevel(next: number): number {
   load();
-  raw = clamp(next, RESERVE_FLOOR, 100);
+  raw = clamp(next, 0, 100);
   writeStored(raw);
   emit();
   return Math.round(raw);
@@ -289,7 +398,9 @@ function tick(): void {
       fullListeners.forEach((listener) => listener());
     }
   } else {
-    raw = Math.max(RESERVE_FLOOR, raw - step * DRAIN_PER_MS);
+    // All the way to zero. The only floor left is the one on `load`, so a
+    // session can end in the dark without any later visit opening there.
+    raw = Math.max(0, raw - step * DRAIN_PER_MS);
   }
 
   if (now - persistedAt > PERSIST_MS) {
@@ -347,8 +458,8 @@ export function startPowerClock(): () => void {
 /* Readout                                                                     */
 /* -------------------------------------------------------------------------- */
 
-/** Five cells, e.g. `[▮▮▮▮▯]`. Never empty above the reserve floor. */
+/** Five cells, e.g. `[▮▮▮▮▯]`. Only ever empty at a true zero. */
 export function batteryCells(level: number): string {
-  const filled = clamp(Math.max(1, Math.round(level / 20)), 0, 5);
+  const filled = level <= 0 ? 0 : clamp(Math.max(1, Math.round(level / 20)), 0, 5);
   return `[${"▮".repeat(filled)}${"▯".repeat(5 - filled)}]`;
 }

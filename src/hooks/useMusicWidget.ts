@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
-import { celebrate, onNovaBooted } from "@/lib/nova-bus";
+import { celebrate, noPower, onNovaBooted } from "@/lib/nova-bus";
+import { isDead, onPowerEvent } from "@/lib/power";
+import { usePower } from "./usePower";
 
 /**
  * How the player is presented. `mini` keeps the embed mounted and playing in a
@@ -80,6 +82,9 @@ export function useMusicWidget() {
   const [shown, setShown] = useState(false);
   const [mode, setMode] = useState<MusicMode>("closed");
   const [track, setTrack] = useState(0);
+  // Subscribed rather than read once: the card has to *look* disabled the
+  // moment she runs out, and the callbacks below read the store directly.
+  const power = usePower();
 
   const dismissed = useSyncExternalStore(
     subscribeDismissed,
@@ -99,6 +104,12 @@ export function useMusicWidget() {
   }, []);
 
   const open = useCallback(() => {
+    // Locked at 0%. The player is hers — it lives on her stage and she hops
+    // when it starts — so a flat battery takes it with everything else.
+    if (isDead()) {
+      noPower();
+      return;
+    }
     // Only a fresh open is worth a reaction — she shouldn't hop every time the
     // panel is restored from its mini bar. Read outside the updater: a state
     // updater has to stay pure, and StrictMode runs it twice.
@@ -118,12 +129,33 @@ export function useMusicWidget() {
 
   /** Picking another jam swaps the embed; the panel stays where it is. */
   const selectTrack = useCallback((index: number) => {
+    if (isDead()) {
+      noPower();
+      return;
+    }
     setTrack(index);
     setMode("open");
   }, []);
 
+  /*
+   * Running out mid-song stops the music.
+   *
+   * `closed` rather than `mini` deliberately: minimising keeps the iframe
+   * mounted and playing, and a robot with no power soundtracking her own
+   * shutdown is the one wrong note in the whole sequence.
+   */
+  useEffect(
+    () =>
+      onPowerEvent((event) => {
+        if (event === "died") setMode("closed");
+      }),
+    [],
+  );
+
   return {
     visible: shown && !dismissed,
+    /** 0%: the card is still there, greyed, and answers with the toast. */
+    disabled: power.state === "dead",
     mode,
     track,
     open,

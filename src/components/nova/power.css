@@ -253,6 +253,12 @@
   opacity: 1;
 }
 
+/* At 0% the instruction moves to the centre of the screen (see `.power-revive`)
+   and this small one would only be a second, quieter copy of it. */
+.power[data-dead="true"] .power-hint {
+  opacity: 0;
+}
+
 /* Instructions for a drag are noise on a device that can't hover, and the wrong
    instruction entirely under reduced motion — where the plug is inert. */
 .power-hint-tap {
@@ -287,5 +293,373 @@
     max-width: 5.5rem;
     font-size: 0.5rem;
     letter-spacing: 0.1em;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Flat                                                                        */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * At 0% the page tokens have collapsed into the background (see the `dead` block
+ * in globals.css) and would take the charger down with them. It opts out by
+ * naming its own colours — the same trick NOVA's port uses, for the same reason:
+ * these are the two things the visitor has to be able to find.
+ */
+.power[data-dead="true"] {
+  --color-accent: #3ad8f2;
+  --color-accent-ink: #7eeafb;
+  --color-line: #2b3346;
+  --color-faint: #55607a;
+  --color-surface: #121722;
+}
+
+/*
+ * The socket breathes.
+ *
+ * Slow and shallow, on scale and opacity only. The job is peripheral vision —
+ * something that moves in an otherwise dead frame is found without being
+ * looked for — so anything faster would read as an alarm rather than as the
+ * one part of the machine still running.
+ */
+.power[data-dead="true"] .power-socket {
+  opacity: 1;
+  border-color: var(--color-accent);
+  animation: power-beacon 2.6s ease-in-out infinite;
+  box-shadow:
+    0 8px 24px -14px rgb(0 0 0 / 0.6),
+    0 0 34px -6px color-mix(in oklab, var(--color-accent) 70%, transparent);
+}
+
+.power[data-dead="true"] .power-plug {
+  opacity: 1;
+}
+
+.power[data-dead="true"] .power-plug-body {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  animation: power-beacon 2.6s ease-in-out infinite;
+  animation-delay: -0.5s;
+  box-shadow: 0 0 22px -4px color-mix(in oklab, var(--color-accent) 65%, transparent);
+}
+
+/* The cable idles with a current running down it even before it's plugged in —
+   it is the line the eye follows from the socket to the robot. */
+.power[data-dead="true"] .power-cable-line {
+  stroke: var(--color-accent);
+  opacity: 0.85;
+  stroke-dasharray: 3 9;
+  animation: power-flow 1600ms linear infinite;
+}
+
+@keyframes power-beacon {
+  50% {
+    scale: 1.14;
+    opacity: 0.62;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Revive instruction                                                          */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The one sentence on a dead page.
+ *
+ * Lives in the charger's layer rather than in the vignette's so it inherits the
+ * re-pointed accent above, and sits centre-bottom where a full-width line of
+ * mono reads as a system message rather than as a label on anything.
+ */
+.power-revive {
+  position: absolute;
+  left: 50%;
+  bottom: 2.6rem;
+  translate: -50% 0;
+  max-width: min(30rem, calc(100vw - 2rem));
+
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  line-height: 1.7;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-align: center;
+  text-wrap: balance;
+  color: var(--color-accent-ink);
+  text-shadow: 0 0 18px color-mix(in oklab, var(--color-accent) 45%, transparent);
+
+  /* It only exists while it applies, so the entrance is an animation rather
+     than a transition off a hidden state — there is no hidden state. */
+  animation:
+    power-revive-in 800ms ease both,
+    power-revive-pulse 3.4s ease-in-out 800ms infinite;
+}
+
+@keyframes power-revive-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes power-revive-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* Same split as `.power-hint`: an instruction to drag is noise where there's no
+   pointer, and wrong under reduced motion, where the plug is inert and the
+   socket takes the click on its own. */
+.power-revive-tap {
+  display: none;
+}
+
+@media (hover: none) {
+  .power-revive-drag {
+    display: none;
+  }
+
+  .power-revive-tap {
+    display: inline;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .power-revive-drag {
+    display: none;
+  }
+
+  .power-revive-tap {
+    display: inline;
+  }
+
+  /* Nothing here may pulse — but the charger still has to be the brightest
+     thing on the page, which is what the colours above already do. */
+  .power[data-dead="true"] .power-socket,
+  .power[data-dead="true"] .power-plug-body,
+  .power[data-dead="true"] .power-cable-line {
+    animation: none;
+  }
+
+  /* The instruction keeps a plain fade in — it's the only thing telling anyone
+     how to get out of this state, and appearing from nowhere is worse than
+     appearing gently. */
+  .power-revive {
+    animation: power-revive-in 500ms ease both;
+  }
+}
+
+/* Phones: clear of the bottom tab bar, which is where the nav lives there. */
+@media (max-width: 639px) {
+  .power-revive {
+    bottom: 5.6rem;
+    font-size: 0.55rem;
+    letter-spacing: 0.12em;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* The void — vignette and labels                                              */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * z-index 39: above the scene (which tops out at 10) and below NOVA's stage
+ * (40), so it can darken everything the page draws without ever touching the
+ * robot standing in front of it. The nav and the music widget are above this
+ * and are dimmed by opacity instead — see the lock block in globals.css.
+ */
+.power-void {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  pointer-events: none;
+
+  /* A wide, soft tunnel. Transparent well past NOVA so nothing crops her, and
+     opaque at the corners, where the page has the most to hide. */
+  background: radial-gradient(
+    118% 88% at 50% 46%,
+    transparent 6%,
+    rgb(2 3 7 / calc(var(--power-void, 0) * 0.5)) 40%,
+    rgb(1 2 5 / calc(var(--power-void, 0) * 0.82)) 68%,
+    rgb(0 1 3 / calc(var(--power-void, 0) * 0.96)) 100%
+  );
+
+  /* Cheap to leave mounted, but not free — a full-viewport gradient the browser
+     has no reason to composite is worth switching off outright. */
+  opacity: 0;
+  transition: opacity 800ms ease;
+}
+
+.power-void[data-on="true"] {
+  opacity: 1;
+}
+
+/*
+ * The text layer.
+ *
+ * z-index 55 clears the nav (50), which on phones is a bottom tab bar sitting
+ * exactly where these labels want to be. Never takes a click: the only control
+ * on a dead page is the charger, one layer down.
+ */
+.power-void-ui {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  pointer-events: none;
+}
+
+/* --- The label under her feet --------------------------------------------- */
+
+/* Rides the ground position the stage loop publishes each frame, so it follows
+   her from the hero down into the corner dock without measuring anything. */
+.power-tag {
+  position: absolute;
+  left: calc(var(--nova-head-x, 0) * 1px);
+  top: calc(var(--nova-foot-y, 0) * 1px + 0.7rem);
+  translate: -50% 0;
+  white-space: nowrap;
+
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #5a6479;
+
+  opacity: 0;
+  transition: opacity 700ms ease;
+}
+
+/* Asymmetric on purpose. It waits for the shutdown animation on her visor to
+   finish before appearing, so the sequence reads as consequence rather than as
+   two things happening at once — but it leaves the moment she has power again,
+   because by then it is describing something that is no longer true. */
+.power-tag[data-show="true"] {
+  opacity: 1;
+  transition-delay: 900ms;
+}
+
+/* --- The refusal toast ---------------------------------------------------- */
+
+/*
+ * Deliberately the least interesting thing on screen: dark on dark, brief, and
+ * nowhere near the charger. It exists so a click doesn't vanish silently, not to
+ * start a conversation about what's broken.
+ */
+.power-toast {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+
+  padding: 0.45rem 0.85rem;
+  border: 1px solid #1c202c;
+  border-radius: 0.4rem;
+  background: rgb(6 7 12 / 0.92);
+
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #5f6a80;
+
+  animation: power-toast 1500ms ease-out both;
+}
+
+@keyframes power-toast {
+  0% {
+    opacity: 0;
+    scale: 0.96;
+  }
+  12%,
+  72% {
+    opacity: 1;
+    scale: 1;
+  }
+  100% {
+    opacity: 0;
+    scale: 1;
+  }
+}
+
+/* --- Feature unlock pings ------------------------------------------------- */
+
+/*
+ * The moment battery saver lifts. Bottom-centre, above where the revive
+ * instruction was standing a second ago — the same spot answering the thing it
+ * was asking for.
+ */
+.power-pings {
+  position: absolute;
+  left: 50%;
+  bottom: 2.4rem;
+  translate: -50% 0;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.power-pings li {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-accent-ink);
+  text-shadow: 0 0 14px color-mix(in oklab, var(--color-accent) 40%, transparent);
+  animation: power-ping 1600ms ease-out both;
+}
+
+@keyframes power-ping {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  14%,
+  70% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@media (max-width: 639px) {
+  .power-pings {
+    bottom: 5.4rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Both of these are already only a fade in and out; what goes is the travel
+     and the scale, which are the parts that move. */
+  @keyframes power-toast {
+    0% {
+      opacity: 0;
+    }
+    12%,
+    72% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes power-ping {
+    0% {
+      opacity: 0;
+    }
+    14%,
+    70% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
   }
 }

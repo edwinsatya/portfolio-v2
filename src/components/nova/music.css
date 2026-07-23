@@ -32,6 +32,15 @@
   pointer-events: auto;
 }
 
+/* 0%: still on the page and still clickable — the click is what produces the
+   refusal — but plainly not a thing that will play anything. Safe to `filter`
+   here, unlike on the wrapper: the card has no fixed descendants to tear off
+   the viewport (see the note at the top of this file). */
+.music[data-disabled="true"] .music-card {
+  filter: grayscale(1);
+  cursor: not-allowed;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Resting card                                                                */
 /* -------------------------------------------------------------------------- */

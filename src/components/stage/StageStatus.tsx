@@ -27,6 +27,16 @@ const READOUT: Record<NovaStatus, { label: string; fill: string }> = {
   thinking: { label: "Nova thinking", fill: "100%" },
 };
 
+/**
+ * 0% overrides all four.
+ *
+ * Applied here rather than added to `NovaStatus` on the bus: the bus tracks what
+ * she is *doing*, and nothing is doing anything. Wiring the battery into it
+ * would give two stores one answer to agree on, where this component already
+ * reads both.
+ */
+const OFFLINE = { label: "Nova offline", fill: "0%" };
+
 export function StageStatus() {
   const status = useSyncExternalStore(
     subscribeNovaStatus,
@@ -34,7 +44,8 @@ export function StageStatus() {
     getServerNovaStatus,
   );
   const power = usePower();
-  const { label, fill } = READOUT[status];
+  const { label, fill } =
+    power.state === "dead" ? OFFLINE : READOUT[status];
 
   return (
     <div

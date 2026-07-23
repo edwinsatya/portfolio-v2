@@ -334,6 +334,19 @@ export const LOW_POWER_LINES = [
   "battery low. i'll keep watch anyway.",
 ];
 
+/**
+ * The last five percent.
+ *
+ * Broken rather than merely tired — the ellipses and the stutter are doing the
+ * work the animation can't, which is telling you she is about to stop rather
+ * than that she is slow.
+ */
+export const CRITICAL_LINES = [
+  "c-critical... power...",
+  "can't... keep eyes open...",
+  "systems... shutting... d—",
+];
+
 export const HERO_CHIPS = [
   "what has he built?",
   "is he available?",

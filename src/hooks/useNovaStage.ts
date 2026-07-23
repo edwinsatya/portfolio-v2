@@ -8,13 +8,19 @@ import {
   setNovaPort,
   type Celebration,
 } from "@/lib/nova-bus";
-import { getPower } from "@/lib/power";
+import {
+  getDroop,
+  getPower,
+  getSlump,
+  onPowerEvent,
+  type PowerEvent,
+} from "@/lib/power";
 import {
   blendPose,
   ease as easeBlend,
   poseFor,
   restingPose,
-  STATE_MS,
+  stateMs,
   type NovaState,
   type Pose,
 } from "@/lib/nova-pose";
@@ -39,6 +45,8 @@ const EYE_LINE = 109 / 320;
 const HEAD_TOP = 19 / 320;
 /** Her chest lamp, which doubles as the charging port. */
 const PORT_LINE = 215 / 320;
+/** The ground she stands on. The "powered off" label hangs below it. */
+const FOOT_LINE = 303 / 320;
 
 /** Clearance the bubble keeps from every viewport edge. */
 const EDGE_PAD = 12;
@@ -67,6 +75,12 @@ const WAVE_MAX_MS = 30000;
     a yawn every fifteen seconds reads as a tic rather than as tiredness. */
 const YAWN_MIN_MS = 18000;
 const YAWN_MAX_MS = 34000;
+/** Gap between the head-nods of fighting sleep. More often than a yawn: on a
+    critical battery losing the fight *is* the idle. */
+const NOD_MIN_MS = 7000;
+const NOD_MAX_MS = 14000;
+/** How long the visor's reboot flicker runs. Matches `nova-spark` in nova.css. */
+const SPARK_MS = 1300;
 /** How long the joyful face lingers after the last like. */
 const JOY_MS = 1400;
 /** Crossfade into a new move, from whatever pose is on screen. */
@@ -290,13 +304,18 @@ export function useNovaStage({
         queued = null;
       }
 
-      /* How tired the body reads, updated every frame so a charge walks her
-         back upright continuously rather than in steps. */
+      /* How tired the body reads, and how far it has collapsed. Read from the
+         store's fractional level every frame rather than from the rounded
+         snapshot, so a charge walks her back upright continuously instead of in
+         one visible step per percent. */
       const power = getPower();
-      const droop = power.droop;
+      const droop = getDroop();
+      const slump = getSlump();
+      const dead = power.state === "dead";
 
       if (svg.dataset.power !== power.state) svg.dataset.power = power.state;
       svg.style.setProperty("--nova-droop", droop.toFixed(2));
+      svg.style.setProperty("--nova-slump", slump.toFixed(2));
 
       // The port shows itself the moment a plug is picked up, so the visitor
       // can see where they're aiming before they get there.
@@ -308,9 +327,11 @@ export function useNovaStage({
       if (reducedMotion.matches) {
         // Held at a fixed rest pose — the engine's idle still breathes and
         // sways, which is motion the visitor asked not to see. Evaluated at a
-        // constant time so nothing oscillates. The slump still applies: it's a
-        // posture, not a movement.
-        pose = restingPose(0, droop);
+        // constant time so nothing oscillates. Droop and slump still apply:
+        // they're postures, not movements, and without them the power states
+        // would be invisible here. The gestures are skipped entirely, leaving
+        // the fades the CSS does anyway.
+        pose = restingPose(0, droop, slump);
       } else {
         const wantPose = poseFor(
           state,
@@ -318,6 +339,7 @@ export function useNovaStage({
           now - stateStartedAt,
           intensity,
           droop,
+          slump,
         );
         const blend = easeBlend(Math.min(1, (now - blendStartedAt) / blendMs));
         pose = blendPose(blendFrom, wantPose, blend);
@@ -332,6 +354,8 @@ export function useNovaStage({
       svg.style.setProperty("--pose-sx", pose.bodySx.toFixed(3));
       svg.style.setProperty("--pose-sy", pose.bodySy.toFixed(3));
       svg.style.setProperty("--pose-chest", pose.chest.toFixed(3));
+      svg.style.setProperty("--pose-head-rot", pose.headRot.toFixed(2));
+      svg.style.setProperty("--pose-head-y", pose.headY.toFixed(2));
 
       /* Gaze — origin derived from the transform above, not measured. */
       const halfHeight = (BASE_HEIGHT * scale) / 2;
@@ -340,7 +364,14 @@ export function useNovaStage({
 
       const idle = !pointerSeen || now - lastPointerAt > IDLE_AFTER;
 
-      if (idle) {
+      // Nothing behind the visor to look with. The gaze eases to centre rather
+      // than being cut, so the last thing she does before the lights go out is
+      // stop following you.
+      if (dead) {
+        target.x = 0;
+        target.y = 0;
+        nextWanderAt = 0;
+      } else if (idle) {
         if (reducedMotion.matches) {
           target.x = 0;
           target.y = 0;
@@ -359,8 +390,9 @@ export function useNovaStage({
         nextWanderAt = 0;
       }
 
-      // Drift lazily when idling, follow crisply when being led.
-      const ease = idle ? 0.035 : 0.12;
+      // Drift lazily when idling, follow crisply when being led — and slower
+      // still on the way out, so the gaze settles rather than snapping to zero.
+      const ease = dead ? 0.02 : idle ? 0.035 : 0.12;
       gaze.x += (target.x - gaze.x) * ease;
       gaze.y += (target.y - gaze.y) * ease;
 
@@ -377,6 +409,12 @@ export function useNovaStage({
       document.documentElement.style.setProperty(
         "--nova-head-y",
         `${Math.round(antennaTop)}`,
+      );
+      // And where the ground under her is, which is what the "powered off"
+      // label hangs from. Published the same way and for the same reason.
+      document.documentElement.style.setProperty(
+        "--nova-foot-y",
+        `${Math.round(boxTop + BASE_HEIGHT * scale * FOOT_LINE)}`,
       );
 
       // Where the charging cable lands. Published in JS rather than as a custom
@@ -445,6 +483,10 @@ export function useNovaStage({
     /* ---------------------------------------------------------------- */
 
     const blink = () => {
+      // Nothing to blink with once the visor is dark, and in critical the eyes
+      // are running their own open-a-sliver-and-shut cycle that a blink would
+      // only interrupt.
+      if (getPower().state === "dead") return;
       svg.dataset.blink = "true";
       later(() => {
         svg.dataset.blink = "false";
@@ -496,7 +538,10 @@ export function useNovaStage({
       stateEndsAt =
         next === "idle" || next === "happy"
           ? Infinity
-          : now + STATE_MS[next] * (1 - intensity * 0.12);
+          : // `stateMs` rather than the raw table: a yawn on a dying battery
+            // plays in slow motion, and the timer has to agree with the pose or
+            // the stretch would finish early and hold.
+            now + stateMs(next, getSlump()) * (1 - intensity * 0.12);
       svg.dataset.state = next;
     };
 
@@ -568,20 +613,89 @@ export function useNovaStage({
      * same one-shot schedule for the same reason: a fixed interval would read
      * as a mechanism rather than as a robot getting sleepy.
      *
-     * Only in `low`. In `reserve` she's asleep on her feet, and a stretch would
-     * undo the nap; while charging she's on her way back up.
+     * In `low` and `critical` both, where `stateMs` stretches it into the
+     * slow-motion version. Never at 0%, where there is nothing left to yawn
+     * with, and never while charging — she's on her way back up.
      */
     const scheduleYawn = () => {
       later(
         () => {
           const power = getPower();
-          if (power.state === "low" && !power.charging && !busy()) {
+          const tired = power.state === "low" || power.state === "critical";
+          if (tired && !power.charging && !busy()) {
             enterState("yawn", performance.now());
           }
           scheduleYawn();
         },
         YAWN_MIN_MS + Math.random() * (YAWN_MAX_MS - YAWN_MIN_MS),
       );
+    };
+
+    /*
+     * Fighting sleep. Critical only — above it she's tired but still upright,
+     * and below it there is no fight left to lose.
+     */
+    const scheduleNod = () => {
+      later(
+        () => {
+          const power = getPower();
+          if (power.state === "critical" && !power.charging && !busy()) {
+            enterState("nod", performance.now());
+          }
+          scheduleNod();
+        },
+        NOD_MIN_MS + Math.random() * (NOD_MAX_MS - NOD_MIN_MS),
+      );
+    };
+
+    /*
+     * The revival, staged.
+     *
+     * Each beat is a gesture rather than a blend, because the continuous part —
+     * the body lifting out of its slump, the glow coming back — is already
+     * happening underneath from `slump` alone, and a wake-up you can only see by
+     * watching the percentage isn't a wake-up.
+     */
+    const runPowerEvent = (event: PowerEvent) => {
+      // Simplified fades instead: the postures and the CSS crossfades still
+      // carry every state change, they just don't perform it.
+      if (reducedMotion.matches) return;
+
+      const now = performance.now();
+      switch (event) {
+        case "died":
+          // Whatever she was doing, she isn't any more. The slumped idle is
+          // already where the pose engine is heading; this just stops fighting
+          // it, and the blend out of the interrupted move reads as collapsing.
+          queued = null;
+          intensity = 0;
+          enterState("idle", now);
+          break;
+
+        case "spark":
+          queued = null;
+          // The visor's own catch-catch-hold, which CSS can't stage on its own:
+          // leaving `dead` merely stops the shutdown rule, and the lights would
+          // otherwise just be back. See `nova-spark` in nova.css.
+          svg.dataset.spark = "true";
+          later(() => {
+            delete svg.dataset.spark;
+          }, SPARK_MS);
+          enterState("twitch", now);
+          break;
+
+        case "waking":
+          // The stretch first, then the yawn it earns — the engine's one queued
+          // follow-up is exactly the right size for this.
+          enterState("stretch", now);
+          queued = "yawn";
+          break;
+
+        case "revived":
+          queued = null;
+          enterState("shake", now);
+          break;
+      }
     };
 
     // Hello, once, after the boot screen clears.
@@ -609,6 +723,8 @@ export function useNovaStage({
 
     const handlePointerDown = () => {
       if (reducedMotion.matches) return;
+      // A flat robot doesn't flinch when you poke her.
+      if (getPower().state === "dead") return;
       svg.dataset.react = "true";
       blink();
       later(() => {
@@ -622,6 +738,7 @@ export function useNovaStage({
 
     const offBooted = onNovaBooted(greetOnBoot);
     const offCelebrate = onCelebrate(runCelebration);
+    const offPower = onPowerEvent(runPowerEvent);
     window.addEventListener("keydown", handleKeyDown);
 
     frame = requestAnimationFrame(tick);
@@ -632,6 +749,7 @@ export function useNovaStage({
     if (!reducedMotion.matches) {
       scheduleWave();
       scheduleYawn();
+      scheduleNod();
     }
 
     return () => {
@@ -639,6 +757,7 @@ export function useNovaStage({
       timers.forEach(window.clearTimeout);
       offBooted();
       offCelebrate();
+      offPower();
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerout", handlePointerOut);

@@ -46,6 +46,37 @@
   --paper-rail-ink: #5f5e58;
 }
 
+/*
+ * Critical: the paper loses its backlight.
+ *
+ * Same reasoning as the terminal's block in `nova.css` — this window resolves
+ * every colour through its own four variables, so the page's dimming cannot
+ * reach it and has to be restated. Both themes dim: a bright sheet of paper is
+ * exactly what a machine on its last percent cannot produce, whichever way the
+ * window's own switch is set.
+ */
+html[data-power="critical"] .resume-layer {
+  --paper: #cdcbc4;
+  --paper-soft: #c4c2b8;
+  --paper-line: #b2aea2;
+  --paper-ink: #2a2a2e;
+  --paper-muted: #5c5b55;
+  --paper-faint: #7e7d75;
+  --paper-rail: #131316;
+  --paper-rail-ink: #63635d;
+}
+
+html[data-power="critical"] .resume-layer[data-theme="dark"] {
+  --paper: #070708;
+  --paper-soft: #0d0d0f;
+  --paper-line: #1c1c1f;
+  --paper-ink: #a9a8a3;
+  --paper-muted: #74736e;
+  --paper-faint: #4f4e4a;
+  --paper-rail: #040405;
+  --paper-rail-ink: #46453f;
+}
+
 .resume-layer[data-open="true"] {
   opacity: 1;
   visibility: visible;

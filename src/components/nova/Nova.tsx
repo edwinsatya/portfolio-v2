@@ -371,7 +371,7 @@ export function Nova({ mood = "greeting", className = "", ref }: NovaProps) {
               <circle className="nova-lamp" cx="152" cy="157" r="2.5" opacity="0.55" />
             </g>
 
-            {/* Sleep particles, shown only in reserve. Outside the head group
+            {/* Sleep particles, shown only in critical. Outside the head group
                 so they drift straight up rather than swinging with her gaze. */}
             <g className="nova-zzz" aria-hidden>
               <text className="nova-z" x="196" y="60">

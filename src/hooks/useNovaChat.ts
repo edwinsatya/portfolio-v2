@@ -11,9 +11,15 @@ import {
 import { scenes } from "@/content/scenes";
 import { profile } from "@/content/profile";
 import { matchIntent, scriptedResponder, type NovaResponder } from "@/lib/nova-brain";
-import { celebrate, onAskNova, setNovaThinking, setWindowOpen } from "@/lib/nova-bus";
+import {
+  celebrate,
+  noPower,
+  onAskNova,
+  setNovaThinking,
+  setWindowOpen,
+} from "@/lib/nova-bus";
 import { sanitizeName, setVisitorName } from "@/lib/memory";
-import { getPower, setLevel } from "@/lib/power";
+import { getPower, isDead, onPowerEvent, setLevel } from "@/lib/power";
 import { setTheme } from "@/lib/theme";
 
 /**
@@ -64,7 +70,7 @@ const BOOT_LINES: Omit<TerminalLine, "id">[] = [
 let nextId = 0;
 const line = (l: Omit<TerminalLine, "id">): TerminalLine => ({ id: nextId++, ...l });
 
-/** Prefixed onto her answers when she's running on reserve. */
+/** Prefixed onto her answers when she's running on the last few percent. */
 const SLEEPY_PREFIXES = [
   "*yawn* ",
   "mm… ",
@@ -72,16 +78,48 @@ const SLEEPY_PREFIXES = [
   "sorry, low power. ",
 ];
 
+/** Longer than this and a critical reply gets cut short. */
+const TRUNCATE_OVER = 108;
+
 /**
- * Colours a reply with how tired she is.
+ * Cuts a reply off where a sentence runs out of power.
  *
- * A prefix rather than a rewritten answer: the content still has to be correct
- * and complete on a flat battery — she's sleepy, not unhelpful — so tiredness
- * lands in the delivery and nowhere else. Only in reserve, and only sometimes,
- * because a tic on every single line stops reading as character.
+ * Backs up to the last natural break rather than slicing mid-word, so what's
+ * left still reads as something she started saying — a hard character cut reads
+ * as a bug in the renderer, not as a robot losing her train of thought.
+ */
+function truncate(text: string): string {
+  if (text.length <= TRUNCATE_OVER) return text;
+  const cut = text.slice(0, TRUNCATE_OVER);
+  const stop = Math.max(
+    cut.lastIndexOf(". "),
+    cut.lastIndexOf(", "),
+    cut.lastIndexOf(" "),
+  );
+  return `${(stop > 40 ? cut.slice(0, stop) : cut).trimEnd()}…`;
+}
+
+/**
+ * Colours a reply with how flat she is.
+ *
+ * On `low` the content still has to be correct and complete — she's tired, not
+ * unhelpful — so tiredness lands in the delivery and nowhere else, and only
+ * sometimes, because a tic on every single line stops reading as character.
+ *
+ * On `critical` it goes further, because by then the honest thing is that she
+ * genuinely can't finish: the answer is banner-prefixed, slurred, and cut off.
+ * The terminal still works, which is the point — she is degrading, not down.
  */
 function sleepy(text: string): string {
-  if (getPower().state !== "reserve" || Math.random() > 0.55) return text;
+  const { state } = getPower();
+
+  if (state === "critical") {
+    const prefix =
+      SLEEPY_PREFIXES[Math.floor(Math.random() * SLEEPY_PREFIXES.length)];
+    return `// LOW POWER MODE\n${prefix}${truncate(text)}`;
+  }
+
+  if (state !== "low" || Math.random() > 0.35) return text;
   return SLEEPY_PREFIXES[Math.floor(Math.random() * SLEEPY_PREFIXES.length)] + text;
 }
 
@@ -127,6 +165,13 @@ export function useNovaChat({
    */
   const open = useCallback(
     (withQuestion = false) => {
+      // Locked at 0%. The refusal is the whole response — no window, no
+      // transcript, just the toast, because a terminal that opens to say she
+      // can't talk is still a terminal that opened.
+      if (isDead()) {
+        noPower();
+        return;
+      }
       setIsOpen(true);
       // Reopening from the dock restores the window rather than leaving it
       // collapsed, which would look like the click did nothing.
@@ -359,6 +404,22 @@ export function useNovaChat({
   const isEngaged = isOpen && windowState !== "minimized";
 
   useEffect(() => setWindowOpen("terminal", isEngaged), [isEngaged]);
+
+  /*
+   * Hitting 0% mid-conversation closes the window.
+   *
+   * Leaving it open would be the only lit thing on a page that has just gone
+   * dark, and it would sit there refusing to answer — worse than shutting down,
+   * which is at least what happened. The transcript survives; reopening after
+   * she's revived picks it up where it stopped.
+   */
+  useEffect(
+    () =>
+      onPowerEvent((event) => {
+        if (event === "died") close();
+      }),
+    [close],
+  );
 
   return {
     isOpen,

@@ -24,8 +24,17 @@ import "./music.css";
  * with it would float over the terminal's scrim.
  */
 export function MusicWidget() {
-  const { visible, mode, track, open, minimize, close, dismiss, selectTrack } =
-    useMusicWidget();
+  const {
+    visible,
+    disabled,
+    mode,
+    track,
+    open,
+    minimize,
+    close,
+    dismiss,
+    selectTrack,
+  } = useMusicWidget();
   const cardRef = useRef<HTMLButtonElement>(null);
 
   const current = jams[track];
@@ -50,7 +59,13 @@ export function MusicWidget() {
   }, [isPlaying]);
 
   return (
-    <div className="music" data-shown={visible} data-mode={mode} inert={!visible}>
+    <div
+      className="music"
+      data-shown={visible}
+      data-mode={mode}
+      data-disabled={disabled}
+      inert={!visible}
+    >
       {/* Resting card. Hidden rather than unmounted while the panel is up, so
           the entrance transition doesn't replay on every close. */}
       <button
@@ -59,7 +74,15 @@ export function MusicWidget() {
         className="music-card"
         onClick={open}
         aria-expanded={isPlaying}
-        aria-label={`Play ${current.title} by ${current.artist}`}
+        // Not the `disabled` attribute: a disabled button takes no click, and
+        // the click is what produces the "// NO POWER" answer. `open` refuses
+        // on its own — this only says so.
+        aria-disabled={disabled || undefined}
+        aria-label={
+          disabled
+            ? "Music unavailable — NOVA is out of power"
+            : `Play ${current.title} by ${current.artist}`
+        }
       >
         <span className="music-art">
           {/* Plain <img>: a remote thumbnail off a host we don't control isn't

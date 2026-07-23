@@ -39,13 +39,44 @@
   filter: drop-shadow(0 0 7px color-mix(in oklab, var(--nova-tint) 70%, transparent));
 }
 
+/*
+ * Gaze and pose share this transform.
+ *
+ * `--pose-head-rot` / `--pose-head-y` come from the pose engine and carry the
+ * power states — the slump, the nod, the reboot twitch — while the gaze keeps
+ * writing its own rotation on top. Adding them rather than choosing between
+ * them is what lets a head hang forward and still turn to follow the cursor.
+ */
 .nova-head {
-  transform: rotate(calc(var(--nova-look-x) * 4.5deg + var(--nova-tilt)))
-    translate(calc(var(--nova-look-x) * 3px), calc(var(--nova-look-y) * 2.5px));
+  transform: rotate(
+      calc(
+        var(--nova-look-x) * 4.5deg + var(--nova-tilt) + var(--pose-head-rot) *
+          1deg
+      )
+    )
+    translate(
+      calc(var(--nova-look-x) * 3px),
+      calc(var(--nova-look-y) * 2.5px + var(--pose-head-y) * 1px)
+    );
   /* Pivot on the neck, not the middle of the skull. */
   transform-box: fill-box;
   transform-origin: 50% 100%;
   transition: transform 400ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/*
+ * The head gestures need their own timing.
+ *
+ * That 400ms transition is a smoothing filter — right for a mood tipping the
+ * head, wrong for a jerk awake, which it would flatten into a lean. Shortened
+ * rather than removed, because the gaze is riding the same property and a hard
+ * 0ms would make the cursor tracking read as jitter.
+ */
+.nova[data-state="nod"] .nova-head,
+.nova[data-state="twitch"] .nova-head,
+.nova[data-state="stretch"] .nova-head,
+.nova[data-state="shake"] .nova-head {
+  transition-duration: 90ms;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -214,20 +245,27 @@
 /* -------------------------------------------------------------------------- */
 
 /*
- * Everything below reads `--nova-droop`, a 0–1 number the stage loop writes each
- * frame, and `data-power` for the two things that are genuinely states rather
- * than degrees — the forced flat mouth, and the nap.
+ * Everything below reads two 0–1 numbers the stage loop writes each frame —
+ * `--nova-droop` (how tired) and `--nova-slump` (how far past tired) — plus
+ * `data-power` for the things that are genuinely states rather than degrees:
+ * the forced flat mouth, the nap, the sliver-eyed critical cycle, and the
+ * shutdown.
  *
  * Placed after the mood rules and before the blink, which is the order the three
  * want: a mood sets the face, tiredness drags it down, and a blink still wins
- * over both. The body's slump is not here at all — that's the pose engine, so it
- * blends with whatever move is playing instead of fighting it.
+ * over both. The body's posture is not here at all — that's the pose engine, so
+ * it blends with whatever move is playing instead of fighting it.
  */
 
 .nova {
   --nova-droop: 0;
-  /* How much of her glow is left. Read by every lamp and the bloom. */
-  --nova-glow: calc(1 - var(--nova-droop) * 0.62);
+  --nova-slump: 0;
+  /* How much of her glow is left. Read by every lamp and the bloom. The two
+     factors multiply rather than add, so tiredness dims her and the collapse
+     takes what's left — at a flat battery there is essentially nothing on. */
+  --nova-glow: calc(
+    (1 - var(--nova-droop) * 0.62) * (1 - var(--nova-slump) * 0.9)
+  );
   /* Base strength of the bloom, before `--nova-glow` dims it. Raised by the
      dark theme further down. */
   --nova-bloom: 13%;
@@ -235,38 +273,26 @@
 
 /* Lids at half mast. Scaled from the bottom edge, the same trick `proud` uses —
    an eye that shrinks towards its own centre reads as *small*, not as sleepy. */
-.nova[data-power="low"] .nova-eye,
-.nova[data-power="reserve"] .nova-eye {
+.nova:is([data-power="low"], [data-power="critical"], [data-power="dead"])
+  .nova-eye {
   transform: scaleY(calc(1 - var(--nova-droop) * 0.6));
   transform-origin: center bottom;
 }
 
-/* Reserve: shut. A hair thicker than a blink so it reads as resting rather than
-   as a frame caught mid-blink. */
-.nova[data-power="reserve"] .nova-eye {
-  transform: scaleY(0.1);
-}
-
 /* Too tired to hold a smile — but only once she's genuinely low, not on the
    first flicker of droop. */
-.nova[data-power="low"] .nova-eye-happy,
-.nova[data-power="reserve"] .nova-eye-happy,
-.nova[data-power="low"] .nova-mouth-smile,
-.nova[data-power="reserve"] .nova-mouth-smile,
-.nova[data-power="low"] .nova-mouth-grin,
-.nova[data-power="reserve"] .nova-mouth-grin,
-.nova[data-power="low"] .nova-sparkle,
-.nova[data-power="reserve"] .nova-sparkle {
+.nova:is([data-power="low"], [data-power="critical"], [data-power="dead"])
+  :is(.nova-eye-happy, .nova-mouth-smile, .nova-mouth-grin, .nova-sparkle) {
   opacity: 0;
 }
 
-.nova[data-power="low"] .nova-eye,
-.nova[data-power="reserve"] .nova-eye {
+.nova:is([data-power="low"], [data-power="critical"], [data-power="dead"])
+  .nova-eye {
   opacity: 1;
 }
 
-.nova[data-power="low"] .nova-mouth-flat,
-.nova[data-power="reserve"] .nova-mouth-flat {
+.nova:is([data-power="low"], [data-power="critical"], [data-power="dead"])
+  .nova-mouth-flat {
   opacity: 1;
 }
 
@@ -283,44 +309,233 @@
   transform-origin: center;
 }
 
+/* --- Critical: the last five percent -------------------------------------- */
+
+/*
+ * She can't hold her eyes open.
+ *
+ * A cycle rather than a held pose: they come up to a sliver, waver, and drop
+ * shut again, and the long flat section between attempts is what sells it as
+ * effort. Transform only, from the same bottom edge as the half-mast lids, so it
+ * layers cleanly over everything above.
+ */
+.nova[data-power="critical"] .nova-eye {
+  transform: scaleY(0.08);
+  transform-origin: center bottom;
+  animation: nova-sliver 6.4s ease-in-out infinite;
+}
+
+@keyframes nova-sliver {
+  0%,
+  58%,
+  100% {
+    transform: scaleY(0.07);
+  }
+  67% {
+    transform: scaleY(0.44);
+  }
+  74% {
+    transform: scaleY(0.3);
+  }
+  86% {
+    transform: scaleY(0.09);
+  }
+}
+
+/*
+ * The visor flicker.
+ *
+ * Steps rather than an ease, and clustered rather than evenly spaced: a smooth
+ * pulse reads as breathing, and this has to read as a supply that keeps nearly
+ * cutting out. Mostly held at full so the drops land as events.
+ */
+.nova[data-power="critical"] .nova-eyes {
+  animation: nova-flicker 7.4s steps(1, end) infinite;
+}
+
+@keyframes nova-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  46% {
+    opacity: 1;
+  }
+  47% {
+    opacity: 0.22;
+  }
+  48.5% {
+    opacity: 1;
+  }
+  71% {
+    opacity: 1;
+  }
+  72% {
+    opacity: 0.12;
+  }
+  73.2% {
+    opacity: 0.85;
+  }
+  74.4% {
+    opacity: 0.2;
+  }
+  76% {
+    opacity: 1;
+  }
+}
+
+/* --- Dead ----------------------------------------------------------------- */
+
+/*
+ * The shutdown, played once on the way in.
+ *
+ * `forwards` holds the last frame, so what's left after the sequence is a robot
+ * with nothing lit — the stillness at the end is the point, and a looping
+ * animation would keep resurrecting her. The late blip is the final flicker: a
+ * capacitor emptying, not a heartbeat.
+ */
+.nova[data-power="dead"] .nova-eyes {
+  animation: nova-shutdown 2200ms ease-out forwards;
+}
+
+/* Flattening the lamps' inline opacities (the chin pair sit at 0.55) is exactly
+   what's wanted here, unlike everywhere else — they are all going to nothing. */
+.nova[data-power="dead"] .nova-lamp {
+  animation: nova-shutdown 2600ms ease-out forwards;
+}
+
+@keyframes nova-shutdown {
+  0% {
+    opacity: 1;
+  }
+  16% {
+    opacity: 0.12;
+  }
+  22% {
+    opacity: 0.62;
+  }
+  30% {
+    opacity: 0.04;
+  }
+  58% {
+    opacity: 0.02;
+  }
+  64% {
+    opacity: 0.4;
+  }
+  70% {
+    opacity: 0.02;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* The mouth goes with the rest of the face — a flat line on an unlit visor is
+   still a face, and she isn't wearing one any more. The transition lives on the
+   group rather than in this rule so it fades back in on the way out too. */
+.nova-mouth {
+  transition: opacity 700ms ease 300ms;
+}
+
+.nova[data-power="dead"] .nova-mouth {
+  opacity: 0;
+}
+
+/* --- The revival spark ---------------------------------------------------- */
+
+/*
+ * `data-spark` is set for a beat by the stage loop when a charge lifts her off
+ * 0%, and it exists only because CSS cannot see where a state came from: leaving
+ * `dead` drops the shutdown rule, and without this the visor would simply be on
+ * again between one frame and the next.
+ *
+ * Two failed catches, then it holds — a machine finding its feet, not a lamp
+ * being switched on. After the last frame the critical rules take back over, so
+ * it lands on the sliver-eyed idle rather than snapping anywhere.
+ *
+ * After the flicker rule above, so it wins at equal specificity for its beat.
+ */
+.nova[data-spark="true"] .nova-eyes,
+.nova[data-spark="true"] .nova-lamp {
+  animation: nova-spark 1300ms ease-out;
+}
+
+@keyframes nova-spark {
+  0% {
+    opacity: 0;
+  }
+  7% {
+    opacity: 0.95;
+  }
+  11% {
+    opacity: 0.03;
+  }
+  24% {
+    opacity: 0.03;
+  }
+  30% {
+    opacity: 1;
+  }
+  36% {
+    opacity: 0.06;
+  }
+  52% {
+    opacity: 0.28;
+  }
+  74% {
+    opacity: 0.72;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
 /* The visor cools off as she runs down: the tint desaturates towards a dead
    slate, and every glow that reads from it dims with it. */
-.nova[data-power="low"],
-.nova[data-power="reserve"] {
+.nova:is([data-power="low"], [data-power="critical"], [data-power="dead"]) {
   --nova-tint: color-mix(in oklab, var(--color-accent) 55%, #6f7a8c);
   --nova-tilt: 5deg;
 }
 
-.nova[data-power="reserve"] {
+.nova[data-power="critical"] {
   --nova-tint: color-mix(in oklab, var(--color-accent) 28%, #6f7a8c);
   --nova-tilt: 9deg;
+}
+
+/* Dead metal. No tint left to speak of, and no tilt either — the head's angle
+   comes from the pose engine's slump now, which is a body that has given up
+   rather than a face turned aside. */
+.nova[data-power="dead"] {
+  --nova-tint: #39404f;
+  --nova-tilt: 0deg;
 }
 
 /* Dimming the drop-shadow rather than the fill: the lamps carry inline `opacity`
    attributes (the chin pair sit at 0.55), and a CSS `opacity` here would
    flatten those to one value. */
-.nova[data-power="low"] .nova-lamp,
-.nova[data-power="reserve"] .nova-lamp {
+.nova:is([data-power="low"], [data-power="critical"], [data-power="dead"])
+  .nova-lamp {
   filter: drop-shadow(
     0 0 calc(6px * var(--nova-glow))
       color-mix(in oklab, var(--nova-tint) calc(65% * var(--nova-glow)), transparent)
   );
 }
 
-.nova[data-power="low"] .nova-eyes,
-.nova[data-power="reserve"] .nova-eyes {
+.nova:is([data-power="low"], [data-power="critical"], [data-power="dead"])
+  .nova-eyes {
   filter: drop-shadow(
     0 0 calc(7px * var(--nova-glow))
       color-mix(in oklab, var(--nova-tint) calc(70% * var(--nova-glow)), transparent)
   );
 }
 
-/* The pulse slows to a tired breath, and slower still in reserve. */
+/* The pulse slows to a tired breath, and slower still on the last few percent. */
 .nova[data-power="low"] .nova-glowing {
   animation-duration: 5.2s;
 }
 
-.nova[data-power="reserve"] .nova-glowing {
+.nova[data-power="critical"] .nova-glowing {
   animation-duration: 7.5s;
 }
 
@@ -331,7 +546,9 @@
   transition: opacity 500ms ease;
 }
 
-.nova[data-power="reserve"] .nova-zzz {
+/* Critical only. A dead robot isn't asleep — it's off, and drifting z's over a
+   machine with no power in it would be the wrong joke entirely. */
+.nova[data-power="critical"] .nova-zzz {
   opacity: 1;
 }
 
@@ -345,7 +562,7 @@
   transform-origin: center;
 }
 
-.nova[data-power="reserve"] .nova-z {
+.nova[data-power="critical"] .nova-z {
   animation: nova-zzz 3.6s ease-in-out infinite;
 }
 
@@ -512,6 +729,12 @@
   --pose-sx: 1;
   --pose-sy: 1;
   --pose-chest: 1;
+  /* Load-bearing defaults, not documentation: `.nova-head` feeds these through
+     `calc()`, and an undefined custom property there invalidates the whole
+     transform — the head would jump to centre for the frames before the loop's
+     first write. */
+  --pose-head-rot: 0;
+  --pose-head-y: 0;
 }
 
 /* Whole body above the hips: lift and squash. */
@@ -749,6 +972,31 @@ html[data-theme="dark"] .nova-shadow {
   filter: blur(12px);
 }
 
+/*
+ * Dead, on a page that has gone dark with her.
+ *
+ * Every token around her has collapsed into the background, so a robot whose
+ * whole palette is dark metal would vanish with it. The silhouette has to be
+ * *drawn*: a brighter seam on every plate, and a wide cold halo that reads as
+ * the page's own light catching an object rather than as anything she's
+ * emitting. She is the thing you're meant to be looking at.
+ *
+ * The accent is re-pointed locally too, and only reaches the charging port —
+ * `--nova-tint` is set outright above, so nothing else on her reads from it.
+ * The port is the target of the whole interaction and cannot be allowed to dim
+ * into the body it sits on.
+ */
+html[data-theme="dark"] .nova[data-power="dead"] {
+  --color-accent: #3ad8f2;
+  filter: drop-shadow(0 0 34px rgb(126 146 190 / 0.16))
+    drop-shadow(0 18px 30px rgb(0 0 0 / 0.55));
+}
+
+html[data-theme="dark"] .nova[data-power="dead"] .nova-plate {
+  stroke: #4b5568;
+  stroke-opacity: 0.85;
+}
+
 /* The speech bubble sits on the page, not on NOVA, so it follows the page. */
 html[data-theme="dark"] .nova-speech {
   box-shadow:
@@ -869,6 +1117,25 @@ html[data-theme="dark"] .nova-speech {
     opacity 220ms ease,
     padding 300ms cubic-bezier(0.22, 1, 0.36, 1),
     visibility 0s linear 220ms;
+}
+
+/*
+ * The panel turns down with her.
+ *
+ * The terminal owns its palette rather than borrowing the page tokens, which is
+ * exactly why the battery's dimming can't reach it on its own — so it's
+ * re-pointed here by hand, the same way `globals.css` re-points the page. Only
+ * at `critical`: at `low` the terminal is the one place she's still fully
+ * herself, and at `dead` it can't be opened at all.
+ */
+html[data-power="critical"] .term-layer {
+  --term-bg: #090c11;
+  --term-bg-soft: #0c1016;
+  --term-line: #171d26;
+  --term-dim: #4a5462;
+  --term-green: #2d8a65;
+  --term-green-soft: #43a07b;
+  --term-red: #a24a4a;
 }
 
 .term-layer[data-open="true"] {
@@ -1657,6 +1924,46 @@ html[data-theme="dark"] .nova-speech {
   .nova-sparkle,
   .nova[data-react="true"] .nova-bob {
     animation: none;
+  }
+
+  /*
+   * The power states, without the performance.
+   *
+   * Every flicker, sliver, and shutdown is a repeated change of brightness,
+   * which is the thing this preference exists to turn off — so each becomes the
+   * single fade it was describing. The states are still completely legible:
+   * critical is a robot with her eyes almost shut, dead is a dark visor. Only
+   * the theatre goes. The stage loop skips the gestures for the same reason.
+   */
+  .nova[data-power="critical"] .nova-eye {
+    transform: scaleY(0.14);
+  }
+
+  .nova[data-power="critical"] .nova-eye,
+  .nova[data-power="critical"] .nova-eyes,
+  .nova[data-power="dead"] .nova-eyes,
+  .nova[data-power="dead"] .nova-lamp,
+  .nova[data-spark="true"] .nova-eyes,
+  .nova[data-spark="true"] .nova-lamp,
+  .nova[data-power="critical"] .nova-z {
+    animation: none;
+  }
+
+  .nova[data-power="critical"] .nova-zzz {
+    opacity: 0;
+  }
+
+  .nova[data-power="dead"] .nova-eyes,
+  .nova[data-power="dead"] .nova-lamp {
+    opacity: 0;
+  }
+
+  /* The one motion kept: without a duration here the lights would cut rather
+     than fade, and globals.css collapses every transition to 0.01ms. Same
+     exception, and the same reasoning, as the blink above. */
+  .nova .nova-eyes,
+  .nova .nova-lamp {
+    transition: opacity 600ms ease !important;
   }
 
   .nova-anchor[data-flying="true"] {

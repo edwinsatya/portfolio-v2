@@ -7,6 +7,8 @@
  * provider around the whole tree for one interaction.
  */
 
+import { isDead } from "./power";
+
 type AskListener = (question?: string) => void;
 
 const listeners = new Set<AskListener>();
@@ -80,9 +82,42 @@ export function onLike(listener: LikeListener): () => void {
 /**
  * Fires a love burst. `origin` is optional — without one the hearts launch from
  * NOVA's head, which is what the L key and a tap on the robot both want.
+ *
+ * Locked at 0%. The guard is here rather than at the four things that can like
+ * — the key, the counter, the tagline, the robot herself — because they all
+ * mean the same thing, and a lock that lives at the chokepoint can't be walked
+ * around by a fifth caller later. Silent by design: the hearts are NOVA
+ * reacting, and there is nothing there to react.
  */
 export function fireLike(origin: LikeOrigin = null): void {
+  if (isDead()) return;
   likeListeners.forEach((listener) => listener(origin));
+}
+
+/* -------------------------------------------------------------------------- */
+/* No power                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Something was clicked that a flat battery can't do.
+ *
+ * One channel for every locked feature, so the answer is the same wherever the
+ * visitor pokes: a brief dark toast and nothing else. Kept separate from the
+ * power store because it isn't state — it's the *refusal*, and two refusals in
+ * a row have to read as two.
+ */
+
+const noPowerListeners = new Set<() => void>();
+
+export function onNoPower(listener: () => void): () => void {
+  noPowerListeners.add(listener);
+  return () => {
+    noPowerListeners.delete(listener);
+  };
+}
+
+export function noPower(): void {
+  noPowerListeners.forEach((listener) => listener());
 }
 
 /* -------------------------------------------------------------------------- */
