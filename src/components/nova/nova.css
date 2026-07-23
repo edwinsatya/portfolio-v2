@@ -1085,6 +1085,13 @@ html[data-theme="dark"] .nova-speech {
   outline-offset: 6px;
 }
 
+/* Focus handed back after the terminal closes. The element really is focused —
+   the next Tab carries on from her — but the ring stays off, because the
+   visitor moved it themselves rather than arriving here by keyboard. */
+.nova-tap[data-quiet-focus]:focus-visible {
+  outline: none;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Terminal                                                                    */
 /* -------------------------------------------------------------------------- */

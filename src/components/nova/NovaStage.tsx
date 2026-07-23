@@ -48,10 +48,19 @@ export function NovaStage() {
   const tapRef = useRef<HTMLButtonElement>(null);
 
   // Whichever way the panel closes — Escape or the X — focus goes back to the
-  // robot rather than being dropped on the document.
+  // robot rather than being dropped on the document. It goes back quietly: this
+  // is a handoff the visitor already knows about, and a ring appearing around
+  // NOVA the moment the terminal disappears reads as a glitch. Tabbing to her
+  // still shows one — the flag is cleared the moment focus leaves.
   const wasOpen = useRef(false);
   useEffect(() => {
-    if (wasOpen.current && !chat.isOpen) tapRef.current?.focus();
+    if (wasOpen.current && !chat.isOpen) {
+      const tap = tapRef.current;
+      if (tap) {
+        tap.dataset.quietFocus = "true";
+        tap.focus();
+      }
+    }
     wasOpen.current = chat.isOpen;
   }, [chat.isOpen]);
 
@@ -105,6 +114,13 @@ export function NovaStage() {
           ref={tapRef}
           type="button"
           onClick={() => fireLike()}
+          /* A mouse click likes her; it has no reason to leave focus parked on
+             her afterwards. Without this the next key press — `L` to like
+             again, most obviously — flips the browser's focus-visible
+             heuristic and draws a ring nobody asked for. Keyboard focus is
+             untouched: Tab still reaches her, Enter still likes. */
+          onMouseDown={(event) => event.preventDefault()}
+          onBlur={(event) => delete event.currentTarget.dataset.quietFocus}
           className="nova-tap"
           aria-label="Like NOVA"
         />
