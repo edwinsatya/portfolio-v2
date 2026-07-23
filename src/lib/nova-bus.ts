@@ -8,6 +8,7 @@
  */
 
 import { isDead } from "./power";
+import { registerLike, type Affection } from "./nova-temper";
 
 type AskListener = (question?: string) => void;
 
@@ -61,6 +62,32 @@ export function novaBooted(): void {
   emitStatus();
 }
 
+/*
+ * The same event, read as state rather than as a one-shot.
+ *
+ * `onNovaBooted` suits the things that *happen* on boot — the wave, the music
+ * card's entrance. This suits the things that must not happen *before* it: the
+ * greeting bubble, the tagline rotation, anything on a timer that would
+ * otherwise start counting from mount and land while the boot screen is still
+ * up. One gate, so the ordering can't drift apart per component.
+ */
+
+export function subscribeBootComplete(listener: () => void): () => void {
+  bootListeners.add(listener);
+  return () => {
+    bootListeners.delete(listener);
+  };
+}
+
+export function getBootComplete(): boolean {
+  return hasBooted;
+}
+
+/** Every visit starts mid-boot, so the server can only ever say no. */
+export function getServerBootComplete(): boolean {
+  return false;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Likes                                                                       */
 /* -------------------------------------------------------------------------- */
@@ -68,7 +95,17 @@ export function novaBooted(): void {
 /** Where the burst should originate, in viewport pixels. */
 export type LikeOrigin = { x: number; y: number } | null;
 
-type LikeListener = (origin: LikeOrigin) => void;
+/**
+ * A like, and what NOVA's current temper will let it do.
+ *
+ * The verdict travels with the event rather than each listener asking the store
+ * itself, so the hearts, the counter and the celebration can never disagree
+ * about which stage she was in — they are all reading one decision, made once,
+ * at the moment the click landed.
+ */
+export type LikeEvent = Affection & { origin: LikeOrigin };
+
+type LikeListener = (event: LikeEvent) => void;
 
 const likeListeners = new Set<LikeListener>();
 
@@ -83,15 +120,27 @@ export function onLike(listener: LikeListener): () => void {
  * Fires a love burst. `origin` is optional — without one the hearts launch from
  * NOVA's head, which is what the L key and a tap on the robot both want.
  *
- * Locked at 0%. The guard is here rather than at the four things that can like
- * — the key, the counter, the tagline, the robot herself — because they all
- * mean the same thing, and a lock that lives at the chokepoint can't be walked
- * around by a fifth caller later. Silent by design: the hearts are NOVA
- * reacting, and there is nothing there to react.
+ * Locked at 0%, and locked again until the boot has finished. The guards are
+ * here rather than at the four things that can like — the key, the counter, the
+ * tagline, the robot herself — because they all mean the same thing, and a lock
+ * that lives at the chokepoint can't be walked around by a fifth caller later.
+ * Silent by design in both cases: the hearts are NOVA reacting, and there is
+ * either nothing there to react or nothing yet to react to.
+ *
+ * The boot guard matters because NOVA is lifted above the boot overlay, so her
+ * hit area is the one main-stage control a visitor can physically reach while
+ * the splash is up — and a stray click during a sequence that no longer answers
+ * to stray clicks should not be the exception.
+ *
+ * Her *temper* is not a guard, which is why it isn't one of the two above: a
+ * like that lands mid-sulk still has to be dispatched, because being ignored is
+ * something she has to visibly do. `registerLike` decides what it's worth and
+ * the listeners read the verdict off the event.
  */
 export function fireLike(origin: LikeOrigin = null): void {
-  if (isDead()) return;
-  likeListeners.forEach((listener) => listener(origin));
+  if (isDead() || !hasBooted) return;
+  const affection = registerLike();
+  likeListeners.forEach((listener) => listener({ ...affection, origin }));
 }
 
 /* -------------------------------------------------------------------------- */
@@ -143,6 +192,46 @@ export function celebrate(kind?: Celebration): void {
   const pick: Celebration =
     kind ?? (["wave", "dance", "hop"] as const)[Math.floor(Math.random() * 3)];
   celebrateListeners.forEach((listener) => listener(pick));
+}
+
+/* -------------------------------------------------------------------------- */
+/* Music                                                                       */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Whether there is something playing for her to listen to.
+ *
+ * The player's state lives in `useMusicWidget`, which hangs off the widget in
+ * the bottom-right corner; NOVA lives on the fixed stage layer. Nothing wraps
+ * both — the same reason `onAskNova` and `setWindowOpen` are here.
+ *
+ * Published from the hook rather than from the widget's markup, so the one
+ * place that owns "is the iframe mounted and playing" is also the one place
+ * that says so.
+ */
+
+let vibing = false;
+const vibeListeners = new Set<(on: boolean) => void>();
+
+export function setNovaVibing(on: boolean): void {
+  if (vibing === on) return;
+  vibing = on;
+  vibeListeners.forEach((listener) => listener(on));
+}
+
+/**
+ * An edge, not a value.
+ *
+ * Both consumers want the transition rather than the state — the stage loop
+ * changes pose on it, the note layer starts and stops a timer on it — and
+ * neither renders anything from it, so there is no `useSyncExternalStore` trio
+ * here. Adding one would be three exports nothing reads.
+ */
+export function onVibeChange(listener: (on: boolean) => void): () => void {
+  vibeListeners.add(listener);
+  return () => {
+    vibeListeners.delete(listener);
+  };
 }
 
 /* -------------------------------------------------------------------------- */

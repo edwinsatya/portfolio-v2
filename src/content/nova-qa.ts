@@ -358,6 +358,37 @@ export const CRITICAL_LINES = [
   "systems... shutting... d—",
 ];
 
+/* -------------------------------------------------------------------------- */
+/* NOVA — being clicked to death                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * What she says when the affection stops being affection.
+ *
+ * Three sets for the three stages past delighted, said through the speech
+ * bubble rather than the tagline rotation: the rotation is ambient narration
+ * about Edwin's work, and a line about the visitor's own behaviour has to come
+ * from her, at her, in the moment. See `nova-temper.ts` for the arc.
+ *
+ * Deliberately light. She is exasperated, not wounded — the joke only works if
+ * the visitor comes away having found a boundary, not having upset someone.
+ */
+export const ANNOYED_LINES = [
+  "okay okay, that's a lot of love.",
+  "personal space, friend.",
+  "i felt that one. and the eight before it.",
+];
+
+/** Said on the way round, and to anyone who keeps poking a turned back. */
+export const SULK_LINES = [
+  "not talking to you right now.",
+  "hmph.",
+  "nope. still ignoring you.",
+];
+
+/** The thaw. One line, because it only ever gets said once per arc. */
+export const FORGIVEN_LINE = "...fine. i missed you too.";
+
 export const HERO_CHIPS = [
   "what has he built?",
   "is he available?",

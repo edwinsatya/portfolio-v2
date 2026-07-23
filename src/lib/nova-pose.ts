@@ -39,6 +39,22 @@ export type Pose = {
    */
   headRot: number;
   headY: number;
+  /** Hip rotations, degrees. Foot taps and standing on one leg. */
+  legL: number;
+  legR: number;
+  /**
+   * How far she has turned her back on you, 0–1.
+   *
+   * A 2D cheat, and deliberately so: a real Y-rotation on an SVG is a 3D
+   * transform Firefox won't honour, and the alternative — drawing a second set
+   * of geometry for her back — is a lot of shapes for a state she is in for
+   * twenty seconds. Narrowing her towards the centre line and dropping the face
+   * reads as a turn at every size she's ever drawn at. The width lives on
+   * `.nova-lean` rather than in `bodySx`, because the legs hang outside the
+   * group `bodySx` scales and a torso that turns while the feet don't is worse
+   * than no turn at all.
+   */
+  turn: number;
 };
 
 export type NovaState =
@@ -55,10 +71,54 @@ export type NovaState =
   /** Waking up: the long stretch, arms overhead. */
   | "stretch"
   /** "I'm back!" — the happy wiggle when the charge clears battery saver. */
-  | "shake";
+  | "shake"
+  /* --- Music ------------------------------------------------------------- */
+  /** Headphones on, in the zone. Runs until the player closes. */
+  | "vibe"
+  /* --- Idle repertoire --------------------------------------------------- */
+  /** Head cocked at something off-screen. */
+  | "tilt"
+  /** Turning her own hand over and looking at it. */
+  | "inspect"
+  /** The absent-minded sway of someone humming to themselves. */
+  | "hum"
+  /** Brushing something off a shoulder. */
+  | "dust"
+  /** Up on one foot, wobbling. */
+  | "balance"
+  /** A slow look back over her shoulder, and around again. */
+  | "peek"
+  /* --- Overstimulation --------------------------------------------------- */
+  /** Hand on hip, and a shake of the head. Stage two. */
+  | "annoyed"
+  /** The turn itself. Stage three's entrance. */
+  | "turnAway"
+  /** Back turned, arms crossed. Runs until the cooldown is served. */
+  | "sulk"
+  /** Poked mid-sulk: a look over the shoulder, and back to ignoring you. */
+  | "glance"
+  /** Turning round again, a beat of side-eye, and softening. */
+  | "forgive";
+
+/**
+ * The states that run until something else ends them, rather than for a set
+ * time. The engine gives these no end timestamp, and nothing queues behind
+ * them — they are left by being replaced.
+ */
+export const SUSTAINED: ReadonlySet<NovaState> = new Set<NovaState>([
+  "idle",
+  "happy",
+  "vibe",
+  "sulk",
+]);
+
+export type TimedState = Exclude<
+  NovaState,
+  "idle" | "happy" | "vibe" | "sulk"
+>;
 
 /** How long each move runs at rest intensity. */
-export const STATE_MS: Record<Exclude<NovaState, "idle" | "happy">, number> = {
+export const STATE_MS: Record<TimedState, number> = {
   wave: 2100,
   dance: 1900,
   hop: 1050,
@@ -67,7 +127,27 @@ export const STATE_MS: Record<Exclude<NovaState, "idle" | "happy">, number> = {
   twitch: 720,
   stretch: 2600,
   shake: 1100,
+  tilt: 2200,
+  inspect: 2800,
+  hum: 2600,
+  dust: 1800,
+  balance: 2400,
+  peek: 3000,
+  annoyed: 1600,
+  turnAway: 900,
+  glance: 1000,
+  forgive: 1900,
 };
+
+/**
+ * The tempo she grooves at, in milliseconds per beat.
+ *
+ * 112bpm — the middle of the range where a nod reads as *keeping* time rather
+ * than as either fighting it or falling asleep in it. Generic on purpose:
+ * nothing here knows what is actually playing in the YouTube iframe, and a bob
+ * synced to the wrong track is worse than one synced to none.
+ */
+const BEAT_MS = 60000 / 112;
 
 /**
  * How long a move actually runs, given how flat she is.
@@ -77,10 +157,7 @@ export const STATE_MS: Record<Exclude<NovaState, "idle" | "happy">, number> = {
  * the engine's timer and the pose function below read this, so the animation
  * always finishes exactly when the state does.
  */
-export function stateMs(
-  state: Exclude<NovaState, "idle" | "happy">,
-  slump = 0,
-): number {
+export function stateMs(state: TimedState, slump = 0): number {
   return state === "yawn" ? STATE_MS.yawn * (1 + slump * 1.1) : STATE_MS[state];
 }
 
@@ -109,6 +186,9 @@ export function blendPose(from: Pose, to: Pose, t: number): Pose {
     chest: lerp(from.chest, to.chest, t),
     headRot: lerp(from.headRot, to.headRot, t),
     headY: lerp(from.headY, to.headY, t),
+    legL: lerp(from.legL, to.legL, t),
+    legR: lerp(from.legR, to.legR, t),
+    turn: lerp(from.turn, to.turn, t),
   };
 }
 
@@ -164,6 +244,9 @@ function idle(now: number, droop = 0, slump = 0): Pose {
        looking like a head merely turned to one side. */
     headRot: slump * 13,
     headY: slump * 3.5,
+    legL: 0,
+    legR: 0,
+    turn: 0,
   };
 }
 
@@ -387,6 +470,292 @@ function happy(now: number, _elapsed: number, intensity: number): Pose {
   return { ...base, bodyY: base.bodyY - 1.5 * (0.5 + intensity * 0.5) };
 }
 
+/* -------------------------------------------------------------------------- */
+/* Music                                                                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * In the zone: nodding on the beat, swaying on the bar, tapping a foot.
+ *
+ * Three rates rather than one, which is the whole difference between grooving
+ * and ticking — the head takes the beat, the body takes the bar underneath it,
+ * and the foot lands on the beat but spends most of it on the floor.
+ *
+ * Tiredness doesn't swap this for another move, it plays the same one slower
+ * and smaller: `lazy` stretches the beat, `amp` shrinks everything reading off
+ * it. At 20% she still nods along, just without the enthusiasm.
+ */
+function vibe(now: number, elapsed: number, droop: number): Pose {
+  const base = idle(now, droop, 0);
+  const lazy = 1 + droop * 1.1;
+  const amp = 1 - droop * 0.55;
+  const beat = (now / (BEAT_MS * lazy)) * TAU;
+
+  // Finds the groove over the first bar rather than snapping onto the one.
+  const env = ease(Math.min(1, elapsed / (BEAT_MS * 4))) * amp;
+
+  const bob = Math.sin(beat);
+  const sway = Math.sin(beat / 2);
+  // Cubed and clipped: a raw sine would drift the foot continuously, which is
+  // a shuffle. This lifts briefly and puts it back down.
+  const tap = Math.max(0, Math.sin(beat)) ** 3;
+
+  return {
+    ...base,
+    armL: base.armL + (6 + sway * 9) * env,
+    armR: base.armR - (6 - sway * 9) * env,
+    foreL: base.foreL - bob * 5 * env,
+    foreR: base.foreR + bob * 5 * env,
+    bodyY: base.bodyY + bob * 1.7 * env,
+    bodyRot: base.bodyRot + sway * 3 * env,
+    bodySy: base.bodySy - bob * 0.008 * env,
+    chest: base.chest + Math.abs(bob) * 0.01 * env,
+    headRot: base.headRot + sway * 5 * env,
+    headY: base.headY + bob * 2.3 * env,
+    legR: tap * 7 * env,
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Idle repertoire                                                             */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Six small things to do when nobody is watching.
+ *
+ * All built on the resting pose and all shaped the same way — in, hold, out —
+ * because they have to be able to end early: the engine cuts back to idle the
+ * moment the pointer moves, and a move whose interesting part is its last frame
+ * would only ever be seen by someone who had already left.
+ */
+
+/** Head cocked at something off-screen, with a second look partway through. */
+function tilt(now: number, elapsed: number): Pose {
+  const base = idle(now);
+  const p = Math.min(1, elapsed / STATE_MS.tilt);
+  const k = p < 0.22 ? ease(p / 0.22) : p > 0.72 ? ease((1 - p) / 0.28) : 1;
+  const again = Math.sin(Math.min(1, Math.max(0, (p - 0.4) / 0.3)) * Math.PI);
+
+  return {
+    ...base,
+    headRot: base.headRot - (13 + again * 5) * k,
+    headY: base.headY - k,
+    bodyRot: base.bodyRot - 1.6 * k,
+    armL: base.armL - 3 * k,
+    armR: base.armR - 2 * k,
+  };
+}
+
+/** Turning her own hand over and looking at it, as if she'd never seen it. */
+function inspect(now: number, elapsed: number): Pose {
+  const base = idle(now);
+  const p = Math.min(1, elapsed / STATE_MS.inspect);
+  const raise = p < 0.24 ? ease(p / 0.24) : p > 0.78 ? ease((1 - p) / 0.22) : 1;
+
+  // The wrist roll, windowed to the hold so the hand isn't still turning on
+  // the way back down.
+  const held = Math.min(1, Math.max(0, (p - 0.24) / 0.54));
+  const roll = Math.sin(held * TAU) * Math.sin(held * Math.PI);
+
+  return {
+    ...base,
+    armR: lerp(base.armR, -104, raise),
+    foreR: lerp(base.foreR, -46, raise) + roll * 26,
+    headRot: base.headRot + 9 * raise,
+    headY: base.headY + 1.5 * raise,
+    bodyRot: base.bodyRot + 1.2 * raise,
+  };
+}
+
+/**
+ * The absent sway of someone humming to themselves.
+ *
+ * The one idle that takes `droop` and `slump`, because it's the one that
+ * survives into the low-battery pool — a tired robot can still sway.
+ */
+function hum(now: number, elapsed: number, droop: number, slump: number): Pose {
+  const base = idle(now, droop, slump);
+  const p = Math.min(1, elapsed / STATE_MS.hum);
+  // In and out with no hold: it's a drift, not a gesture.
+  const env = Math.sin(ease(p) * Math.PI) * (1 - droop * 0.4);
+  const w = Math.sin((elapsed / 780) * TAU);
+
+  return {
+    ...base,
+    bodyRot: base.bodyRot + w * 2.6 * env,
+    bodyY: base.bodyY - Math.abs(w) * 0.9 * env,
+    headRot: base.headRot + w * 4.5 * env,
+    armL: base.armL + w * 4 * env,
+    armR: base.armR + w * 4 * env,
+  };
+}
+
+/** Three brisk strokes at a shoulder that didn't have anything on it. */
+function dust(now: number, elapsed: number): Pose {
+  const base = idle(now);
+  const p = Math.min(1, elapsed / STATE_MS.dust);
+  const reach = p < 0.26 ? ease(p / 0.26) : p > 0.72 ? ease((1 - p) / 0.28) : 1;
+
+  const held = Math.min(1, Math.max(0, (p - 0.26) / 0.46));
+  const brush = Math.sin(held * TAU * 3) * Math.sin(held * Math.PI);
+
+  return {
+    ...base,
+    armR: lerp(base.armR, -68, reach),
+    foreR: lerp(base.foreR, -96, reach) + brush * 16,
+    armL: base.armL - 4 * reach,
+    headRot: base.headRot + 4 * reach,
+    bodyRot: base.bodyRot + 1.4 * reach,
+  };
+}
+
+/** Up on one foot. The wobble is the joke — she isn't good at this. */
+function balance(now: number, elapsed: number): Pose {
+  const base = idle(now);
+  const p = Math.min(1, elapsed / STATE_MS.balance);
+  const up = p < 0.2 ? ease(p / 0.2) : p > 0.76 ? ease((1 - p) / 0.24) : 1;
+  const wobble = Math.sin((elapsed / 420) * TAU) * up;
+
+  return {
+    ...base,
+    legL: -16 * up,
+    armL: lerp(base.armL, 46, up) + wobble * 9,
+    armR: lerp(base.armR, -46, up) - wobble * 9,
+    foreL: base.foreL + wobble * 7,
+    foreR: base.foreR - wobble * 7,
+    bodyY: base.bodyY - 2.5 * up,
+    bodyRot: base.bodyRot + wobble * 3.4 - 2 * up,
+    headRot: base.headRot - wobble * 3,
+  };
+}
+
+/** Round, a pause at the far end — the pause is the looking — and back. */
+function peek(now: number, elapsed: number): Pose {
+  const base = idle(now);
+  const p = Math.min(1, elapsed / STATE_MS.peek);
+  const t =
+    p < 0.38 ? ease(p / 0.38) : p < 0.62 ? 1 : 1 - ease((p - 0.62) / 0.38);
+
+  return {
+    ...base,
+    turn: 0.82 * t,
+    bodyRot: base.bodyRot + 3 * t,
+    headRot: base.headRot - 7 * t,
+    armL: base.armL + 8 * t,
+    armR: base.armR + 8 * t,
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Overstimulation                                                             */
+/* -------------------------------------------------------------------------- */
+
+/** Arms folded, `k` of the way. Shared by the turn, the sulk, and the thaw. */
+function crossArms(base: Pose, k: number): Pose {
+  return {
+    ...base,
+    armL: lerp(base.armL, 74, k),
+    armR: lerp(base.armR, -74, k),
+    foreL: lerp(base.foreL, -68, k),
+    foreR: lerp(base.foreR, 68, k),
+  };
+}
+
+/** Hand on hip, and a shake of the head. Sharper the harder she's leaned on. */
+function annoyed(now: number, elapsed: number, intensity: number): Pose {
+  const base = idle(now);
+  const p = Math.min(1, elapsed / STATE_MS.annoyed);
+  const set = p < 0.2 ? ease(p / 0.2) : p > 0.78 ? ease((1 - p) / 0.22) : 1;
+  // Decaying, so the last shake is a twitch rather than a fourth full swing.
+  const shakes = Math.sin(p * TAU * (3 + intensity)) * (1 - p) * set;
+
+  return {
+    ...base,
+    armL: lerp(base.armL, 52, set),
+    foreL: lerp(base.foreL, -74, set),
+    armR: base.armR + 4 * set,
+    headRot: base.headRot + shakes * 9,
+    bodyY: base.bodyY - set,
+    bodyRot: base.bodyRot - shakes * 2.6 - 1.2 * set,
+  };
+}
+
+/** The flounce: she leads with a shoulder and lands a little heavier. */
+function turnAway(now: number, elapsed: number): Pose {
+  const base = idle(now);
+  const t = ease(Math.min(1, elapsed / STATE_MS.turnAway));
+
+  return {
+    ...crossArms(base, t),
+    turn: t,
+    bodyRot: base.bodyRot - 4 * Math.sin(t * Math.PI),
+    bodyY: base.bodyY + 1.2 * t,
+    headRot: base.headRot + 3 * t,
+  };
+}
+
+/**
+ * Back turned, arms crossed, for as long as the cooldown lasts.
+ *
+ * The huff runs on absolute time like the idle it's built on. A sulk outlives
+ * whatever poked her halfway through it, and a breath that restarted on every
+ * poke would read as flinching rather than as ignoring you.
+ */
+function sulk(now: number): Pose {
+  const base = idle(now);
+  const huff = Math.sin((now / 3400) * TAU);
+
+  return {
+    ...crossArms(base, 1),
+    turn: 1,
+    bodyY: base.bodyY + 1.4 + huff * 0.7,
+    bodyRot: base.bodyRot + huff * 0.9,
+    headRot: base.headRot + 4,
+  };
+}
+
+/**
+ * Poked mid-sulk. Out and back with no hold, and never far enough round to
+ * show the face — the whole point is that she isn't staying.
+ */
+function glance(now: number, elapsed: number): Pose {
+  const base = sulk(now);
+  const k = Math.sin(ease(Math.min(1, elapsed / STATE_MS.glance)) * Math.PI);
+
+  return {
+    ...base,
+    turn: base.turn - 0.28 * k,
+    headRot: base.headRot - 11 * k,
+    bodyRot: base.bodyRot - 2.4 * k,
+  };
+}
+
+/**
+ * The thaw, in three beats: round most of the way, a held side-eye, and only
+ * then the arms. Turning and unfolding at once would be someone who was never
+ * really cross.
+ */
+function forgive(now: number, elapsed: number): Pose {
+  const base = idle(now);
+  const p = Math.min(1, elapsed / STATE_MS.forgive);
+
+  const turn =
+    p < 0.45
+      ? lerp(1, 0.3, ease(p / 0.45))
+      : p < 0.63
+        ? 0.3
+        : lerp(0.3, 0, ease((p - 0.63) / 0.37));
+  const soften = ease(Math.min(1, Math.max(0, (p - 0.63) / 0.37)));
+
+  return {
+    ...crossArms(base, 1 - soften),
+    turn,
+    headRot: base.headRot - 8 * (1 - soften),
+    bodyRot: base.bodyRot + 2 * (1 - soften),
+    bodyY: base.bodyY + 1.2 * (1 - soften),
+  };
+}
+
 /**
  * The pose a state wants right now.
  *
@@ -423,6 +792,30 @@ export function poseFor(
       return twitch(now, elapsed, droop, slump);
     case "stretch":
       return stretch(now, elapsed, droop, slump);
+    case "vibe":
+      return vibe(now, elapsed, droop);
+    case "tilt":
+      return tilt(now, elapsed);
+    case "inspect":
+      return inspect(now, elapsed);
+    case "hum":
+      return hum(now, elapsed, droop, slump);
+    case "dust":
+      return dust(now, elapsed);
+    case "balance":
+      return balance(now, elapsed);
+    case "peek":
+      return peek(now, elapsed);
+    case "annoyed":
+      return annoyed(now, elapsed, intensity);
+    case "turnAway":
+      return turnAway(now, elapsed);
+    case "sulk":
+      return sulk(now);
+    case "glance":
+      return glance(now, elapsed);
+    case "forgive":
+      return forgive(now, elapsed);
     default:
       return idle(now, droop, slump);
   }

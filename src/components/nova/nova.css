@@ -13,7 +13,18 @@
 .nova {
   --nova-look-x: 0;
   --nova-look-y: 0;
-  filter: drop-shadow(0 18px 26px rgb(24 27 45 / 0.22));
+  /*
+   * How lit she is. Only the boot moves these, but they're threaded through
+   * every rule that sets `filter` below rather than being a rule of their own,
+   * because `filter` is a list and a list only interpolates against another of
+   * the same shape. Swapping the whole declaration for `brightness() saturate()`
+   * — which is what the boot used to do — can only snap.
+   */
+  --nova-dim: 1;
+  --nova-desat: 1;
+  filter: drop-shadow(0 18px 26px rgb(24 27 45 / 0.22))
+    brightness(var(--nova-dim)) saturate(var(--nova-desat));
+  transition: filter 600ms ease;
   /* Overridden per mood; everything glowing reads from it. */
   --nova-tint: var(--color-accent);
   /* Extra head rotation a mood can add on top of the gaze. */
@@ -735,6 +746,11 @@
      first write. */
   --pose-head-rot: 0;
   --pose-head-y: 0;
+  --pose-leg-l: 0;
+  --pose-leg-r: 0;
+  /* How far round she has turned, 0–1. `.nova-lean` narrows towards her own
+     centre line to sell it — see the note on `turn` in nova-pose.ts. */
+  --pose-turn: 0;
 }
 
 /* Whole body above the hips: lift and squash. */
@@ -766,9 +782,30 @@
   rotate: calc(var(--pose-fore-r) * 1deg);
 }
 
-/* Body tilt pivots at the feet, and carries the gaze lean too. */
+/* Hips. Only two moves use them — the foot tap she keeps while music is on,
+   and standing on one leg — but they have to live on the pose rather than in a
+   keyframe like everything else, or a tap interrupted halfway would snap the
+   leg back rather than blending out of wherever it was. */
+.nova-leg-l {
+  rotate: calc(var(--pose-leg-l) * 1deg);
+}
+
+.nova-leg-r {
+  rotate: calc(var(--pose-leg-r) * 1deg);
+}
+
+/*
+ * Body tilt pivots at the feet, and carries the gaze lean too.
+ *
+ * The turn rides here rather than on `.nova-float` — which is where the pose's
+ * own squash and stretch live — because `.nova-float` holds everything above
+ * the hips and the legs hang outside it. A torso that turned while the feet
+ * stayed planted would be worse than not turning at all. Scaling about the same
+ * origin the tilt uses keeps her on her own centre line while she does it.
+ */
 .nova-lean {
-  transform: translateX(calc(var(--nova-look-x) * 5px));
+  transform: translateX(calc(var(--nova-look-x) * 5px))
+    scaleX(calc(1 - var(--pose-turn) * 0.54));
   rotate: calc(var(--pose-body-rot) * 1deg);
   transform-box: view-box;
   transform-origin: 120px 300px;
@@ -846,6 +883,234 @@
 }
 
 /* -------------------------------------------------------------------------- */
+/* Temper                                                                      */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The overstimulation arc, face only. The body — hand on hip, the turn, the
+ * folded arms — is the pose engine's, which is deliberate: it means every one
+ * of these expressions still lands under reduced motion, where no pose runs at
+ * all and the flat mouth is the *whole* performance.
+ *
+ * Placed after the joy block so it wins at equal specificity. That ordering is
+ * load-bearing: a like still fires `data-joy` on its way through stage two, and
+ * a robot grinning while she tells you off would give the game away.
+ */
+
+/* Half-lidded, from the bottom edge — the same trick `proud` and the low
+   battery use. An eye shrinking towards its own centre reads as *small*; one
+   shrinking towards its bottom lid reads as unimpressed. */
+.nova:is([data-temper="annoyed"], [data-temper="mad"], [data-temper="sulking"])
+  .nova-eye {
+  opacity: 1;
+  transform: scaleY(0.5);
+  transform-origin: center bottom;
+}
+
+.nova:is([data-temper="annoyed"], [data-temper="mad"], [data-temper="sulking"])
+  :is(.nova-eye-happy, .nova-sparkle) {
+  opacity: 0;
+}
+
+.nova:is([data-temper="annoyed"], [data-temper="mad"], [data-temper="sulking"])
+  :is(.nova-mouth-smile, .nova-mouth-grin, .nova-mouth-open) {
+  opacity: 0;
+}
+
+.nova:is([data-temper="annoyed"], [data-temper="mad"], [data-temper="sulking"])
+  .nova-mouth-flat {
+  opacity: 1;
+}
+
+/*
+ * Turned away.
+ *
+ * The face has to go, or a robot with her back to you is a robot with a face on
+ * the back of her head. An attribute rather than an opacity derived from
+ * `--pose-turn`, so the fade lands on the frame the stage loop picks — the
+ * edge-on one, where losing a face is invisible.
+ */
+.nova[data-facing="away"] :is(.nova-eyes, .nova-mouth) {
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+/* The eyes' half of the same fade, on the way back.
+   `.nova-mouth` already carries a transition of its own — the long, delayed one
+   the shutdown uses — and is deliberately left alone: overriding it here would
+   reach the dead state too, where the delay is the point. The mouth therefore
+   returns on that slower curve, which suits both moves that turn her: the thaw
+   is meant to soften rather than snap, and the look-behind has finished
+   turning long before the mouth is back. */
+.nova-eyes {
+  transition: opacity 180ms ease;
+}
+
+/* Steam and the tick, above her head. Only once she's genuinely cross — an
+   exasperated robot is still willing to look at you, and these are for the one
+   who isn't. */
+.nova-cross {
+  opacity: 0;
+  transition: opacity 240ms ease;
+}
+
+.nova:is([data-temper="mad"], [data-temper="sulking"]) .nova-cross {
+  opacity: 1;
+}
+
+.nova-cross-mark {
+  stroke: var(--color-love, #e8637a);
+  stroke-opacity: 0.85;
+}
+
+.nova-steam {
+  stroke: var(--color-faint);
+  stroke-opacity: 0.5;
+  animation: nova-steam 2.4s ease-out infinite;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+.nova-steam-late {
+  animation-delay: -1.2s;
+}
+
+@keyframes nova-steam {
+  0% {
+    opacity: 0;
+    transform: translateY(4px) scale(0.7);
+  }
+  30% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-16px) scale(1.25);
+  }
+}
+
+/* Everything else in this block is opacity and a static transform, which the
+   preference has no quarrel with. The steam is the only rule that repeats, and
+   a puff cycling forever is exactly what it's about. */
+@media (prefers-reduced-motion: reduce) {
+  .nova-steam {
+    animation: none;
+    opacity: 0.55;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Music mode                                                                  */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Headphones, and the face that goes with them.
+ *
+ * The body is the pose engine's — `vibe` in nova-pose.ts nods on the beat and
+ * sways on the bar. Everything here is the parts CSS is better at: the cans
+ * arriving, the eyes closing, the tint warming.
+ *
+ * `data-vibing` is set whenever the player is mounted, reduced motion included.
+ * The preference is about movement, and a pair of headphones appearing is a
+ * change of state, not a journey across the screen — so the cans still go on
+ * there, they simply cross-fade in place instead of dropping onto her head.
+ *
+ * Placed after the temper block on purpose, and it is the one piece of this
+ * ordering that matters: music outranks anger, so a visitor who puts music on
+ * mid-sulk gets a robot who has decided to let it go. At equal specificity that
+ * is decided entirely by which block comes last.
+ */
+
+.nova-cans {
+  /* Off the top of the head and out of the way, so the reveal is a drop onto
+     her rather than a fade at the destination. `translate` rather than
+     `transform`, because the head group above already owns `transform` for the
+     gaze and this has to compose with it, not replace it. */
+  opacity: 0;
+  translate: 0 -26px;
+  scale: 0.86;
+  transform-box: view-box;
+  transform-origin: 120px 104px;
+  transition:
+    opacity 260ms ease,
+    translate 420ms cubic-bezier(0.34, 1.4, 0.5, 1),
+    scale 420ms cubic-bezier(0.34, 1.4, 0.5, 1);
+}
+
+.nova[data-vibing="true"] .nova-cans {
+  opacity: 1;
+  translate: 0 0;
+  scale: 1;
+}
+
+/* Dark band and dark cups: she is a dark-metal robot and these are a part of
+   her, not an accessory in someone else's palette. */
+.nova-cans-band {
+  stroke: #2b3140;
+}
+
+.nova-cans-cup {
+  fill: #1a1e28;
+  stroke: #4b5364;
+  stroke-width: 1.5;
+  stroke-opacity: 0.7;
+}
+
+/* The lit ring. Reads from `--nova-tint` like every other glowing part of her,
+   so a flat battery dims the cans along with the rest — and `--nova-glow`
+   carries the tiredness, which is why it isn't a fixed cyan. */
+.nova-cans-glow {
+  fill: none;
+  stroke: var(--nova-tint);
+  stroke-width: 2.5;
+  stroke-opacity: calc(0.35 + 0.5 * var(--nova-glow, 1));
+  filter: drop-shadow(0 0 6px color-mix(in oklab, var(--nova-tint) 65%, transparent));
+}
+
+/* Content, eyes shut. The arcs are the ones `warm` already uses — a second
+   set of closed eyes would be two things to keep in agreement for no gain. */
+.nova[data-vibing="true"] .nova-eye {
+  opacity: 0;
+}
+
+.nova[data-vibing="true"] .nova-eye-happy {
+  opacity: 1;
+}
+
+.nova[data-vibing="true"] .nova-mouth-smile {
+  opacity: 1;
+}
+
+.nova[data-vibing="true"] :is(.nova-mouth-grin, .nova-mouth-flat, .nova-mouth-open) {
+  opacity: 0;
+}
+
+/* Nobody stays cross with a song on. The pose engine has already turned her
+   back round by this point — `vibe` sits at the top of its priority table — and
+   leaving steam over the head of a robot nodding along would be the one frame
+   that gave away that the two systems are separate. */
+.nova[data-vibing="true"] .nova-cross {
+  opacity: 0;
+}
+
+/*
+ * The cans arrive rather than travel.
+ *
+ * Has to sit *after* the base rule, not up with the other reduced-motion
+ * overrides: these are the same properties at the same specificity, so the
+ * later block is the one that wins. It read correctly in the source when this
+ * lived in the temper section above, and stopped the moment that section moved
+ * ahead of this one — the compiled sheet is the authority, not the file.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .nova-cans {
+    translate: none;
+    scale: none;
+    transition: opacity 200ms ease;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
 /* Love burst                                                                  */
 /* -------------------------------------------------------------------------- */
 
@@ -878,6 +1143,50 @@
   }
   100% {
     transform: translate(var(--drift), -120px) scale(calc(var(--scale) * 0.75))
+      rotate(var(--spin));
+    opacity: 0;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Music notes                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/* Same layer arrangement as the hearts, and for the same reason — see the note
+   on `.love-layer`. Below them at z-index 59: a like landing mid-song should
+   put its hearts in front of the quavers, not behind. */
+.note-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 59;
+  pointer-events: none;
+}
+
+.music-note {
+  position: absolute;
+  color: var(--color-accent);
+  font-size: 1rem;
+  line-height: 1;
+  /* Centres the glyph on its launch point. */
+  translate: -50% -50%;
+  animation: nova-note 2.6s cubic-bezier(0.3, 0.6, 0.4, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Slower and further than a heart, and it fades most of the way up rather than
+   at the end — a note should read as drifting off, where a heart pops. */
+@keyframes nova-note {
+  0% {
+    transform: translate(0, 0) scale(0.5) rotate(0deg);
+    opacity: 0;
+  }
+  16% {
+    transform: translate(calc(var(--drift) * 0.25), -18px) scale(var(--scale))
+      rotate(calc(var(--spin) * 0.4));
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate(var(--drift), -96px) scale(calc(var(--scale) * 0.7))
       rotate(var(--spin));
     opacity: 0;
   }
@@ -923,6 +1232,35 @@
   stroke-opacity: 0.55;
 }
 
+/*
+ * The boot's wireframe, declared at rest so the reveal has something to fade.
+ *
+ * `.nova-visor` carries no stroke of its own, and introducing one from the boot
+ * rule meant `stroke: none` → accent, which snaps. Declaring it here at zero
+ * opacity costs nothing on screen and leaves the boot rule with one number to
+ * move. The width stays on the SVG's own `strokeWidth` throughout — the boot
+ * rule used to nudge it to 1.25 and drop back, and a seam that changes gauge
+ * halfway through the reveal is one more thing that can be seen changing.
+ */
+.nova-plate,
+.nova-visor {
+  transition:
+    fill-opacity 380ms ease,
+    stroke 380ms ease,
+    stroke-opacity 380ms ease;
+}
+
+.nova-visor {
+  stroke: var(--color-accent);
+  stroke-opacity: 0;
+}
+
+/* Flat paint against a plate rather than a plate itself. See the boot-stage
+   block for why these are classed at all. */
+.nova-gloss {
+  transition: opacity 380ms ease;
+}
+
 /* A pool of NOVA's own light rather than a cast shadow — a black shadow is
    invisible on a near-black page, but a glow reads as height. */
 /* A real contact shadow now — on a light page a glowing pool would read as
@@ -959,8 +1297,9 @@
 html[data-theme="dark"] .nova {
   --nova-bloom: 24%;
   /* A drop shadow does nothing against near-black; the depth has to come from
-     the light she casts instead. */
-  filter: drop-shadow(0 18px 30px rgb(0 0 0 / 0.55));
+     the light she casts instead. The dim pair rides along — see `.nova`. */
+  filter: drop-shadow(0 18px 30px rgb(0 0 0 / 0.55))
+    brightness(var(--nova-dim)) saturate(var(--nova-desat));
 }
 
 /* On a light page a glowing pool reads as fog and a grounded shadow reads as an
@@ -989,7 +1328,8 @@ html[data-theme="dark"] .nova-shadow {
 html[data-theme="dark"] .nova[data-power="dead"] {
   --color-accent: #3ad8f2;
   filter: drop-shadow(0 0 34px rgb(126 146 190 / 0.16))
-    drop-shadow(0 18px 30px rgb(0 0 0 / 0.55));
+    drop-shadow(0 18px 30px rgb(0 0 0 / 0.55)) brightness(var(--nova-dim))
+    saturate(var(--nova-desat));
 }
 
 html[data-theme="dark"] .nova[data-power="dead"] .nova-plate {
@@ -2075,9 +2415,32 @@ html[data-power="critical"] .term-layer {
  * the last stages run. The attribute is only set for the full-length boot —
  * reduced motion and deep links never see these.
  *
- * Everything here is scoped to `html[data-boot-stage]`, so the moment the boot
- * ends — or is skipped mid-stage — she is back to her normal self with nothing
- * to unwind.
+ * Everything here is scoped to `html[data-boot-stage]`, so there is nothing to
+ * unwind when the boot ends. It ends by being held at `nominal` for the length
+ * of the overlay's dissolve and *then* dropped, which is what gives the rules
+ * below something to interpolate towards — including when the boot is skipped
+ * from the middle of the wireframe.
+ *
+ * The reveal has to be seamless, and how each rule is written is shaped by what
+ * that rules out. The originals were all hard swaps — `fill: transparent` to a
+ * gradient, a `filter` list replaced wholesale, a bordered box switched on and
+ * off — and a hard swap is exactly what reads as a flash. Three rewrites:
+ *
+ * - The wireframe is `fill-opacity`, not `fill`. A paint server and a colour
+ *   don't interpolate, so `fill: transparent` → `url(#shell)` could only ever
+ *   snap; an opacity crossfades, and the gradient never leaves.
+ * - The stroke is declared on the resting rule at zero opacity rather than
+ *   introduced by the boot rule. `stroke: none` → a colour is another hard
+ *   swap; fading an already-present stroke is not.
+ * - The dimming is two numbers fed into the filter `.nova` already carries,
+ *   rather than a second `filter` declaration replacing it. Same reason: a
+ *   one-function list can't interpolate with a three-function one, but two
+ *   lists of identical shape can. See `--nova-dim` on `.nova`.
+ *
+ * The old scan frame — an absolutely-positioned bordered rect on the anchor —
+ * is gone outright. It was a literal box around her, drawn hard-edged and
+ * switched off in a single frame, and no amount of easing makes a bounding box
+ * appearing around the subject read as anything but an artifact.
  */
 
 /* Unpowered: no eyes, no lamps, and the plates knocked back to a cold shell. */
@@ -2088,34 +2451,35 @@ html[data-boot-stage="select"] .nova-lamp {
   opacity: 0;
 }
 
+/* Cold, unlit metal. Both are back at 1 by the time the boot drops the
+   attribute, so the reveal is finished before the rule stops applying. */
 html[data-boot-stage="post"] .nova {
-  filter: brightness(0.5) saturate(0.35);
+  --nova-dim: 0.45;
+  --nova-desat: 0.3;
 }
 
-/* Wireframe. The fills are presentation attributes on the SVG, so a CSS `fill`
-   takes them out; what's left is her outline in the accent, which is the shape
-   the selector is asking about. */
+/* Wireframe: the fills fade out from under a stroke that was already there. */
 html[data-boot-stage="select"] .nova-plate,
 html[data-boot-stage="select"] .nova-visor {
-  fill: transparent;
+  fill-opacity: 0;
   stroke: var(--color-accent);
   stroke-opacity: 0.9;
-  stroke-width: 1.25;
+}
+
+/*
+ * Flat paint that isn't a plate: the two specular highlights, the visor sheen,
+ * and the neck block behind the torso. All four are painted against a plate
+ * rather than being one, so they have to go out with the fills — left on, they
+ * float in the middle of the wireframe as rectangles with nothing behind them.
+ * The white ones are the box that used to flash out of the reveal.
+ */
+html[data-boot-stage="post"] .nova-gloss,
+html[data-boot-stage="select"] .nova-gloss {
+  opacity: 0;
 }
 
 html[data-boot-stage="select"] .nova-shadow {
   opacity: 0.15;
-}
-
-/* The scan frame around her — drawn on the anchor so it rides the same
-   transform she does rather than needing to be positioned against her. */
-html[data-boot-stage="select"] .nova-anchor::before {
-  content: "";
-  position: absolute;
-  inset: 2% 8% 3%;
-  border: 1px solid color-mix(in oklab, var(--color-accent) 45%, transparent);
-  border-radius: 18px;
-  pointer-events: none;
 }
 
 /* Waking: the lights come up in three uneven steps, the way something with a

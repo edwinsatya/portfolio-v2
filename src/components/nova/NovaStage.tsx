@@ -3,10 +3,12 @@
 import { useEffect, useRef } from "react";
 import { addLike } from "@/lib/likes";
 import { celebrate, fireLike, onCelebrate, onLike } from "@/lib/nova-bus";
+import { startTemperClock } from "@/lib/nova-temper";
 import { onCharged, spendOnCelebration, startPowerClock } from "@/lib/power";
 import { initTheme } from "@/lib/theme";
 import { DockPill } from "./DockPill";
 import { LoveBurst } from "./LoveBurst";
+import { MusicNotes } from "./MusicNotes";
 import { Nova } from "./Nova";
 import { NovaTerminal } from "./NovaTerminal";
 import { PowerSocket } from "./PowerSocket";
@@ -64,13 +66,22 @@ export function NovaStage() {
     wasOpen.current = chat.isOpen;
   }, [chat.isOpen]);
 
-  // One place records a like and picks a celebration, whatever fired it — the
-  // L key, the counter, the tagline, or NOVA herself.
+  /*
+   * One place records a like and picks a celebration, whatever fired it — the
+   * L key, the counter, the tagline, or NOVA herself.
+   *
+   * Both halves are now conditional, and on different flags, because they come
+   * apart in the middle of the overstimulation arc: exasperated, she stops
+   * reacting but the like still counts (a total that silently froze would read
+   * as a bug rather than as a mood); sulking, nothing lands at all. The verdict
+   * rides on the event so every listener is reading one decision — see
+   * `nova-temper.ts`.
+   */
   useEffect(
     () =>
-      onLike(() => {
-        addLike();
-        celebrate();
+      onLike((event) => {
+        if (event.counts) addLike();
+        if (event.celebrate) celebrate();
       }),
     [],
   );
@@ -82,6 +93,11 @@ export function NovaStage() {
    * to be mounted.
    */
   useEffect(() => startPowerClock(), []);
+
+  // And her patience, which recovers on its own clock for the same reason: a
+  // sulk has to end whether or not anybody is still clicking — especially then,
+  // since not clicking is exactly what she asked for. See `nova-temper.ts`.
+  useEffect(() => startTemperClock(), []);
 
   // Wakes the theme store, which is what subscribes it to the battery. Without
   // this a visitor who never types `/dark-mode` would drain to 20% and never
@@ -148,6 +164,12 @@ export function NovaStage() {
       </div>
 
       <LoveBurst />
+
+      {/* Drifts up off her headphones while the player is open. Same layer and
+          the same reason as the hearts: it reads NOVA's head position off the
+          stage loop rather than living inside her anchor, which is scaled down
+          to a third in the corner dock. */}
+      <MusicNotes />
 
       {/* Inside the stage layer so it rides up with it: a window opening covers
           the cable with its scrim, the same way it covers the music widget. */}

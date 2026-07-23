@@ -1018,21 +1018,30 @@ html[data-theme-shift="true"] *::after {
   color: var(--color-accent-ink);
 }
 
-/* Present from the first POST line to the dissolve. Right-aligned under the
-   readout, where it reads as the exit rather than as one of the choices. */
+/* Present from the first POST line to the dissolve, and the only thing that
+   dismisses the boot — no key, click, scroll or touch does it any more. Parked
+   in the corner rather than under the readout: down there it read as a third
+   line of a two-line menu, and it has to be legible as a control instead. */
 .boot-skip {
-  display: block;
-  margin-top: 1.4rem;
-  margin-left: auto;
+  position: absolute;
+  right: max(1.25rem, env(safe-area-inset-right));
+  bottom: max(1.25rem, env(safe-area-inset-bottom));
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
   font-family: var(--font-mono);
   font-size: 0.6rem;
   letter-spacing: 0.2em;
   color: var(--color-faint);
   cursor: pointer;
+  transition:
+    color 200ms ease,
+    border-color 200ms ease;
 }
 
 .boot-skip:hover {
   color: var(--color-accent-ink);
+  border-color: var(--color-accent);
 }
 
 .boot-select-switching {
@@ -1064,14 +1073,52 @@ html[data-theme-shift="true"] *::after {
 }
 
 /* While the boot screen is up, NOVA rises above it so she's visibly powering on,
-   and the nav steps out of the way. Both revert the moment booting ends. */
-html[data-booting="true"] .nova-stage {
+   and the nav steps out of the way.
+   Matched on the attribute's *presence*, not on `true`: `BootSequence` flips it
+   to `out` for the length of the dissolve, and the lift has to outlast the
+   fading sheet. Reverting it the moment the boot finished dropped her back to
+   z-index 40 while the overlay was still opaque, which washed her out in the
+   page's own background colour — the white flash over the reveal. */
+html[data-booting] .nova-stage {
   z-index: 95;
 }
 
+/* The nav comes back with the dissolve rather than after it, so `true` only. */
 html[data-booting="true"] [data-site-nav] {
   opacity: 0;
   pointer-events: none;
+}
+
+/*
+ * Nothing from the main stage may appear over the boot screen.
+ *
+ * NOVA is lifted above the overlay on purpose — she is what the readout is
+ * describing. Everything else on that layer rides the lift by accident: the
+ * charging cable drew itself across the boot screen from the first frame, and
+ * the greeting bubble opened over the POST log. They're main-stage furniture,
+ * and the stage isn't up yet.
+ *
+ * A visual backstop for the `bootComplete` gate the timed triggers now sit
+ * behind, not a substitute for it — the cable is drawn from a rAF loop that
+ * never asked anything about the boot.
+ */
+html[data-booting] .nova-stage > :not(.nova-anchor) {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* NOVA herself stays visible, but she isn't a control yet. Hers is the only
+   hit area on the page a visitor can physically reach while the overlay is up,
+   and the boot no longer answers to a stray click anywhere else. */
+html[data-booting] .nova-tap {
+  pointer-events: none;
+}
+
+/* Fades back in with the dissolve rather than appearing at the end of it. The
+   transition lives outside the boot rule so it applies on the way *out*; it's
+   the only thing on this layer with an opacity of its own to animate. */
+.power {
+  transition: opacity 500ms ease;
 }
 
 [data-site-nav] {

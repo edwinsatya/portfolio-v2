@@ -509,8 +509,10 @@ export function useNovaChat({
         return;
       }
 
-      // The boot screen swallows the first key as a skip; opening a terminal
-      // out from under it would be two things happening on one press.
+      // Nothing on the main stage answers a key while the boot is up, and a
+      // terminal opening underneath the splash would be the loudest possible
+      // exception. Set for the length of the dissolve too, so `/` doesn't land
+      // in the half-second where the overlay is still fading over the page.
       if (document.documentElement.dataset.booting) return;
       // Something already has the visitor — the resume window, or the terminal
       // itself. A minimised terminal doesn't count: `/` restores it.

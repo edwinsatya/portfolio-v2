@@ -196,6 +196,7 @@ export function Nova({ mood = "greeting", className = "", ref }: NovaProps) {
             <g className="nova-torso">
               {/* Neck, drawn first so the torso's top edge covers the join. */}
               <rect
+                className="nova-gloss"
                 x="104"
                 y="162"
                 width="32"
@@ -213,7 +214,12 @@ export function Nova({ mood = "greeting", className = "", ref }: NovaProps) {
                 fill={`url(#${id("shell")})`}
                 strokeWidth="1.5"
               />
+              {/* Specular highlight. Classed for the same reason as the neck
+                  above: it's flat paint sitting on the plate rather than part
+                  of it, and the boot's wireframe takes the plate fills out
+                  from under it. See `.nova-gloss` in nova.css. */}
               <rect
+                className="nova-gloss"
                 x="88"
                 y="186"
                 width="64"
@@ -282,6 +288,7 @@ export function Nova({ mood = "greeting", className = "", ref }: NovaProps) {
                 strokeWidth="1.5"
               />
               <rect
+                className="nova-gloss"
                 x="62"
                 y="56"
                 width="116"
@@ -302,8 +309,15 @@ export function Nova({ mood = "greeting", className = "", ref }: NovaProps) {
                 rx="34"
                 fill={`url(#${id("visor")})`}
               />
+              {/* Sheen across the visor, clipped to it. Same treatment as the
+                  plate highlights: it's white paint on a fill that fades. */}
               <g clipPath={`url(#${id("visor-clip")})`}>
-                <path d="M76 62h22L58 154H36z" fill="#fff" opacity="0.07" />
+                <path
+                  className="nova-gloss"
+                  d="M76 62h22L58 154H36z"
+                  fill="#fff"
+                  opacity="0.07"
+                />
               </g>
 
               {/* Every expression is drawn; CSS shows the one this mood wants. */}
@@ -371,6 +385,70 @@ export function Nova({ mood = "greeting", className = "", ref }: NovaProps) {
               {/* Chin lamps */}
               <circle className="nova-lamp" cx="88" cy="157" r="2.5" opacity="0.55" />
               <circle className="nova-lamp" cx="152" cy="157" r="2.5" opacity="0.55" />
+
+              {/* ---- Headphones. Drawn last so the band passes in front of
+                   the antenna and the cups cover her ears, which is how a pair
+                   actually sits. Inside `.nova-head`, so they ride her gaze
+                   rather than needing to be animated after it. Hidden until
+                   the music player opens — see `.nova-cans` in nova.css. ---- */}
+              <g className="nova-cans" aria-hidden>
+                <path
+                  className="nova-cans-band"
+                  d="M40 104C40 44 200 44 200 104"
+                  fill="none"
+                  strokeWidth="9"
+                  strokeLinecap="round"
+                />
+                <rect
+                  className="nova-cans-cup"
+                  x="25"
+                  y="88"
+                  width="30"
+                  height="52"
+                  rx="14"
+                />
+                <rect
+                  className="nova-cans-cup"
+                  x="185"
+                  y="88"
+                  width="30"
+                  height="52"
+                  rx="14"
+                />
+                {/* The lit ring on each cup. Reads from `--nova-tint` like
+                    every other glowing part of her, so it dims with the
+                    battery instead of staying bright on a flat robot. */}
+                <ellipse className="nova-cans-glow" cx="40" cy="114" rx="8" ry="17" />
+                <ellipse className="nova-cans-glow" cx="200" cy="114" rx="8" ry="17" />
+              </g>
+            </g>
+
+            {/* Steam, and the tick. Outside the head group so they hang in the
+                air above her rather than swinging with her gaze — the same
+                reason the sleep particles below are out here. Shown only once
+                she's genuinely cross; see the temper block in nova.css. */}
+            <g className="nova-cross" aria-hidden>
+              <path
+                className="nova-cross-mark"
+                d="M196 40l16 16M212 40l-16 16"
+                fill="none"
+                strokeWidth="4"
+                strokeLinecap="round"
+              />
+              <path
+                className="nova-steam"
+                d="M52 44c-5-6 3-9-2-15"
+                fill="none"
+                strokeWidth="3.5"
+                strokeLinecap="round"
+              />
+              <path
+                className="nova-steam nova-steam-late"
+                d="M38 52c-5-6 3-9-2-15"
+                fill="none"
+                strokeWidth="3.5"
+                strokeLinecap="round"
+              />
             </g>
 
             {/* Sleep particles, shown only in critical. Outside the head group

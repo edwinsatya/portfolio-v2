@@ -75,6 +75,15 @@ const STAGE_LABEL: Record<Stage, string> = {
 const GRACE_MS = 4000;
 
 /**
+ * How long the overlay takes to dissolve. Must match the `.nova-boot` opacity
+ * transition in globals.css — the boot's own attributes are held for exactly
+ * this long after it finishes, and everything the reveal crossfades reads from
+ * them.
+ */
+const DISSOLVE_MS = 500;
+const DISSOLVE_REDUCED_MS = 150;
+
+/**
  * The terminal-style boot screen that plays before the hero.
  *
  * Deliberately an overlay rather than a gate: the page underneath is fully
@@ -82,8 +91,11 @@ const GRACE_MS = 4000;
  * never runs — loses nothing. It also never blocks a deep link; anyone arriving
  * at `#projects` gets it dismissed immediately.
  *
- * Skipping is bound to pointer, key, scroll, and touch, because a splash you
- * can't dismiss is worse than no splash at all.
+ * Skipping is one button and nothing else. It used to answer to any key, any
+ * click, any scroll and any touch, which read as responsive until you watched
+ * someone lose the sequence to a stray spacebar or a trackpad nudge they never
+ * meant as an instruction. A splash you can't dismiss is worse than no splash;
+ * a splash that dismisses itself on contact is worse than both.
  */
 export function BootSequence() {
   const { visit } = useNovaMemory();
@@ -161,15 +173,28 @@ export function BootSequence() {
     }
 
     /*
-     * The wave, and everything else waiting on the boot.
+     * The wave, the greeting bubble, the music card — everything waiting on the
+     * boot.
      *
-     * Fired when NOMINAL comes up rather than when the overlay goes, so her
-     * hello plays *during* the dissolve — the last second is her waking up and
-     * waving through it, not a blank screen followed by a wave. Idempotent: a
-     * skip lands here too, and the music widget's entrance is on the same
-     * event, so a second call would run it twice.
+     * Fired once the overlay has finished dissolving, not when NOMINAL comes
+     * up. Firing it early meant the main stage started arriving while the boot
+     * screen was still on top of it: the greeting bubble opened over the POST
+     * log, and her hello was spent on a frame nobody could see. The stage gets
+     * revealed first and *then* introduces itself. Idempotent, because a skip
+     * lands here too.
      */
     let booted = false;
+    /*
+     * Set the moment the overlay starts leaving.
+     *
+     * The boot answers to `1` and Enter through a *window* listener, and the
+     * component stays mounted once it's done — so without this the keys keep
+     * answering for the rest of the session. Enter in the terminal re-ran the
+     * exit and put the boot attributes back for the length of a dissolve, which
+     * blinked the whole stage (see `html[data-booting]` in globals.css); `1`
+     * redirected to the classic build from wherever the visitor was typing.
+     */
+    let over = false;
     const fireBooted = () => {
       if (booted) return;
       booted = true;
@@ -181,14 +206,41 @@ export function BootSequence() {
     let elapsed = 0;
     let grace = GRACE_MS;
 
-    /** The overlay's own exit, shared by the clock running out and by a skip. */
-    const complete = () => {
-      cancelAnimationFrame(frame);
-      setDone(true);
+    const dissolve = reduced ? DISSOLVE_REDUCED_MS : DISSOLVE_MS;
+    let dissolveTimer = 0;
+
+    const clearBootAttrs = () => {
       delete document.documentElement.dataset.booting;
       delete document.documentElement.dataset.bootStage;
       document.documentElement.style.removeProperty("--boot-wake-ms");
-      fireBooted();
+    };
+
+    /**
+     * The overlay's own exit, shared by the clock running out and by a skip.
+     *
+     * The attributes deliberately outlive the overlay by the length of its
+     * dissolve. Dropping them in the same frame the fade started was what put
+     * the flash in the reveal: `booting` is what holds NOVA above the overlay,
+     * so losing it dropped her behind a sheet that was still opaque and washed
+     * her out in the page's own background colour for half a second. Holding
+     * the stage at `nominal` instead of deleting it also gives the plates, the
+     * gloss and the dimming somewhere to interpolate *to*, so a skip taken
+     * mid-wireframe crossfades into the finished robot rather than snapping.
+     */
+    const complete = () => {
+      if (over) return;
+      over = true;
+      cancelAnimationFrame(frame);
+      // The sequence is finished with the keyboard. Dropped here rather than
+      // only in the cleanup, which doesn't run until the page does.
+      window.removeEventListener("keydown", onKeyDown);
+      setDone(true);
+      document.documentElement.dataset.booting = "out";
+      if (staged) document.documentElement.dataset.bootStage = "nominal";
+      dissolveTimer = window.setTimeout(() => {
+        clearBootAttrs();
+        fireBooted();
+      }, dissolve);
     };
 
     const tick = (now: number) => {
@@ -203,9 +255,7 @@ export function BootSequence() {
       const ratio = total <= 0 ? 1 : Math.min(1, elapsed / total);
       setProgress(Math.round(ratio * 100));
 
-      const next = stageAt(ratio);
-      setStageAttr(next);
-      if (next === "nominal") fireBooted();
+      setStageAttr(stageAt(ratio));
 
       // The log prints across the first stage, whatever that stage is worth.
       const through = Math.min(1, ratio / STAGE_ENDS[0]);
@@ -222,6 +272,11 @@ export function BootSequence() {
     frame = requestAnimationFrame(tick);
 
     const finish = () => {
+      // CLASSIC has been taken and the redirect is pending. Completing the boot
+      // now would dissolve the overlay onto the build they just declined, for
+      // the second it takes the navigation to land — the exact flash the
+      // overlay is held up to prevent.
+      if (over || switchTimer) return;
       setProgress(100);
       setStage("nominal");
       setPrinted(log.length);
@@ -239,53 +294,39 @@ export function BootSequence() {
      */
     let switchTimer = 0;
     const chooseClassic = () => {
-      if (switchTimer) return;
+      if (over || switchTimer) return;
       cancelAnimationFrame(frame);
       setSwitching(true);
       switchTimer = window.setTimeout(goToLegacy, SWITCH_DELAY_MS);
     };
     classicRef.current = chooseClassic;
 
-    /* A tap on either option is a choice, not a skip — the options handle
-       themselves, and letting this through would dismiss the boot before the
-       click ever reached CLASSIC. */
-    const skip = (event: Event) => {
-      const target = event.target;
-      if (target instanceof Element && target.closest("[data-boot-choice]")) {
-        return;
-      }
-      finish();
-    };
-
-    // `1` is the only key the selector claims. Everything else — Enter
-    // included — still skips into the flagship build, as it always has.
+    /*
+     * The two keys the selector claims, and nothing else.
+     *
+     * Everything that isn't one of them is now inert: a stray key, a click
+     * anywhere, a scroll, a touch. That is the point — the boot is a sequence
+     * with a stated exit, not a screen that dismisses itself the moment the
+     * visitor's hand moves. Modifier chords fall through untouched, so the
+     * browser's own shortcuts still work while it's up.
+     */
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.metaKey || event.ctrlKey || event.altKey) {
-        finish();
-        return;
-      }
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (event.key === "1") {
         chooseClassic();
         return;
       }
-      finish();
+      if (event.key === "Enter") finish();
     };
 
-    window.addEventListener("pointerdown", skip);
     window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("wheel", skip, { passive: true });
-    window.addEventListener("touchstart", skip, { passive: true });
 
     return () => {
       cancelAnimationFrame(frame);
       window.clearTimeout(switchTimer);
-      delete document.documentElement.dataset.booting;
-      delete document.documentElement.dataset.bootStage;
-      document.documentElement.style.removeProperty("--boot-wake-ms");
-      window.removeEventListener("pointerdown", skip);
+      window.clearTimeout(dissolveTimer);
+      clearBootAttrs();
       window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("wheel", skip);
-      window.removeEventListener("touchstart", skip);
     };
   }, [visit.previous, visit.name]);
 
@@ -353,7 +394,6 @@ export function BootSequence() {
             <button
               type="button"
               tabIndex={-1}
-              data-boot-choice
               data-current="true"
               className="boot-option"
               onClick={() => finishRef.current()}
@@ -367,7 +407,6 @@ export function BootSequence() {
             <button
               type="button"
               tabIndex={-1}
-              data-boot-choice
               className="boot-option"
               onClick={() => classicRef.current()}
             >
@@ -393,7 +432,6 @@ export function BootSequence() {
             <button
               type="button"
               tabIndex={-1}
-              data-boot-choice
               className="boot-option-inline"
               onClick={() => classicRef.current()}
             >
@@ -401,21 +439,23 @@ export function BootSequence() {
             </button>
           </p>
         ) : null}
-
-        {/* Ten seconds is a long time to hold someone who didn't ask to wait,
-            so the way out is on screen from the first line rather than being
-            folklore. Any key or click does it; this is just where it says so. */}
-        {!switching && (
-          <button
-            type="button"
-            tabIndex={-1}
-            className="boot-skip"
-            onClick={() => finishRef.current()}
-          >
-            SKIP ▸
-          </button>
-        )}
       </div>
+
+      {/* The only way out, and now the *whole* way out — nothing else on the
+          page dismisses this. Ten seconds is a long time to hold someone who
+          didn't ask to wait, so it is on screen from the first POST line, and
+          parked in the corner rather than under the readout, where it would
+          read as a third item on a menu that has two. */}
+      {!switching && (
+        <button
+          type="button"
+          tabIndex={-1}
+          className="boot-skip"
+          onClick={() => finishRef.current()}
+        >
+          SKIP ▸
+        </button>
+      )}
     </div>
   );
 }
