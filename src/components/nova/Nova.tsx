@@ -291,8 +291,10 @@ export function Nova({ mood = "greeting", className = "", ref }: NovaProps) {
                 opacity="0.2"
               />
 
-              {/* Face plate */}
+              {/* Face plate. Classed for the boot sequence, which wireframes
+                  it while she's unpowered and lights it as she wakes. */}
               <rect
+                className="nova-visor"
                 x="64"
                 y="70"
                 width="112"

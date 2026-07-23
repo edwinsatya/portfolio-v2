@@ -5,7 +5,7 @@
  * terminal's `/v1` — so the URL and the beat before the redirect live here
  * rather than being written out three times.
  */
-export const LEGACY_URL = "https://edwin.touchsimpledev.site";
+export const LEGACY_URL = "https://edwin-v2.touchsimpledev.site";
 
 /**
  * Long enough for "switching…" to be read as a sentence rather than a flash.

@@ -880,7 +880,30 @@ html[data-theme-shift="true"] *::after {
 }
 
 .nova-boot-readout {
-  width: min(20rem, 70vw);
+  width: min(26rem, 78vw);
+}
+
+/* The POST log. Prints across the first stage and then stays, so the block
+   above the bar is session history rather than a panel that empties. */
+.nova-boot-post {
+  margin-bottom: 1.1rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  line-height: 2;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-faint);
+}
+
+.nova-boot-post li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.nova-boot-ok {
+  flex: none;
+  color: var(--color-accent-ink);
 }
 
 .nova-boot-bar {
@@ -992,6 +1015,23 @@ html[data-theme-shift="true"] *::after {
 }
 
 .boot-option-inline:hover {
+  color: var(--color-accent-ink);
+}
+
+/* Present from the first POST line to the dissolve. Right-aligned under the
+   readout, where it reads as the exit rather than as one of the choices. */
+.boot-skip {
+  display: block;
+  margin-top: 1.4rem;
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  color: var(--color-faint);
+  cursor: pointer;
+}
+
+.boot-skip:hover {
   color: var(--color-accent-ink);
 }
 

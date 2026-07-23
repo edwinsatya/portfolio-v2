@@ -7,7 +7,7 @@
  * URL to read. Set NEXT_PUBLIC_SITE_URL to override it if a custom domain is
  * ever pointed at the site.
  */
-const PRODUCTION_URL = "https://portfolio-v2-snowy-two.vercel.app";
+const PRODUCTION_URL = "https://edwin.touchsimpledev.site";
 
 export const siteUrl = (
   process.env.NEXT_PUBLIC_SITE_URL || PRODUCTION_URL
