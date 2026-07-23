@@ -120,7 +120,15 @@ export function NovaStage() {
              heuristic and draws a ring nobody asked for. Keyboard focus is
              untouched: Tab still reaches her, Enter still likes. */
           onMouseDown={(event) => event.preventDefault()}
-          onBlur={(event) => delete event.currentTarget.dataset.quietFocus}
+          /* The quiet flag lasts until focus genuinely moves off her. Leaving
+             the window fires a blur too, but focus never went anywhere — she
+             is still the active element and gets it straight back on return,
+             which is how the ring used to reappear after an app switch. */
+          onBlur={(event) => {
+            const tap = event.currentTarget;
+            if (!document.hasFocus() || document.activeElement === tap) return;
+            delete tap.dataset.quietFocus;
+          }}
           className="nova-tap"
           aria-label="Like NOVA"
         />
