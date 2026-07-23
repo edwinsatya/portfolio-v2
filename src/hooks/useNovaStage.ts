@@ -11,6 +11,7 @@ import {
   setNovaPort,
   type Celebration,
 } from "@/lib/nova-bus";
+import { getLights, onLightsBeat, type LightsBeat } from "@/lib/nova-lights";
 import { beginSulk, getTemper, onTemperChange } from "@/lib/nova-temper";
 import {
   getDroop,
@@ -117,6 +118,13 @@ const FACING_AWAY_AT = 0.45;
  * too cross to notice she is dying would be the wrong joke. (Music never has to
  * argue with it: a flat battery closes the player, which stops the vibe at
  * source.)
+ *
+ * The light-switch gag sits above the celebrations and below the sulk, which is
+ * the one place it can go: it's a twelve-second scripted bit that drives the
+ * whole page, so a stray like landing in the middle of it must not be able to
+ * cut to a wave — but nothing about it outranks her actually being cross, or
+ * dying, or listening to something. It never has to argue with any of those
+ * anyway; `nova-lights.ts` refuses to start unless all three are clear.
  */
 const PRIORITY: Record<NovaState, number> = {
   vibe: 50,
@@ -132,6 +140,11 @@ const PRIORITY: Record<NovaState, number> = {
   sulk: 30,
   glance: 30,
   forgive: 30,
+
+  wonder: 25,
+  idea: 25,
+  flick: 25,
+  caught: 25,
 
   wave: 20,
   dance: 20,
@@ -189,6 +202,32 @@ const GAZE_BIAS: Partial<Record<NovaState, { x: number; y: number }>> = {
   tilt: { x: -0.8, y: -0.25 },
   inspect: { x: 0.45, y: 0.5 },
   balance: { x: 0, y: -0.35 },
+  /* The gag. The switch is drawn to her left and a little below her eyeline, so
+     that is where she looks while her hand is on it; `caught` is the only entry
+     here that aims at nothing, because straight down the lens *is* the pose. */
+  idea: { x: -0.3, y: -0.45 },
+  flick: { x: -0.7, y: 0.3 },
+  caught: { x: 0, y: 0 },
+};
+
+/**
+ * Gazes that are a sequence rather than a direction.
+ *
+ * A bias says "look over there for as long as this runs", which is right for a
+ * head-tilt and wrong for someone searching a room. This gets the elapsed time
+ * and can therefore sweep, which is the difference between NOVA looking away and
+ * NOVA looking *for* you.
+ */
+const GAZE_SCRIPT: Partial<
+  Record<NovaState, (elapsed: number) => { x: number; y: number }>
+> = {
+  // One way, then the other, then damped onto the camera — the eyes land there
+  // a beat before the bubble opens, so the question is asked at somebody.
+  wonder: (elapsed) => {
+    const p = Math.min(1, elapsed / STATE_MS.wonder);
+    const damp = p < 0.72 ? 1 : Math.max(0, (1 - p) / 0.28);
+    return { x: Math.sin(p * Math.PI * 2) * 0.9 * damp, y: -0.12 * damp };
+  },
 };
 
 /**
@@ -265,6 +304,15 @@ export function useNovaStage({
     let vibing = false;
     /** True while the current state came out of the idle repertoire. */
     let fromRepertoire = false;
+    /**
+     * The light-switch gag has the stage.
+     *
+     * Needed because the gag drops back to `idle` between beats — her hand comes
+     * off the switch while she admires the work — and `idle` is exactly what the
+     * repertoire and the wave wait for. Without this she would break off
+     * mid-prank to inspect her own hand.
+     */
+    let mischief = false;
     /** So the pool never plays the same thing twice running. */
     let lastAct: NovaState | null = null;
     /** Mirrors `pose.turn` past the threshold, so the face isn't re-toggled. */
@@ -525,8 +573,15 @@ export function useNovaStage({
         target.y = 0;
         nextWanderAt = 0;
       } else if (idle) {
+        const script = GAZE_SCRIPT[state];
         const bias = GAZE_BIAS[state];
-        if (bias) {
+        if (script) {
+          // A gaze with a script of its own, played from the state's own clock.
+          const look = script(now - stateStartedAt);
+          target.x = look.x;
+          target.y = look.y;
+          nextWanderAt = 0;
+        } else if (bias) {
           // An activity that has somewhere specific to look, looking there.
           target.x = bias.x;
           target.y = bias.y;
@@ -549,9 +604,12 @@ export function useNovaStage({
         nextWanderAt = 0;
       }
 
-      // Drift lazily when idling, follow crisply when being led — and slower
-      // still on the way out, so the gaze settles rather than snapping to zero.
-      const ease = dead ? 0.02 : idle ? 0.035 : 0.12;
+      /* Drift lazily when idling, follow crisply when being led — and slower
+         still on the way out, so the gaze settles rather than snapping to zero.
+         The gag is the exception among the idle cases: it has a scripted gaze
+         with beats to hit, and at the idle rate she is still turning her eyes
+         towards the switch by the time the flick has already happened. */
+      const ease = dead ? 0.02 : idle ? (mischief ? 0.09 : 0.035) : 0.12;
       gaze.x += (target.x - gaze.x) * ease;
       gaze.y += (target.y - gaze.y) * ease;
 
@@ -764,9 +822,9 @@ export function useNovaStage({
       if (!queued && kind !== state) queued = kind;
     };
 
-    /** The idle wave. Never interrupts a celebration, or a flat battery. */
+    /** The idle wave. Never interrupts a celebration, a flat battery, or a gag. */
     const wave = () => {
-      if (reducedMotion.matches || busy()) return;
+      if (reducedMotion.matches || busy() || mischief) return;
       if (getPower().state !== "normal") return;
       enterState("wave", performance.now());
     };
@@ -805,6 +863,9 @@ export function useNovaStage({
      */
     const runIdleAct = () => {
       if (reducedMotion.matches || !getBootComplete()) return;
+      // She's busy. The gag parks her in `idle` between its own beats, which is
+      // exactly the condition below, so this has to be checked first.
+      if (mischief) return;
       if (state !== "idle") return;
       if (pointerSeen && performance.now() - lastPointerAt < IDLE_AFTER) return;
 
@@ -980,6 +1041,77 @@ export function useNovaStage({
     };
 
     /* ---------------------------------------------------------------- */
+    /* The light-switch gag                                              */
+    /* ---------------------------------------------------------------- */
+
+    /**
+     * One beat of "anyone home?".
+     *
+     * Her half only: the props and the theme are `nova-lights.ts`'s, the words
+     * are the bubble's, and what's left here is a body and three faces.
+     *
+     * `canPlay` is deliberately not consulted. The gag has already asked a
+     * stricter question than this one — it refuses to start at all unless she is
+     * off the mains, above 20%, off the headphones and in a good mood — and once
+     * it *is* running, `caught` has to be able to land from any of its own
+     * states, which an equal-priority check would allow but a stricter reading
+     * of "don't interrupt yourself" would not.
+     */
+    const runLightsBeat = (next: LightsBeat) => {
+      const now = performance.now();
+
+      switch (next) {
+        case "wonder":
+          mischief = true;
+          /* Reduced motion gets the calm version, which is the bubble and one
+             slow swap of the page. There is no pose in it at all — the beat
+             still arrives so the bubble can open, and stops here. */
+          if (reducedMotion.matches) return;
+          queued = null;
+          intensity = 0;
+          enterState("wonder", now);
+          return;
+
+        case "idea":
+          if (reducedMotion.matches) return;
+          svg.dataset.mischief = "idea";
+          enterState("idea", now);
+          return;
+
+        case "flick":
+          if (reducedMotion.matches) return;
+          // Once the flicking stops being careful, so does she.
+          if (getLights().phase === "crescendo") {
+            svg.dataset.mischief = "glee";
+          }
+          // Re-entered per flick on purpose — the arm stays out and only the
+          // wrist restarts. See `flick` in `nova-pose.ts`.
+          enterState("flick", now);
+          return;
+
+        case "caught":
+          if (reducedMotion.matches) return;
+          svg.dataset.mischief = "innocent";
+          queued = null;
+          intensity = 0;
+          enterState("caught", now);
+          return;
+
+        case "over":
+          mischief = false;
+          delete svg.dataset.mischief;
+          // No `enterState` here: `caught` is timed and has already handed back
+          // to idle by the time this lands. Cutting to idle again would only
+          // restart a blend that has finished.
+          return;
+
+        case "scheme":
+          // Words, not movement. The bubble has this one.
+          return;
+      }
+    };
+
+    /* ---------------------------------------------------------------- */
     /* Temper                                                            */
     /* ---------------------------------------------------------------- */
 
@@ -1098,6 +1230,7 @@ export function useNovaStage({
     const offPower = onPowerEvent(runPowerEvent);
     const offVibe = onVibeChange(runVibe);
     const offTemper = onTemperChange(runTemper);
+    const offLights = onLightsBeat(runLightsBeat);
     /*
      * Subscribed to the like itself rather than to a celebration, because past
      * stage one there *is* no celebration — that's the whole point. What's left
@@ -1140,6 +1273,7 @@ export function useNovaStage({
       offPower();
       offVibe();
       offTemper();
+      offLights();
       offLike();
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("pointermove", handlePointerMove);

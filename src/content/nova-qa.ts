@@ -319,6 +319,9 @@ export const ROTATING_LINES = [
   "he ships full-stack — i just take the credit.",
   "ten projects in. ask me which one's the best.",
   "psst — he's open to new work right now.",
+  // Funny before you've seen the light-switch gag, funnier after — and it works
+  // either way round, which is why it's in the rotation rather than gated on it.
+  "i don't touch the lights when you're away. promise.",
 ];
 
 /**
@@ -388,6 +391,31 @@ export const SULK_LINES = [
 
 /** The thaw. One line, because it only ever gets said once per arc. */
 export const FORGIVEN_LINE = "...fine. i missed you too.";
+
+/* -------------------------------------------------------------------------- */
+/* NOVA — alone with the light switch                                          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The three lines of the "anyone home?" gag.
+ *
+ * Fixed rather than pooled, unlike every other set in this file: it's a bit with
+ * a beginning, a middle and a punchline, played at most once a session, so there
+ * is no repetition for variants to relieve. Randomising the last line would only
+ * make it a different joke each time nobody sees it twice anyway.
+ *
+ * All three are hers, at the visitor, which is why they go through the speech
+ * bubble and not the rotation. The last one is the whole gag: she is not
+ * apologising, she is establishing that nothing happened.
+ */
+export const LIGHTS_LINES = {
+  /** Looking around, having noticed the silence. */
+  wonder: "hello? still there?",
+  /** The plan, arrived at. */
+  scheme: "hm. maybe this'll wake them up.",
+  /** Caught. */
+  caught: "...you saw nothing.",
+};
 
 export const HERO_CHIPS = [
   "what has he built?",

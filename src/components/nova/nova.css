@@ -1000,6 +1000,81 @@
 }
 
 /* -------------------------------------------------------------------------- */
+/* Mischief — the light-switch gag                                             */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Three faces, one per act: the idea landing, enjoying herself far too much, and
+ * absolute innocence. Written by the stage loop from the beats `nova-lights.ts`
+ * publishes; the body that goes with them is in `nova-pose.ts`.
+ *
+ * After the temper block and before the music one, which is the ordering the
+ * priority table already describes. Above temper because a like landing mid-gag
+ * still fires `data-joy`, and her grinning through the caught-in-the-act face
+ * would give away the one thing she is pretending. Below music because the gag
+ * refuses to start with the headphones on, so if both are somehow set, the
+ * headphones are the newer fact.
+ *
+ * Everything here is opacity and a static transform, so all three survive the
+ * reduced-motion rules further up untouched — but they never run there anyway:
+ * the calm version of the gag has no faces in it.
+ */
+
+/* The idea. Eyes up and wide, mouth open — and her own lamps take it too, which
+   is a bulb going on above a bulb going on. */
+.nova[data-mischief="idea"] .nova-eye {
+  opacity: 1;
+  transform: scale(1.14);
+}
+
+.nova[data-mischief="idea"]
+  :is(.nova-eye-happy, .nova-mouth-smile, .nova-mouth-grin, .nova-mouth-flat) {
+  opacity: 0;
+}
+
+.nova[data-mischief="idea"] .nova-mouth-open {
+  opacity: 1;
+}
+
+.nova[data-mischief="idea"] .nova-lamp {
+  filter: drop-shadow(0 0 12px var(--nova-tint));
+}
+
+/* Gleeful. The arc eyes and the full grin, which is the widest face she has. */
+.nova[data-mischief="glee"] .nova-eye {
+  opacity: 0;
+}
+
+.nova[data-mischief="glee"] .nova-eye-happy {
+  opacity: 1;
+}
+
+.nova[data-mischief="glee"]
+  :is(.nova-mouth-smile, .nova-mouth-flat, .nova-mouth-open) {
+  opacity: 0;
+}
+
+.nova[data-mischief="glee"] .nova-mouth-grin {
+  opacity: 1;
+}
+
+/* Who, me? Eyes as round as they go — scaled from their own centres, so they
+   read as *wide* rather than as raised — over the smallest mouth on the sheet. */
+.nova[data-mischief="innocent"] .nova-eye {
+  opacity: 1;
+  transform: scale(1.3);
+}
+
+.nova[data-mischief="innocent"]
+  :is(.nova-eye-happy, .nova-mouth-smile, .nova-mouth-grin, .nova-mouth-open) {
+  opacity: 0;
+}
+
+.nova[data-mischief="innocent"] .nova-mouth-flat {
+  opacity: 1;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Music mode                                                                  */
 /* -------------------------------------------------------------------------- */
 

@@ -220,6 +220,18 @@ export function setNovaVibing(on: boolean): void {
 }
 
 /**
+ * Whether there is currently something playing.
+ *
+ * A plain read rather than a subscription, for the one caller that only needs
+ * the answer at a single instant: the light-switch gag asks once, at the moment
+ * it would otherwise start, and a robot with her headphones on is not available
+ * for mischief. Nothing renders from this, so there's still no store trio here.
+ */
+export function getNovaVibing(): boolean {
+  return vibing;
+}
+
+/**
  * An edge, not a value.
  *
  * Both consumers want the transition rather than the state — the stage loop

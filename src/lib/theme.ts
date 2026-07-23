@@ -7,12 +7,13 @@
  *                 `/light-mode` ever change it.
  *   `effective` — what's actually painted. Equal to `chosen` except when the
  *                 battery is low, which forces dark the way a phone's battery
- *                 saver does.
+ *                 saver does, or when NOVA is playing with the light switch.
  *
  * Keeping them apart is what makes the rule in the spec fall out for free:
  * charging back up lifts the *forcing*, so a visitor who chose dark stays dark
  * and one who chose light returns to light, with nobody storing a "theme before
- * the battery died" to restore.
+ * the battery died" to restore. The light-switch gag rides on the same split for
+ * the same reason — see `setThemeOverride`.
  */
 
 import { getPower, subscribePower } from "./power";
@@ -53,6 +54,16 @@ let chosen: Theme = "light";
 let loaded = false;
 
 /**
+ * A theme painted *over* the chosen one, without becoming it.
+ *
+ * Only NOVA's light-switch gag sets this. It exists so the whole page can be
+ * flipped and flipped back without `chosen` — the thing that gets written to
+ * storage — ever moving: clearing it restores exactly what the visitor picked,
+ * with nothing to remember and nothing to put back.
+ */
+let override: Theme | null = null;
+
+/**
  * How hard the battery is dimming the page.
  *
  * Three steps rather than one boolean, because the low-power states aren't
@@ -87,10 +98,16 @@ function toneFor(): Tone {
   }
 }
 
+/*
+ * The battery still outranks the override. It can't come up in practice — the
+ * gag refuses to start below 20% and any input ends it — but "the page dims
+ * because she's dying" is not a rule a joke gets to suspend.
+ */
 function compute(): Snapshot {
   const tone = toneFor();
   const saver = tone !== "none";
-  return { chosen, effective: saver ? "dark" : chosen, saver, tone };
+  const wanted = override ?? chosen;
+  return { chosen, effective: saver ? "dark" : wanted, saver, tone };
 }
 
 /**
@@ -117,7 +134,20 @@ function apply(next: Snapshot): void {
     ?.setAttribute("content", next.effective === "dark" ? "#0a0b10" : "#ecedf4");
 }
 
-function emit(animate: boolean): void {
+/**
+ * How the swap is allowed to look.
+ *
+ * `ms` so the light-switch gag can cross-fade in 150ms rather than 400 — at its
+ * fastest it toggles every 350ms, and a fade longer than the gap between flicks
+ * never lands. `force` because `runTransition` otherwise steps aside for reduced
+ * motion; the one caller that overrides that is the calm version of the gag,
+ * where a slow fade *is* the whole event and there is nothing else to see.
+ */
+type Fade = { ms: number; force: boolean };
+
+const DEFAULT_FADE: Fade = { ms: THEME_MS, force: false };
+
+function emit(fade: Fade | null): void {
   const next = compute();
   if (
     snapshot.chosen === next.chosen &&
@@ -132,7 +162,7 @@ function emit(animate: boolean): void {
   snapshot = next;
 
   if (changed) {
-    if (animate) runTransition();
+    if (fade) runTransition(fade);
     apply(next);
   }
 
@@ -149,15 +179,21 @@ function emit(animate: boolean): void {
  */
 let transitionTimer = 0;
 
-function runTransition(): void {
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+function runTransition({ ms, force }: Fade): void {
+  if (!force && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    return;
+  }
 
   const root = document.documentElement;
+  // Read by the rule in `globals.css`, so one swap can be quicker than another
+  // without the stylesheet having to know who asked.
+  root.style.setProperty("--theme-shift-ms", `${ms}ms`);
   root.dataset.themeShift = "true";
   window.clearTimeout(transitionTimer);
   transitionTimer = window.setTimeout(() => {
     delete root.dataset.themeShift;
-  }, THEME_MS + 60);
+    root.style.removeProperty("--theme-shift-ms");
+  }, ms + 60);
 }
 
 function load(): void {
@@ -168,7 +204,7 @@ function load(): void {
   apply(snapshot);
 
   // The battery can force dark on its own, so the theme has to follow it.
-  subscribePower(() => emit(true));
+  subscribePower(() => emit(DEFAULT_FADE));
 }
 
 /**
@@ -233,13 +269,34 @@ export function setTheme(next: Theme): ThemeResult {
   const was = chosen;
   chosen = next;
   writeStored(next);
-  emit(true);
+  emit(DEFAULT_FADE);
   return was === next ? "already" : "changed";
 }
 
 export function getChosenTheme(): Theme {
   load();
   return chosen;
+}
+
+/**
+ * Paints a theme over the chosen one, or clears it.
+ *
+ * The visual half of the theme only: `chosen` is untouched and nothing is
+ * written to storage, so a visitor whose page NOVA has just flicked to dark and
+ * back has exactly the preference they arrived with — including if they close
+ * the tab mid-flick, since there was never anything to put back.
+ *
+ * Passing `null` restores whatever `chosen` says, which is why the gag has no
+ * "theme before the lights went out" of its own to remember.
+ */
+export function setThemeOverride(
+  next: Theme | null,
+  { ms = THEME_MS, fade = false }: { ms?: number; fade?: boolean } = {},
+): void {
+  load();
+  if (override === next) return;
+  override = next;
+  emit({ ms, force: fade });
 }
 
 /**

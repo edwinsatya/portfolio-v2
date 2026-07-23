@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSelectedLayoutSegment } from "next/navigation";
 import { greetings, type NovaMood } from "@/content/profile";
 import {
   ANNOYED_LINES,
   FORGIVEN_LINE,
+  LIGHTS_LINES,
   SULK_LINES,
 } from "@/content/nova-qa";
 import { sceneFromSegment } from "@/content/scenes";
@@ -15,6 +16,7 @@ import {
   onLike,
   subscribeStageBusy,
 } from "@/lib/nova-bus";
+import { onLightsBeat } from "@/lib/nova-lights";
 import { getTemper, onTemperChange, resetTemper } from "@/lib/nova-temper";
 import { onForget } from "@/lib/memory";
 import { useBootComplete } from "./useBootComplete";
@@ -57,6 +59,22 @@ export function useSceneReactions() {
   const greeted = useRef(false);
 
   const previous = visit.previous;
+
+  /**
+   * Put a line in the bubble, and take it away again.
+   *
+   * Hoisted so every source shares the one dismiss timer. There is a single
+   * bubble, and three unrelated things can want it — a returning visitor's
+   * welcome, a line about being clicked at, and NOVA caught at the light switch.
+   * Sharing the timer is what stops one of them cancelling a line the next has
+   * already replaced, which would leave the bubble open forever.
+   */
+  const say = useCallback((text: string) => {
+    window.clearTimeout(dismissTimer.current);
+    setLine(text);
+    setOpen(true);
+    dismissTimer.current = window.setTimeout(() => setOpen(false), BUBBLE_MS);
+  }, []);
 
   // Face follows the scene.
   useEffect(() => {
@@ -129,13 +147,6 @@ export function useSceneReactions() {
    * `fireLike` refuses them — so the temper can't change before the stage is up.
    */
   useEffect(() => {
-    const say = (text: string) => {
-      window.clearTimeout(dismissTimer.current);
-      setLine(text);
-      setOpen(true);
-      dismissTimer.current = window.setTimeout(() => setOpen(false), BUBBLE_MS);
-    };
-
     // Cycled rather than random: being snubbed three times in a row with the
     // identical two words reads as a broken string, not as a mood.
     let snub = 0;
@@ -163,7 +174,29 @@ export function useSceneReactions() {
       offTemper();
       offLike();
     };
-  }, []);
+  }, [say]);
+
+  /*
+   * The light-switch gag, in words.
+   *
+   * Three beats out of the six `nova-lights.ts` publishes — the other three are
+   * things she does rather than says, and belong to the pose engine. Through the
+   * bubble for the same reason the temper lines are: this is her talking to the
+   * visitor about the room they are both in, which the tagline rotation is not
+   * the voice for.
+   *
+   * No boot gate. The gag will not start before boot, so there is nothing to
+   * gate — see `allowed()`.
+   */
+  useEffect(
+    () =>
+      onLightsBeat((beat) => {
+        if (beat === "wonder") say(LIGHTS_LINES.wonder);
+        else if (beat === "scheme") say(LIGHTS_LINES.scheme);
+        else if (beat === "caught") say(LIGHTS_LINES.caught);
+      }),
+    [say],
+  );
 
   // Memory wiped from the chat or elsewhere: say so, and allow greeting again.
   useEffect(
@@ -174,12 +207,9 @@ export function useSceneReactions() {
         // stranger — carrying on a sulk about what the last one did with the
         // mouse would be the one thing a wiped memory shouldn't remember.
         resetTemper();
-        window.clearTimeout(dismissTimer.current);
-        setLine(greetings.forgotten);
-        setOpen(true);
-        dismissTimer.current = window.setTimeout(() => setOpen(false), BUBBLE_MS);
+        say(greetings.forgotten);
       }),
-    [],
+    [say],
   );
 
   useEffect(() => () => window.clearTimeout(dismissTimer.current), []);

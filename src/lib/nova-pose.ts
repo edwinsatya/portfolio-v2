@@ -88,6 +88,15 @@ export type NovaState =
   | "balance"
   /** A slow look back over her shoulder, and around again. */
   | "peek"
+  /* --- The light-switch gag ---------------------------------------------- */
+  /** "hello? still there?" — a look around, ending on the camera. */
+  | "wonder"
+  /** The idea landing. A pop, and she's up on her toes. */
+  | "idea"
+  /** One flick of the switch. Re-entered per flick; the arm stays out. */
+  | "flick"
+  /** Caught. Stops dead, hands behind her back, all innocence. */
+  | "caught"
   /* --- Overstimulation --------------------------------------------------- */
   /** Hand on hip, and a shake of the head. Stage two. */
   | "annoyed"
@@ -133,6 +142,14 @@ export const STATE_MS: Record<TimedState, number> = {
   dust: 1800,
   balance: 2400,
   peek: 3000,
+  wonder: 2000,
+  idea: 1500,
+  /* Longer than the gap between flicks on purpose. Every flick re-enters this
+     state, so the reach only ever runs down when one *doesn't* arrive — which
+     is the beat in the middle of the gag where she stands back and admires the
+     work, and the end, where her hand comes off the switch for good. */
+  flick: 1200,
+  caught: 2000,
   annoyed: 1600,
   turnAway: 900,
   glance: 1000,
@@ -647,6 +664,133 @@ function peek(now: number, elapsed: number): Pose {
 }
 
 /* -------------------------------------------------------------------------- */
+/* The light-switch gag                                                        */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Four beats of "anyone home?", in order. The props — the switch on the wall and
+ * the lamp overhead — are DOM, not geometry: they have to fade in beside a robot
+ * who is a third of her size when docked, and drawing them into her viewBox
+ * would shrink them with her. What's here is only her half of it.
+ *
+ * The gaze is not here either. `useNovaStage` scripts it for `wonder` and biases
+ * it for the rest, the same way it does for the idle repertoire.
+ */
+
+/**
+ * The look around: one way, then the other, then straight down the lens.
+ *
+ * The damping over the last quarter is what makes it land on the camera rather
+ * than sweep past it — without it she is still turning when the bubble opens,
+ * and "hello? still there?" reads as being said to the wall.
+ */
+function wonder(now: number, elapsed: number): Pose {
+  const base = idle(now);
+  const p = Math.min(1, elapsed / STATE_MS.wonder);
+  const damp = p < 0.72 ? 1 : Math.max(0, ease((1 - p) / 0.28));
+  const sweep = Math.sin(p * TAU) * damp;
+  // She straightens up as she gives up on looking and just asks.
+  const settle = ease(Math.max(0, (p - 0.72) / 0.28));
+
+  return {
+    ...base,
+    headRot: base.headRot + sweep * 10,
+    bodyRot: base.bodyRot + sweep * 2.6,
+    armL: base.armL + sweep * 3.5,
+    armR: base.armR + sweep * 3.5,
+    bodyY: base.bodyY - 1.4 * settle,
+    chest: base.chest + 0.008 * settle,
+  };
+}
+
+/**
+ * The idea.
+ *
+ * One sharp pop and then nothing — she holds, up on her toes, while the props
+ * arrive around her. The stillness after the pop is the point: an idea that
+ * keeps bouncing is excitement, and this is a plan.
+ */
+function idea(now: number, elapsed: number): Pose {
+  const base = idle(now);
+  const p = Math.min(1, elapsed / STATE_MS.idea);
+  const pop = Math.sin(ease(Math.min(1, p / 0.2)) * Math.PI);
+  const held = ease(Math.min(1, p / 0.3));
+
+  return {
+    ...base,
+    bodyY: base.bodyY - 6 * pop - 1.6 * held,
+    bodySx: base.bodySx - 0.03 * pop,
+    bodySy: base.bodySy + 0.045 * pop,
+    chest: base.chest + 0.018 * held,
+    headRot: base.headRot - 4 * pop,
+    headY: base.headY - 2.4 * pop,
+    armL: base.armL + 18 * pop + 7 * held,
+    armR: base.armR - 18 * pop - 7 * held,
+  };
+}
+
+/**
+ * One flick.
+ *
+ * Two envelopes on different clocks, which is the whole trick. `reach` runs on
+ * the state's own progress and holds the arm out at the switch for the length of
+ * the state; `snap` runs on raw elapsed time and is over in a fifth of a second.
+ * Re-entering per flick therefore restarts the wrist without the arm ever coming
+ * down — at the crescendo's fastest she is flicking, not reaching again.
+ *
+ * The switch is drawn to her left on screen, so it's the left arm that goes out.
+ */
+function flick(now: number, elapsed: number): Pose {
+  const base = idle(now);
+  const p = Math.min(1, elapsed / STATE_MS.flick);
+  const reach = p > 0.86 ? ease((1 - p) / 0.14) : ease(Math.min(1, p / 0.12));
+  const snap = Math.sin(Math.min(1, elapsed / 220) * Math.PI);
+
+  return {
+    ...base,
+    armL: lerp(base.armL, 88, reach) - snap * 5,
+    foreL: lerp(base.foreL, -14, reach) + snap * 26,
+    armR: base.armR + 5 * reach,
+    // The shoulders bouncing with each one — the tell that she's enjoying this.
+    bodyY: base.bodyY - 1.2 * reach - snap * 1.8,
+    bodyRot: base.bodyRot - 2 * reach - snap * 1.4,
+    headRot: base.headRot - 5 * reach,
+  };
+}
+
+/**
+ * Caught.
+ *
+ * The freeze is the first sixteenth and it is *nothing* — no pose change at all,
+ * so the blend out of whatever she was mid-way through stops dead rather than
+ * easing. Only then do the arms go.
+ *
+ * Hands behind her back is a 2D cheat, like the turn: the arms are drawn behind
+ * the torso, so folding the forearms hard inward puts the hands out of sight
+ * without needing a hand to hide. The small sway afterwards is someone standing
+ * very still and hoping it's enough.
+ */
+function caught(now: number, elapsed: number): Pose {
+  const base = idle(now);
+  const p = Math.min(1, elapsed / STATE_MS.caught);
+  const hide = ease(Math.min(1, Math.max(0, (p - 0.06) / 0.2)));
+  const innocent = Math.sin((elapsed / 900) * TAU) * 0.9 * hide;
+
+  return {
+    ...base,
+    armL: lerp(base.armL, 10, hide),
+    armR: lerp(base.armR, -10, hide),
+    foreL: lerp(base.foreL, -104, hide),
+    foreR: lerp(base.foreR, 104, hide),
+    bodyY: base.bodyY + 1.5 * hide,
+    bodyRot: base.bodyRot + innocent,
+    headRot: base.headRot + innocent * 1.7,
+    // Chin up. Nothing to see here.
+    headY: base.headY - 1.2 * hide,
+  };
+}
+
+/* -------------------------------------------------------------------------- */
 /* Overstimulation                                                             */
 /* -------------------------------------------------------------------------- */
 
@@ -806,6 +950,14 @@ export function poseFor(
       return balance(now, elapsed);
     case "peek":
       return peek(now, elapsed);
+    case "wonder":
+      return wonder(now, elapsed);
+    case "idea":
+      return idea(now, elapsed);
+    case "flick":
+      return flick(now, elapsed);
+    case "caught":
+      return caught(now, elapsed);
     case "annoyed":
       return annoyed(now, elapsed, intensity);
     case "turnAway":

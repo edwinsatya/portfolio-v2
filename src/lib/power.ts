@@ -50,6 +50,15 @@ const CHARGE_PER_MS = 3 / 1000;
 /** What a dance/hop/wave costs on top of the passive drain. */
 const CELEBRATION_MIN = 1;
 const CELEBRATION_MAX = 2;
+/**
+ * What the light-switch gag costs.
+ *
+ * Flat rather than the celebration's range: it's one scripted event of a known
+ * length that happens at most once a visit, so there is nothing for a random
+ * cost to vary *with*. Priced at the top of a celebration — it runs twelve
+ * seconds and drives the whole page, which is more than a wave.
+ */
+const MISCHIEF_COST = 2;
 /** Window after a completed charge in which celebrating is on the house. */
 const CHARGE_GRACE_MS = 4000;
 
@@ -317,6 +326,22 @@ export function spendOnCelebration(): void {
   if (performance.now() - chargedAt < CHARGE_GRACE_MS) return;
   const cost = CELEBRATION_MIN + Math.random() * (CELEBRATION_MAX - CELEBRATION_MIN);
   raw = Math.max(0, raw - cost);
+  emit();
+}
+
+/**
+ * The light-switch gag's cost.
+ *
+ * The same two guards as a celebration, and for the same reasons — though
+ * neither can fire here in practice: the gag refuses to start unless the battery
+ * is normal and she is off the mains. They're kept because the rule is "moving
+ * costs her something, unless she's plugged in", and a second spender that
+ * quietly disagreed with the first would be the bug.
+ */
+export function spendOnMischief(): void {
+  if (charging) return;
+  if (performance.now() - chargedAt < CHARGE_GRACE_MS) return;
+  raw = Math.max(0, raw - MISCHIEF_COST);
   emit();
 }
 
