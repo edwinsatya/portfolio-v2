@@ -7,6 +7,7 @@ import {
   LOW_POWER_LINES,
   ROTATING_LINES,
 } from "@/content/nova-qa";
+import { useBootComplete } from "@/hooks/useBootComplete";
 import { usePower } from "@/hooks/usePower";
 import { classicHintPending, markClassicHintShown } from "@/lib/legacy";
 import type { PowerState } from "@/lib/power";
@@ -26,7 +27,13 @@ const REDUCED_HOLD_MS = 7000;
 const WORD_STEP_MS = 55;
 /** Matches the word transition in globals.css. */
 const WORD_REVEAL_MS = 420;
-/** Beat before the first line, so the boot screen is gone. */
+/**
+ * Beat between the stage being revealed and her first line materialising.
+ *
+ * Counted from the boot completing, not from mount — as a mount delay it was a
+ * guess against a boot length it never actually matched, and the line was
+ * already materialising behind the boot screen by the time the overlay lifted.
+ */
 const START_DELAY = 600;
 /** Window for a second tap to count as a double-tap. */
 const DOUBLE_TAP_MS = 320;
@@ -122,6 +129,7 @@ function LineRotator({ line, state }: { line: string; state: PowerState }) {
   const [index, setIndex] = useState(0);
   const [visible, setVisible] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const bootComplete = useBootComplete();
 
   const stageBusy = useSyncExternalStore(
     subscribeStageBusy,
@@ -140,8 +148,12 @@ function LineRotator({ line, state }: { line: string; state: PowerState }) {
   const words = useMemo(() => current.split(" "), [current]);
   const showingClassicHint = current === CLASSIC_BUILD_LINE;
 
-  // Reveal the line, then hand over to the hold timer below.
+  // Reveal the line, then hand over to the hold timer below. Nothing starts
+  // until the boot overlay is gone: the first line is the stage introducing
+  // itself, and it can't do that from underneath a splash screen.
   useEffect(() => {
+    if (!bootComplete) return;
+
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const show = window.setTimeout(
@@ -162,7 +174,7 @@ function LineRotator({ line, state }: { line: string; state: PowerState }) {
     );
 
     return () => window.clearTimeout(show);
-  }, [index, words.length, showingClassicHint]);
+  }, [bootComplete, index, words.length, showingClassicHint]);
 
   // The hold. Re-runs on pause changes, banking the time already served.
   useEffect(() => {

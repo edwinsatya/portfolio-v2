@@ -1,0 +1,320 @@
+/* -------------------------------------------------------------------------- */
+/* Stage lights — the props for the "anyone home?" gag                         */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * A hanging lamp and a wall panel, both positioned from `--nova-head-x`,
+ * `--nova-head-y` and `--nova-foot-y` — the three numbers the stage loop writes
+ * onto `<html>` every frame. Following her that way means the props are in the
+ * right place in the hero, in the corner dock, and during the flight between
+ * them, without anything here running per frame or measuring anything.
+ *
+ * The layer sits inside `.nova-stage`, so its z-index is scoped to that stacking
+ * context and a terminal opening still covers the lot. It is also the first
+ * child of that layer, which is what puts it behind NOVA — see the note in
+ * `NovaStage.tsx`. `z-index: 0` rather than a negative one: this has to stay
+ * *above* the page, and only below her.
+ */
+.lights {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* -------------------------------------------------------------------------- */
+/* The lamp                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The box is the cord's full run: from the top of the viewport down to a little
+ * above her antenna. Its own height is therefore what the drop animation
+ * translates by, which is what lets one keyframe pair work at every size she is.
+ *
+ * The floor stops the cord collapsing to nothing when she's near the top of the
+ * screen — a shade with no cord reads as a sticker rather than as something
+ * hanging.
+ */
+.lights-lamp {
+  position: absolute;
+  left: calc(var(--nova-head-x, 0) * 1px);
+  top: 0;
+  height: max(72px, calc(var(--nova-head-y, 0) * 1px - 26px));
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  animation: lights-drop 760ms cubic-bezier(0.24, 0.92, 0.32, 1) both;
+}
+
+/* Hoisted away like a prop going back up into the rig — quicker than it came
+   down, and accelerating, because this one is being got rid of. */
+.lights[data-leaving="true"] .lights-lamp {
+  animation: lights-hoist 420ms cubic-bezier(0.5, 0, 0.82, 0.36) both;
+}
+
+@keyframes lights-drop {
+  from {
+    transform: translate(-50%, -100%);
+  }
+  to {
+    transform: translate(-50%, 0);
+  }
+}
+
+@keyframes lights-hoist {
+  from {
+    transform: translate(-50%, 0);
+  }
+  to {
+    transform: translate(-50%, -100%);
+  }
+}
+
+.lights-cord {
+  flex: 1;
+  width: 2px;
+  border-radius: 1px;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--color-line) 60%, transparent),
+    var(--color-line)
+  );
+}
+
+/* A rounded dome, open at the bottom. Same hairline-on-a-soft-surface language
+   as the socket and the nav pill. */
+.lights-shade {
+  position: relative;
+  display: grid;
+  place-items: end center;
+  width: 3.4rem;
+  height: 1.9rem;
+
+  border: 1px solid var(--color-line);
+  border-bottom: 0;
+  border-radius: 1.7rem 1.7rem 0.35rem 0.35rem;
+  background: linear-gradient(
+    to bottom,
+    var(--color-surface),
+    color-mix(in oklab, var(--color-surface) 82%, var(--color-line))
+  );
+  box-shadow: 0 8px 22px -14px rgb(20 22 31 / 0.5);
+  transition:
+    box-shadow 150ms ease,
+    border-color 150ms ease;
+}
+
+.lights[data-lit="true"] .lights-shade {
+  border-color: color-mix(in oklab, var(--color-accent) 50%, var(--color-line));
+  box-shadow:
+    0 8px 22px -14px rgb(20 22 31 / 0.5),
+    0 6px 20px -6px color-mix(in oklab, var(--color-accent) 45%, transparent);
+}
+
+/* The bulb under the lip of the shade. Dies to a dull ember rather than to
+   nothing — a filament that has just been switched off is still warm, and it's
+   the fade rather than the disappearance that reads as *off*. */
+.lights-filament {
+  width: 0.62rem;
+  height: 0.62rem;
+  translate: 0 45%;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--color-faint) 55%, transparent);
+  transition:
+    background 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.lights[data-lit="true"] .lights-filament {
+  background: var(--color-accent);
+  box-shadow: 0 0 12px 2px color-mix(in oklab, var(--color-accent) 70%, transparent);
+}
+
+/*
+ * The light it throws. A soft cone under the shade, wide enough to sit NOVA
+ * inside it — this is the prop's whole claim to being the thing lighting the
+ * stage, and a glow that stopped short of her would just be a lamp with a halo.
+ *
+ * `mask-image` rather than a second gradient stop, so it fades out at the bottom
+ * edge instead of ending on a line.
+ */
+.lights-cast {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 20rem;
+  height: 22rem;
+  translate: -50% 0;
+
+  background: radial-gradient(
+    ellipse 50% 60% at 50% 0%,
+    color-mix(in oklab, var(--color-accent) 26%, transparent),
+    transparent 70%
+  );
+  -webkit-mask-image: linear-gradient(to bottom, #000 30%, transparent);
+  mask-image: linear-gradient(to bottom, #000 30%, transparent);
+
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.lights[data-lit="true"] .lights-cast {
+  opacity: 1;
+}
+
+/* -------------------------------------------------------------------------- */
+/* The switch panel                                                            */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Beside her, at the height of her own middle — `(head + foot) / 2` is her waist
+ * at any scale, which keeps the panel next to a hand rather than next to a knee
+ * once she's docked. The horizontal offset is a constant because the panel is a
+ * fitting on a wall, not a part of her: it stays the size of a light switch
+ * whether she's a metre tall or a thumbnail. `max()` keeps it on screen.
+ */
+.lights-panel {
+  position: absolute;
+  left: max(0.9rem, calc(var(--nova-head-x, 0) * 1px - 168px));
+  top: calc((var(--nova-head-y, 0) + var(--nova-foot-y, 0)) * 0.5px);
+  translate: 0 -50%;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.55rem 0.6rem;
+
+  border: 1px solid var(--color-line);
+  border-radius: 0.55rem;
+  background: color-mix(in oklab, var(--color-surface) 88%, transparent);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px -14px rgb(20 22 31 / 0.4);
+
+  animation: lights-panel-in 420ms ease both;
+}
+
+.lights[data-leaving="true"] .lights-panel {
+  animation: lights-panel-out 300ms ease both;
+}
+
+@keyframes lights-panel-in {
+  from {
+    opacity: 0;
+    scale: 0.9;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes lights-panel-out {
+  to {
+    opacity: 0;
+    scale: 0.94;
+  }
+}
+
+.lights-panel-label {
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-faint);
+  white-space: nowrap;
+}
+
+/* The plate the rocker sits in. */
+.lights-rocker {
+  position: relative;
+  width: 1.15rem;
+  height: 1.85rem;
+  border-radius: 0.3rem;
+  background: color-mix(in oklab, var(--color-line) 55%, transparent);
+  box-shadow: inset 0 1px 3px rgb(20 22 31 / 0.25);
+}
+
+/* The rocker itself: up when the lights are on, down when they aren't. Snappy
+   and slightly overshooting, because a switch is a sprung thing — this is the
+   one part of the prop that should look mechanical rather than soft. */
+.lights-rocker-nub {
+  position: absolute;
+  left: 0.12rem;
+  right: 0.12rem;
+  height: 0.85rem;
+  border-radius: 0.22rem;
+  background: var(--color-faint);
+  box-shadow: 0 1px 2px rgb(20 22 31 / 0.35);
+
+  top: calc(100% - 0.97rem);
+  transition:
+    top 140ms cubic-bezier(0.3, 1.5, 0.5, 1),
+    background 150ms ease;
+}
+
+.lights[data-lit="true"] .lights-rocker-nub {
+  top: 0.12rem;
+  background: var(--color-accent);
+}
+
+/*
+ * The click.
+ *
+ * A ring that expands out of the panel and fades, replaced on every flick — see
+ * the `key` in `StageLights.tsx`. Cheap, and it does the job the rocker can't:
+ * at the crescendo's pace the rocker is a blur, and this is what still reads as
+ * a discrete *click* rather than as something vibrating.
+ */
+.lights-click {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--color-accent);
+  border-radius: 0.55rem;
+  animation: lights-click 320ms ease-out both;
+}
+
+@keyframes lights-click {
+  from {
+    opacity: 0.75;
+    scale: 1;
+  }
+  to {
+    opacity: 0;
+    scale: 1.22;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Motion preferences                                                          */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Belt and braces. The calm version of the gag never sets `present`, so none of
+ * this should ever render under the preference — but a prop that descended from
+ * the ceiling if it somehow did would be the single worst thing on the page for
+ * someone who asked for stillness, so the entrances are neutralised here too.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .lights-lamp,
+  .lights[data-leaving="true"] .lights-lamp,
+  .lights-panel,
+  .lights[data-leaving="true"] .lights-panel,
+  .lights-click {
+    animation: none;
+  }
+
+  .lights-lamp {
+    transform: translate(-50%, 0);
+  }
+
+  .lights-click {
+    opacity: 0;
+  }
+
+  .lights-rocker-nub {
+    transition: none;
+  }
+}

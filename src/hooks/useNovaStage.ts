@@ -3,11 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import {
   fireLike,
+  getBootComplete,
   onCelebrate,
+  onLike,
   onNovaBooted,
+  onVibeChange,
   setNovaPort,
   type Celebration,
 } from "@/lib/nova-bus";
+import { getLights, onLightsBeat, type LightsBeat } from "@/lib/nova-lights";
+import { beginSulk, getTemper, onTemperChange } from "@/lib/nova-temper";
 import {
   getDroop,
   getPower,
@@ -21,8 +26,11 @@ import {
   poseFor,
   restingPose,
   stateMs,
+  STATE_MS,
+  SUSTAINED,
   type NovaState,
   type Pose,
+  type TimedState,
 } from "@/lib/nova-pose";
 
 /** The anchor's CSS width. Everything scales from this to hero or dock size. */
@@ -92,6 +100,135 @@ const BLEND_MAX_MS = 520;
 /** Intensity added per like while already celebrating, and its decay. */
 const INTENSITY_STEP = 0.34;
 const INTENSITY_DECAY_MS = 2600;
+/** Randomised gap between idle activities. */
+const IDLE_ACT_MIN_MS = 20000;
+const IDLE_ACT_MAX_MS = 40000;
+/** How far round she has to be before the face is hidden behind her. */
+const FACING_AWAY_AT = 0.45;
+
+/**
+ * Which states may take over from which.
+ *
+ * Bigger wins, and equal wins — a celebration can replace a celebration, and
+ * one idle activity can replace another. The ordering the whole personality
+ * hangs off is: music beats anger beats celebration beats pottering about.
+ *
+ * Power moves sit above anger deliberately, and only just below music. Running
+ * out of battery is the one thing on this page that isn't a mood, and a robot
+ * too cross to notice she is dying would be the wrong joke. (Music never has to
+ * argue with it: a flat battery closes the player, which stops the vibe at
+ * source.)
+ *
+ * The light-switch gag sits above the celebrations and below the sulk, which is
+ * the one place it can go: it's a twelve-second scripted bit that drives the
+ * whole page, so a stray like landing in the middle of it must not be able to
+ * cut to a wave — but nothing about it outranks her actually being cross, or
+ * dying, or listening to something. It never has to argue with any of those
+ * anyway; `nova-lights.ts` refuses to start unless all three are clear.
+ */
+const PRIORITY: Record<NovaState, number> = {
+  vibe: 50,
+
+  twitch: 40,
+  stretch: 40,
+  shake: 40,
+  nod: 40,
+  yawn: 40,
+
+  annoyed: 30,
+  turnAway: 30,
+  sulk: 30,
+  glance: 30,
+  forgive: 30,
+
+  wonder: 25,
+  idea: 25,
+  flick: 25,
+  caught: 25,
+
+  wave: 20,
+  dance: 20,
+  hop: 20,
+  happy: 20,
+
+  tilt: 10,
+  inspect: 10,
+  hum: 10,
+  dust: 10,
+  balance: 10,
+  peek: 10,
+
+  idle: 0,
+};
+
+/**
+ * The idle repertoire, and how often each comes up relative to the others.
+ *
+ * Weighted rather than uniform because they aren't equally good: a head-tilt is
+ * small enough to see often, where a full look-behind is a whole beat of
+ * screen time and wears out fast. `stretch` is borrowed from the wake-up
+ * sequence rather than written twice — evaluated at zero droop it is exactly
+ * the standing stretch this wants.
+ */
+const IDLE_ACTS: ReadonlyArray<{ state: NovaState; weight: number }> = [
+  { state: "tilt", weight: 5 },
+  { state: "hum", weight: 4 },
+  { state: "inspect", weight: 3 },
+  { state: "dust", weight: 3 },
+  { state: "stretch", weight: 3 },
+  { state: "balance", weight: 2 },
+  { state: "peek", weight: 2 },
+];
+
+/**
+ * What survives a flat battery.
+ *
+ * Everything else in the pool is something done for its own sake — inspecting a
+ * hand, balancing on one foot, checking who's behind you — and a robot with
+ * nothing left to run on doesn't do things for their own sake. A sway and a
+ * yawn are what tiredness looks like when it still has to stand there.
+ */
+const TIRED_ACTS: ReadonlyArray<{ state: NovaState; weight: number }> = [
+  { state: "hum", weight: 4 },
+  { state: "yawn", weight: 2 },
+];
+
+/**
+ * Where a few of the activities want her looking, since the gaze is idling
+ * anyway when they play. A head-tilt at nothing is a head-tilt; a head-tilt
+ * with the eyes gone the same way is her having noticed something.
+ */
+const GAZE_BIAS: Partial<Record<NovaState, { x: number; y: number }>> = {
+  tilt: { x: -0.8, y: -0.25 },
+  inspect: { x: 0.45, y: 0.5 },
+  balance: { x: 0, y: -0.35 },
+  /* The gag. The switch is drawn to her left and a little below her eyeline, so
+     that is where she looks while her hand is on it; `caught` is the only entry
+     here that aims at nothing, because straight down the lens *is* the pose. */
+  idea: { x: -0.3, y: -0.45 },
+  flick: { x: -0.7, y: 0.3 },
+  caught: { x: 0, y: 0 },
+};
+
+/**
+ * Gazes that are a sequence rather than a direction.
+ *
+ * A bias says "look over there for as long as this runs", which is right for a
+ * head-tilt and wrong for someone searching a room. This gets the elapsed time
+ * and can therefore sweep, which is the difference between NOVA looking away and
+ * NOVA looking *for* you.
+ */
+const GAZE_SCRIPT: Partial<
+  Record<NovaState, (elapsed: number) => { x: number; y: number }>
+> = {
+  // One way, then the other, then damped onto the camera — the eyes land there
+  // a beat before the bubble opens, so the question is asked at somebody.
+  wonder: (elapsed) => {
+    const p = Math.min(1, elapsed / STATE_MS.wonder);
+    const damp = p < 0.72 ? 1 : Math.max(0, (1 - p) / 0.28);
+    return { x: Math.sin(p * Math.PI * 2) * 0.9 * damp, y: -0.12 * damp };
+  },
+};
 
 /**
  * Owns every per-frame concern in one requestAnimationFrame loop: where NOVA
@@ -163,6 +300,27 @@ export function useNovaStage({
     /** The pose actually on screen this frame. */
     let pose: Pose = restingPose(0);
     let joyTimer: number | undefined;
+    /** Music is playing. Read by the gaze, which stops tracking while it is. */
+    let vibing = false;
+    /** True while the current state came out of the idle repertoire. */
+    let fromRepertoire = false;
+    /**
+     * The light-switch gag has the stage.
+     *
+     * Needed because the gag drops back to `idle` between beats — her hand comes
+     * off the switch while she admires the work — and `idle` is exactly what the
+     * repertoire and the wave wait for. Without this she would break off
+     * mid-prank to inspect her own hand.
+     */
+    let mischief = false;
+    /** So the pool never plays the same thing twice running. */
+    let lastAct: NovaState | null = null;
+    /** Mirrors `pose.turn` past the threshold, so the face isn't re-toggled. */
+    let facingAway = false;
+    /** Last value written to `data-temper`. Null so the first frame always writes
+        one — the store outlives this effect, and a remount that inherited a sulk
+        would otherwise show a perfectly cheerful face through it. */
+    let temper: ReturnType<typeof getTemper> | null = null;
 
     const timers = new Set<number>();
     const later = (fn: () => void, ms: number) => {
@@ -183,6 +341,22 @@ export function useNovaStage({
       pointer.y = event.clientY;
       pointerSeen = true;
       lastPointerAt = performance.now();
+
+      /*
+       * Caught pottering about.
+       *
+       * The repertoire is what she does when nobody is watching, so somebody
+       * watching ends it — carrying on inspecting her own hand while the
+       * visitor moves the cursor would read as her not having noticed them,
+       * which is the opposite of a robot who follows you around the page.
+       *
+       * The stretch is the exception, and gets to finish. Half a stretch is
+       * worse than none, and by the time the arms are overhead she is
+       * committed whether anyone is watching or not.
+       */
+      if (fromRepertoire && state !== "stretch") {
+        enterState("idle", lastPointerAt);
+      }
     };
 
     // Pointer gone from the window: let idle behaviour take back over.
@@ -356,6 +530,27 @@ export function useNovaStage({
       svg.style.setProperty("--pose-chest", pose.chest.toFixed(3));
       svg.style.setProperty("--pose-head-rot", pose.headRot.toFixed(2));
       svg.style.setProperty("--pose-head-y", pose.headY.toFixed(2));
+      svg.style.setProperty("--pose-leg-l", pose.legL.toFixed(2));
+      svg.style.setProperty("--pose-leg-r", pose.legR.toFixed(2));
+      svg.style.setProperty("--pose-turn", pose.turn.toFixed(3));
+
+      /* The face goes when she's far enough round for it to be behind her.
+         An attribute rather than an opacity derived from `--pose-turn`, so the
+         180ms fade in CSS lands exactly at the edge-on frame — the one moment
+         in the turn where losing a face is invisible. */
+      const away = pose.turn > FACING_AWAY_AT;
+      if (away !== facingAway) {
+        facingAway = away;
+        svg.dataset.facing = away ? "away" : "toward";
+      }
+
+      // Her temper drives the face from CSS. Compared before writing: this runs
+      // sixty times a second and only changes a handful of times a session.
+      const mood = getTemper();
+      if (mood !== temper) {
+        temper = mood;
+        svg.dataset.temper = mood;
+      }
 
       /* Gaze — origin derived from the transform above, not measured. */
       const halfHeight = (BASE_HEIGHT * scale) / 2;
@@ -367,12 +562,31 @@ export function useNovaStage({
       // Nothing behind the visor to look with. The gaze eases to centre rather
       // than being cut, so the last thing she does before the lights go out is
       // stop following you.
-      if (dead) {
+      //
+      // Vibing centres it for the opposite reason: she is in the zone, and a
+      // robot with her eyes shut still tracking your cursor would be a robot
+      // pretending. The ease below carries it there over about a second rather
+      // than cutting, so putting the headphones on reads as her letting go of
+      // you rather than as the tracking being switched off.
+      if (dead || vibing) {
         target.x = 0;
         target.y = 0;
         nextWanderAt = 0;
       } else if (idle) {
-        if (reducedMotion.matches) {
+        const script = GAZE_SCRIPT[state];
+        const bias = GAZE_BIAS[state];
+        if (script) {
+          // A gaze with a script of its own, played from the state's own clock.
+          const look = script(now - stateStartedAt);
+          target.x = look.x;
+          target.y = look.y;
+          nextWanderAt = 0;
+        } else if (bias) {
+          // An activity that has somewhere specific to look, looking there.
+          target.x = bias.x;
+          target.y = bias.y;
+          nextWanderAt = 0;
+        } else if (reducedMotion.matches) {
           target.x = 0;
           target.y = 0;
         } else if (now > nextWanderAt) {
@@ -390,9 +604,12 @@ export function useNovaStage({
         nextWanderAt = 0;
       }
 
-      // Drift lazily when idling, follow crisply when being led — and slower
-      // still on the way out, so the gaze settles rather than snapping to zero.
-      const ease = dead ? 0.02 : idle ? 0.035 : 0.12;
+      /* Drift lazily when idling, follow crisply when being led — and slower
+         still on the way out, so the gaze settles rather than snapping to zero.
+         The gag is the exception among the idle cases: it has a scripted gaze
+         with beats to hit, and at the idle rate she is still turning her eyes
+         towards the switch by the time the flick has already happened. */
+      const ease = dead ? 0.02 : idle ? (mischief ? 0.09 : 0.035) : 0.12;
       gaze.x += (target.x - gaze.x) * ease;
       gaze.y += (target.y - gaze.y) * ease;
 
@@ -535,15 +752,27 @@ export function useNovaStage({
 
       state = next;
       stateStartedAt = now;
-      stateEndsAt =
-        next === "idle" || next === "happy"
-          ? Infinity
-          : // `stateMs` rather than the raw table: a yawn on a dying battery
-            // plays in slow motion, and the timer has to agree with the pose or
-            // the stretch would finish early and hold.
-            now + stateMs(next, getSlump()) * (1 - intensity * 0.12);
+      stateEndsAt = SUSTAINED.has(next)
+        ? Infinity
+        : // `stateMs` rather than the raw table: a yawn on a dying battery
+          // plays in slow motion, and the timer has to agree with the pose or
+          // the stretch would finish early and hold.
+          now +
+          stateMs(next as TimedState, getSlump()) * (1 - intensity * 0.12);
       svg.dataset.state = next;
+      // Only `runIdleAct` sets this, and only after the call — anything else
+      // taking over means the current move is no longer hers to interrupt.
+      fromRepertoire = false;
     };
+
+    /**
+     * Whether `next` is allowed to take the stage from whatever is on it.
+     *
+     * Equal priority passes, so a celebration can replace a celebration and one
+     * idle activity can follow another. Everything automatic goes through this;
+     * the power events don't, because a robot dying is not negotiating.
+     */
+    const canPlay = (next: NovaState) => PRIORITY[next] >= PRIORITY[state];
 
     const busy = () => state !== "idle";
 
@@ -562,6 +791,13 @@ export function useNovaStage({
       // grins on every click would undo the whole state — the like still lands
       // and still throws hearts, she just hasn't the power to react to it.
       if (getPower().state !== "normal") return;
+
+      /* Cross, or listening to something. The face is the tell here as much as
+         the body: `data-joy` is a grin, and grinning through a sulk would give
+         the whole thing away. Music wins over both — she's just not available.
+         Checked before the joy face rather than alongside the body, because
+         `canPlay` guards limbs and this guards the expression. */
+      if (!canPlay("happy")) return;
 
       // Face first, always, however fast they click. Pure opacity, so it can
       // retrigger endlessly without ever snapping.
@@ -586,11 +822,75 @@ export function useNovaStage({
       if (!queued && kind !== state) queued = kind;
     };
 
-    /** The idle wave. Never interrupts a celebration, or a flat battery. */
+    /** The idle wave. Never interrupts a celebration, a flat battery, or a gag. */
     const wave = () => {
-      if (reducedMotion.matches || busy()) return;
+      if (reducedMotion.matches || busy() || mischief) return;
       if (getPower().state !== "normal") return;
       enterState("wave", performance.now());
+    };
+
+    /* ---------------------------------------------------------------- */
+    /* Idle repertoire                                                   */
+    /* ---------------------------------------------------------------- */
+
+    /**
+     * One of the pool, weighted, never the one that just played.
+     *
+     * The exclusion is dropped rather than enforced when it would empty the
+     * pool — the low-battery set is two long, and "never twice in a row" has to
+     * lose to "play something" when the alternative is a robot that stops
+     * moving altogether at 20%.
+     */
+    const pickAct = (pool: typeof IDLE_ACTS): NovaState => {
+      const fresh = pool.filter((act) => act.state !== lastAct);
+      const choices = fresh.length > 0 ? fresh : pool;
+      const total = choices.reduce((sum, act) => sum + act.weight, 0);
+
+      let roll = Math.random() * total;
+      for (const act of choices) {
+        roll -= act.weight;
+        if (roll <= 0) return act.state;
+      }
+      return choices[choices.length - 1].state;
+    };
+
+    /**
+     * Something to do when nobody is watching.
+     *
+     * Every guard here is the same guard the wave has, for the same reasons —
+     * these are things she does *instead of* being watched, so the pool goes
+     * quiet the moment there is a cursor to follow or a boot still finishing.
+     */
+    const runIdleAct = () => {
+      if (reducedMotion.matches || !getBootComplete()) return;
+      // She's busy. The gag parks her in `idle` between its own beats, which is
+      // exactly the condition below, so this has to be checked first.
+      if (mischief) return;
+      if (state !== "idle") return;
+      if (pointerSeen && performance.now() - lastPointerAt < IDLE_AFTER) return;
+
+      // Nothing left to potter about with. Charging is deliberately *not* a
+      // guard — unlike the yawn, which is tiredness and stops when she's on the
+      // mains, none of these are about how much power she has.
+      const power = getPower();
+      if (power.state === "dead") return;
+
+      const tired = power.state === "low" || power.state === "critical";
+      const next = pickAct(tired ? TIRED_ACTS : IDLE_ACTS);
+
+      lastAct = next;
+      enterState(next, performance.now());
+      fromRepertoire = true;
+    };
+
+    const scheduleIdleAct = () => {
+      later(
+        () => {
+          runIdleAct();
+          scheduleIdleAct();
+        },
+        IDLE_ACT_MIN_MS + Math.random() * (IDLE_ACT_MAX_MS - IDLE_ACT_MIN_MS),
+      );
     };
 
     // Idle waves, at a randomised interval so they never feel metronomic.
@@ -698,8 +998,193 @@ export function useNovaStage({
       }
     };
 
-    // Hello, once, after the boot screen clears.
-    const greetOnBoot = () => later(wave, 400);
+    /* Hello, once, after the boot screen clears — and a beat after that, so the
+       stage lands before she waves into it rather than with it. The bus now
+       fires this at the end of the dissolve instead of at the start, so the
+       wave is no longer spent behind an overlay that's still up. */
+    const greetOnBoot = () => later(wave, 800);
+
+    /* ---------------------------------------------------------------- */
+    /* Music                                                             */
+    /* ---------------------------------------------------------------- */
+
+    /**
+     * The player opened or closed.
+     *
+     * The headphones are an attribute rather than a pose, and they go on even
+     * under reduced motion — a visitor who asked not to watch things move has
+     * not asked to be left out of the joke. What the preference takes away is
+     * the groove: no bob, no sway, no notes.
+     */
+    const runVibe = (on: boolean) => {
+      vibing = on;
+      if (on) svg.dataset.vibing = "true";
+      else delete svg.dataset.vibing;
+
+      if (reducedMotion.matches) return;
+      const now = performance.now();
+
+      if (on) {
+        // Top of the priority table, so this is the one trigger that never has
+        // to ask: it takes the stage from a sulk, a celebration, anything.
+        queued = null;
+        intensity = 0;
+        enterState("vibe", now);
+        return;
+      }
+
+      /* One last happy shake on the way out — but only from `vibe` itself. If
+         something above her in the table already took over (dying, most
+         likely) a cheerful wiggle on top of it would be the wrong note
+         entirely. The engine hands `shake` back to idle when it finishes. */
+      if (state === "vibe") enterState("shake", now);
+    };
+
+    /* ---------------------------------------------------------------- */
+    /* The light-switch gag                                              */
+    /* ---------------------------------------------------------------- */
+
+    /**
+     * One beat of "anyone home?".
+     *
+     * Her half only: the props and the theme are `nova-lights.ts`'s, the words
+     * are the bubble's, and what's left here is a body and three faces.
+     *
+     * `canPlay` is deliberately not consulted. The gag has already asked a
+     * stricter question than this one — it refuses to start at all unless she is
+     * off the mains, above 20%, off the headphones and in a good mood — and once
+     * it *is* running, `caught` has to be able to land from any of its own
+     * states, which an equal-priority check would allow but a stricter reading
+     * of "don't interrupt yourself" would not.
+     */
+    const runLightsBeat = (next: LightsBeat) => {
+      const now = performance.now();
+
+      switch (next) {
+        case "wonder":
+          mischief = true;
+          /* Reduced motion gets the calm version, which is the bubble and one
+             slow swap of the page. There is no pose in it at all — the beat
+             still arrives so the bubble can open, and stops here. */
+          if (reducedMotion.matches) return;
+          queued = null;
+          intensity = 0;
+          enterState("wonder", now);
+          return;
+
+        case "idea":
+          if (reducedMotion.matches) return;
+          svg.dataset.mischief = "idea";
+          enterState("idea", now);
+          return;
+
+        case "flick":
+          if (reducedMotion.matches) return;
+          // Once the flicking stops being careful, so does she.
+          if (getLights().phase === "crescendo") {
+            svg.dataset.mischief = "glee";
+          }
+          // Re-entered per flick on purpose — the arm stays out and only the
+          // wrist restarts. See `flick` in `nova-pose.ts`.
+          enterState("flick", now);
+          return;
+
+        case "caught":
+          if (reducedMotion.matches) return;
+          svg.dataset.mischief = "innocent";
+          queued = null;
+          intensity = 0;
+          enterState("caught", now);
+          return;
+
+        case "over":
+          mischief = false;
+          delete svg.dataset.mischief;
+          // No `enterState` here: `caught` is timed and has already handed back
+          // to idle by the time this lands. Cutting to idle again would only
+          // restart a blend that has finished.
+          return;
+
+        case "scheme":
+          // Words, not movement. The bubble has this one.
+          return;
+      }
+    };
+
+    /* ---------------------------------------------------------------- */
+    /* Temper                                                            */
+    /* ---------------------------------------------------------------- */
+
+    /**
+     * She's had enough — or has stopped having had enough.
+     *
+     * Only the body is here. The face is `data-temper`, written from the frame
+     * loop, which is what keeps the flat mouth and the half-lidded eyes working
+     * under reduced motion where none of these poses run.
+     */
+    const runTemper = (next: ReturnType<typeof getTemper>) => {
+      const now = performance.now();
+
+      /* Reduced motion gets the expression and nothing else: the turn rotates
+         her whole body, which is precisely what the preference is asking not to
+         see. The sulk still has to *start*, or the cooldown never runs and she
+         never forgives anybody. */
+      if (reducedMotion.matches) {
+        if (next === "mad") beginSulk();
+        return;
+      }
+
+      switch (next) {
+        case "annoyed":
+          if (!canPlay("annoyed")) return;
+          queued = null;
+          intensity = 0;
+          enterState("annoyed", now);
+          return;
+
+        case "mad":
+          if (!canPlay("turnAway")) return;
+          intensity = 0;
+          enterState("turnAway", now);
+          /* Queued rather than timed, so the pose that holds her turned round
+             takes over on the exact frame the turn finishes. A timer racing the
+             engine would drop her back to idle for however many frames it lost
+             by, unwinding the whole turn on screen and then redoing it. */
+          queued = "sulk";
+          later(beginSulk, STATE_MS.turnAway);
+          return;
+
+        case "sulking":
+          // Usually already there, via the queue above. This is the belt for
+          // the reduced-motion braces, and for a `mad` that lost `canPlay`.
+          if (state !== "sulk" && canPlay("sulk")) enterState("sulk", now);
+          return;
+
+        case "thawing":
+          if (state === "sulk" || state === "glance") {
+            enterState("forgive", now);
+          }
+          return;
+
+        case "delighted":
+          return;
+      }
+    };
+
+    /**
+     * Poked while she isn't talking to you.
+     *
+     * The one thing a click still buys during the strike, and pointedly not a
+     * reward: she looks over a shoulder, never comes far enough round to show
+     * her face, and goes back to it. `queued` is what takes her back — the
+     * glance is a detour off the sulk, not a state she can be left in.
+     */
+    const runSnub = () => {
+      if (reducedMotion.matches) return;
+      if (state !== "sulk" && state !== "glance") return;
+      queued = "sulk";
+      enterState("glance", performance.now());
+    };
 
     /* ---------------------------------------------------------------- */
     /* Liking                                                            */
@@ -725,6 +1210,10 @@ export function useNovaStage({
       if (reducedMotion.matches) return;
       // A flat robot doesn't flinch when you poke her.
       if (getPower().state === "dead") return;
+      // Neither does one that hasn't finished powering on. She's drawn above
+      // the boot overlay, so every click on the splash reaches this handler —
+      // and a click on the boot screen is now supposed to do nothing at all.
+      if (!getBootComplete()) return;
       svg.dataset.react = "true";
       blink();
       later(() => {
@@ -739,6 +1228,29 @@ export function useNovaStage({
     const offBooted = onNovaBooted(greetOnBoot);
     const offCelebrate = onCelebrate(runCelebration);
     const offPower = onPowerEvent(runPowerEvent);
+    const offVibe = onVibeChange(runVibe);
+    const offTemper = onTemperChange(runTemper);
+    const offLights = onLightsBeat(runLightsBeat);
+    /*
+     * Subscribed to the like itself rather than to a celebration, because past
+     * stage one there *is* no celebration — that's the whole point. What's left
+     * is the two things a refused click still gets.
+     *
+     * `counts && !celebrate` is exactly the exasperated stage, and it re-enters
+     * the head-shake on every one of them: `onTemperChange` fires only on the
+     * way in, so without this the tenth click through the fourteenth would each
+     * get the first one's answer standing in for them, which reads as her
+     * having stopped noticing rather than as her noticing repeatedly.
+     */
+    const offLike = onLike((event) => {
+      if (event.celebrate || reducedMotion.matches) return;
+
+      if (event.counts) {
+        if (canPlay("annoyed")) enterState("annoyed", performance.now());
+        return;
+      }
+      runSnub();
+    });
     window.addEventListener("keydown", handleKeyDown);
 
     frame = requestAnimationFrame(tick);
@@ -750,6 +1262,7 @@ export function useNovaStage({
       scheduleWave();
       scheduleYawn();
       scheduleNod();
+      scheduleIdleAct();
     }
 
     return () => {
@@ -758,6 +1271,10 @@ export function useNovaStage({
       offBooted();
       offCelebrate();
       offPower();
+      offVibe();
+      offTemper();
+      offLights();
+      offLike();
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerout", handlePointerOut);

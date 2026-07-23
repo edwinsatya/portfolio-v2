@@ -1,19 +1,41 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSelectedLayoutSegment } from "next/navigation";
 import { greetings, type NovaMood } from "@/content/profile";
+import {
+  ANNOYED_LINES,
+  FORGIVEN_LINE,
+  LIGHTS_LINES,
+  SULK_LINES,
+} from "@/content/nova-qa";
 import { sceneFromSegment } from "@/content/scenes";
-import { celebrate, getStageBusy, subscribeStageBusy } from "@/lib/nova-bus";
+import {
+  celebrate,
+  getStageBusy,
+  onLike,
+  subscribeStageBusy,
+} from "@/lib/nova-bus";
+import { onLightsBeat } from "@/lib/nova-lights";
+import { getTemper, onTemperChange, resetTemper } from "@/lib/nova-temper";
 import { onForget } from "@/lib/memory";
+import { useBootComplete } from "./useBootComplete";
 import { useNovaMemory } from "./useNovaMemory";
 
 /** Beat before the face changes, so a fast click-through doesn't strobe. */
 const MOOD_DELAY = 160;
 /** How long the returning-visitor bubble stays up. */
 const BUBBLE_MS = 4200;
-/** Long enough for the boot screen to clear first. */
-const GREETING_DELAY = 1200;
+/**
+ * Beat between the stage being revealed and NOVA speaking into it.
+ *
+ * Measured from the boot completing, not from mount. It used to be 1200ms from
+ * mount and described as "long enough for the boot screen to clear" — which it
+ * never was: the first-visit boot runs ten seconds and the returning visitor's
+ * three, and it's the returning visitor who gets this bubble. The greeting was
+ * opening on top of the POST log every time.
+ */
+const GREETING_DELAY = 800;
 
 /**
  * NOVA's reaction to the current scene.
@@ -27,6 +49,7 @@ export function useSceneReactions() {
   const segment = useSelectedLayoutSegment();
   const scene = sceneFromSegment(segment);
   const { visit, markSectionSeen } = useNovaMemory();
+  const bootComplete = useBootComplete();
 
   const [mood, setMood] = useState<NovaMood>("greeting");
   const [line, setLine] = useState("");
@@ -36,6 +59,22 @@ export function useSceneReactions() {
   const greeted = useRef(false);
 
   const previous = visit.previous;
+
+  /**
+   * Put a line in the bubble, and take it away again.
+   *
+   * Hoisted so every source shares the one dismiss timer. There is a single
+   * bubble, and three unrelated things can want it — a returning visitor's
+   * welcome, a line about being clicked at, and NOVA caught at the light switch.
+   * Sharing the timer is what stops one of them cancelling a line the next has
+   * already replaced, which would leave the bubble open forever.
+   */
+  const say = useCallback((text: string) => {
+    window.clearTimeout(dismissTimer.current);
+    setLine(text);
+    setOpen(true);
+    dismissTimer.current = window.setTimeout(() => setOpen(false), BUBBLE_MS);
+  }, []);
 
   // Face follows the scene.
   useEffect(() => {
@@ -48,8 +87,10 @@ export function useSceneReactions() {
     markSectionSeen(scene.id);
   }, [scene.id, markSectionSeen]);
 
-  // Welcome a returning visitor back, once, on HOME.
+  // Welcome a returning visitor back, once, on HOME — and only once the boot
+  // overlay is gone and the stage she's greeting them onto is actually there.
   useEffect(() => {
+    if (!bootComplete) return;
     if (!previous || greeted.current || scene.id !== "home") return;
     if (previous.visitCount === 0) return;
 
@@ -72,7 +113,7 @@ export function useSceneReactions() {
     }, GREETING_DELAY);
 
     return () => window.clearTimeout(timer);
-  }, [previous, scene.id]);
+  }, [bootComplete, previous, scene.id]);
 
   /*
    * Opening the terminal retires the bubble for good.
@@ -93,17 +134,82 @@ export function useSceneReactions() {
     [],
   );
 
+  /*
+   * The overstimulation arc, in words.
+   *
+   * Through the bubble rather than the tagline rotation, deliberately: the
+   * rotation is ambient narration about Edwin's work, and a line about what the
+   * visitor is doing right now has to come *from* her *at* them. It reuses the
+   * greeting's dismiss timer, so a line about being clicked at and a "welcome
+   * back" can never end up on screen fighting over the same bubble.
+   *
+   * No boot gate here: the clicks that drive this can't happen before boot —
+   * `fireLike` refuses them — so the temper can't change before the stage is up.
+   */
+  useEffect(() => {
+    // Cycled rather than random: being snubbed three times in a row with the
+    // identical two words reads as a broken string, not as a mood.
+    let snub = 0;
+    const nextSulkLine = () => SULK_LINES[snub++ % SULK_LINES.length];
+
+    const offTemper = onTemperChange((next) => {
+      if (next === "annoyed") {
+        say(ANNOYED_LINES[Math.floor(Math.random() * ANNOYED_LINES.length)]);
+      } else if (next === "mad") {
+        say(nextSulkLine());
+      }
+    });
+
+    const offLike = onLike((event) => {
+      // The one click that's worth double is the one that gets the apology.
+      if (event.burst > 1) {
+        say(FORGIVEN_LINE);
+        return;
+      }
+      // Still poking a turned back.
+      if (!event.counts && getTemper() === "sulking") say(nextSulkLine());
+    });
+
+    return () => {
+      offTemper();
+      offLike();
+    };
+  }, [say]);
+
+  /*
+   * The light-switch gag, in words.
+   *
+   * Three beats out of the six `nova-lights.ts` publishes — the other three are
+   * things she does rather than says, and belong to the pose engine. Through the
+   * bubble for the same reason the temper lines are: this is her talking to the
+   * visitor about the room they are both in, which the tagline rotation is not
+   * the voice for.
+   *
+   * No boot gate. The gag will not start before boot, so there is nothing to
+   * gate — see `allowed()`.
+   */
+  useEffect(
+    () =>
+      onLightsBeat((beat) => {
+        if (beat === "wonder") say(LIGHTS_LINES.wonder);
+        else if (beat === "scheme") say(LIGHTS_LINES.scheme);
+        else if (beat === "caught") say(LIGHTS_LINES.caught);
+      }),
+    [say],
+  );
+
   // Memory wiped from the chat or elsewhere: say so, and allow greeting again.
   useEffect(
     () =>
       onForget(() => {
         greeted.current = false;
-        window.clearTimeout(dismissTimer.current);
-        setLine(greetings.forgotten);
-        setOpen(true);
-        dismissTimer.current = window.setTimeout(() => setOpen(false), BUBBLE_MS);
+        // Being asked to forget them clears the grudge too. She's meeting a
+        // stranger — carrying on a sulk about what the last one did with the
+        // mouse would be the one thing a wiped memory shouldn't remember.
+        resetTemper();
+        say(greetings.forgotten);
       }),
-    [],
+    [say],
   );
 
   useEffect(() => () => window.clearTimeout(dismissTimer.current), []);

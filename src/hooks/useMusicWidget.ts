@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
-import { celebrate, noPower, onNovaBooted } from "@/lib/nova-bus";
+import { celebrate, noPower, onNovaBooted, setNovaVibing } from "@/lib/nova-bus";
 import { isDead, onPowerEvent } from "@/lib/power";
 import { usePower } from "./usePower";
 
@@ -116,6 +116,24 @@ export function useMusicWidget() {
     if (mode === "closed") celebrate("hop");
     setMode("open");
   }, [mode]);
+
+  /*
+   * Tells NOVA there's something to listen to.
+   *
+   * Keyed off `mode` rather than off `open()`, because the thing she is
+   * reacting to is the iframe being mounted, and that is exactly what `mode`
+   * describes: `mini` keeps it playing, so she keeps her headphones on while
+   * the panel is collapsed, and only `closed` — which unmounts it — takes them
+   * off. Published from here rather than from the widget's markup so the one
+   * place that owns the player's lifecycle is the one place that announces it.
+   */
+  useEffect(() => {
+    setNovaVibing(mode !== "closed");
+  }, [mode]);
+
+  // A player left open when the widget unmounts would leave her wearing
+  // headphones for music that stopped with it.
+  useEffect(() => () => setNovaVibing(false), []);
 
   /** Collapses to the mini bar. The iframe survives, so playback carries on. */
   const minimize = useCallback(() => setMode("mini"), []);

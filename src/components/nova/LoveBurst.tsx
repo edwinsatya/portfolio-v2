@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { onLike, type LikeOrigin } from "@/lib/nova-bus";
+import { onLike, type LikeEvent } from "@/lib/nova-bus";
 
 /** How long one heart lives. Matches the keyframes in nova.css. */
 const HEART_MS = 1500;
@@ -40,10 +40,19 @@ export function LoveBurst() {
 
   useEffect(
     () =>
-      onLike((origin: LikeOrigin) => {
-        const count =
-          MIN_PER_BURST +
-          Math.floor(Math.random() * (MAX_PER_BURST - MIN_PER_BURST + 1));
+      onLike((event: LikeEvent) => {
+        /* She has had enough. The hearts are the first thing to go — before
+           the celebrations, before the counter — because they're the part of
+           the interaction that reads as encouragement, and stage two is her
+           declining to encourage it. */
+        if (!event.hearts) return;
+
+        const { origin, burst } = event;
+        const count = Math.round(
+          (MIN_PER_BURST +
+            Math.floor(Math.random() * (MAX_PER_BURST - MIN_PER_BURST + 1))) *
+            burst,
+        );
 
         // No explicit origin means "from NOVA's head" — the stage loop keeps
         // these two properties current.

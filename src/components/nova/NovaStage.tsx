@@ -3,14 +3,18 @@
 import { useEffect, useRef } from "react";
 import { addLike } from "@/lib/likes";
 import { celebrate, fireLike, onCelebrate, onLike } from "@/lib/nova-bus";
+import { startLightsWatch } from "@/lib/nova-lights";
+import { startTemperClock } from "@/lib/nova-temper";
 import { onCharged, spendOnCelebration, startPowerClock } from "@/lib/power";
 import { initTheme } from "@/lib/theme";
 import { DockPill } from "./DockPill";
 import { LoveBurst } from "./LoveBurst";
+import { MusicNotes } from "./MusicNotes";
 import { Nova } from "./Nova";
 import { NovaTerminal } from "./NovaTerminal";
 import { PowerSocket } from "./PowerSocket";
 import { ResumeWindow } from "./ResumeWindow";
+import { StageLights } from "./StageLights";
 import { useNovaChat } from "@/hooks/useNovaChat";
 import { useNovaMemory } from "@/hooks/useNovaMemory";
 import { useNovaStage } from "@/hooks/useNovaStage";
@@ -64,13 +68,22 @@ export function NovaStage() {
     wasOpen.current = chat.isOpen;
   }, [chat.isOpen]);
 
-  // One place records a like and picks a celebration, whatever fired it — the
-  // L key, the counter, the tagline, or NOVA herself.
+  /*
+   * One place records a like and picks a celebration, whatever fired it — the
+   * L key, the counter, the tagline, or NOVA herself.
+   *
+   * Both halves are now conditional, and on different flags, because they come
+   * apart in the middle of the overstimulation arc: exasperated, she stops
+   * reacting but the like still counts (a total that silently froze would read
+   * as a bug rather than as a mood); sulking, nothing lands at all. The verdict
+   * rides on the event so every listener is reading one decision — see
+   * `nova-temper.ts`.
+   */
   useEffect(
     () =>
-      onLike(() => {
-        addLike();
-        celebrate();
+      onLike((event) => {
+        if (event.counts) addLike();
+        if (event.celebrate) celebrate();
       }),
     [],
   );
@@ -83,10 +96,21 @@ export function NovaStage() {
    */
   useEffect(() => startPowerClock(), []);
 
+  // And her patience, which recovers on its own clock for the same reason: a
+  // sulk has to end whether or not anybody is still clicking — especially then,
+  // since not clicking is exactly what she asked for. See `nova-temper.ts`.
+  useEffect(() => startTemperClock(), []);
+
   // Wakes the theme store, which is what subscribes it to the battery. Without
   // this a visitor who never types `/dark-mode` would drain to 20% and never
   // get battery saver — see the note on `initTheme`.
   useEffect(() => initTheme(), []);
+
+  // And the minute-of-silence watch that eventually catches her at the light
+  // switch. Here for the same reason as the two clocks above: it listens on the
+  // window and fires at most once a session, so it belongs to the page rather
+  // than to anything that renders. See `nova-lights.ts`.
+  useEffect(() => startLightsWatch(), []);
 
   // Moving costs her something. Subscribed to the bus rather than folded into
   // the like handler above, because celebrations also come from the music
@@ -104,6 +128,15 @@ export function NovaStage() {
       data-chatting={chat.isEngaged || resume.isEngaged}
       data-window={chat.isOpen ? chat.windowState : undefined}
     >
+      {/* Her props for the light-switch gag, mounted only for the ten seconds
+          it runs. First in the layer so it paints *behind* her: the lamp throws
+          a cone of light wide enough to stand in, and in front it would be a
+          cyan film over the robot rather than something lighting her. Positioned
+          from the same custom properties as the hearts and the notes, for the
+          same reason — the anchor scales to a third in the corner dock, and a
+          ceiling lamp that shrank with it would be a speck. */}
+      <StageLights />
+
       <div ref={anchorRef} className="nova-anchor">
         <Nova ref={svgRef} mood={mood} />
 
@@ -148,6 +181,12 @@ export function NovaStage() {
       </div>
 
       <LoveBurst />
+
+      {/* Drifts up off her headphones while the player is open. Same layer and
+          the same reason as the hearts: it reads NOVA's head position off the
+          stage loop rather than living inside her anchor, which is scaled down
+          to a third in the corner dock. */}
+      <MusicNotes />
 
       {/* Inside the stage layer so it rides up with it: a window opening covers
           the cable with its scrim, the same way it covers the music widget. */}
