@@ -322,6 +322,17 @@ export const ROTATING_LINES = [
 ];
 
 /**
+ * Her one mention of the older portfolio.
+ *
+ * Kept out of `ROTATING_LINES` because it isn't one: the rotation repeats for
+ * as long as the visitor stays, and a robot bringing up the previous build
+ * every couple of minutes would read as her wanting them to leave. Shown once
+ * per session, then dropped from the pool — see `lib/legacy.ts`.
+ */
+export const CLASSIC_BUILD_LINE =
+  "there's also a classic me — type /v1 if you're curious.";
+
+/**
  * What she says once the battery is under 20%.
  *
  * Replaces the rotation outright rather than joining it — a robot alternating

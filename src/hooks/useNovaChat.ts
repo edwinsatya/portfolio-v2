@@ -19,6 +19,7 @@ import {
   setNovaThinking,
   setWindowOpen,
 } from "@/lib/nova-bus";
+import { goToLegacy, SWITCH_DELAY_MS } from "@/lib/legacy";
 import { sanitizeName, setVisitorName } from "@/lib/memory";
 import { getPower, isDead, onPowerEvent, setLevel } from "@/lib/power";
 import { setTheme } from "@/lib/theme";
@@ -65,6 +66,7 @@ export const COMMANDS = [
   "/about",
   "/contact",
   "/cv",
+  "/v1",
   "/dark-mode",
   "/light-mode",
   "/clear",
@@ -85,6 +87,7 @@ const COMMAND_HELP: Record<Command, string> = {
   "/about": "jump to the about scene",
   "/contact": "jump to the contact scene",
   "/cv": "open edwin's resume in a new tab",
+  "/v1": "leave for the classic build (/classic)",
   "/dark-mode": "lights out",
   "/light-mode": "lights on — needs power",
   "/clear": "wipe the screen (ctrl+l)",
@@ -330,6 +333,16 @@ export function useNovaChat({
         case "/cv":
           push({ kind: "reply", text: "opening resume in a new tab…" });
           window.open(profile.links.resume, "_blank", "noopener,noreferrer");
+          return true;
+
+        case "/v1":
+        case "/classic":
+          // The one command that ends the session: a full load to the older
+          // portfolio. `status` rather than `reply` — this is the terminal
+          // reporting what it's doing, not NOVA saying goodbye — and the beat
+          // before leaving is what makes the line readable at all.
+          push({ kind: "status", text: "// loading classic build…" });
+          window.setTimeout(goToLegacy, SWITCH_DELAY_MS);
           return true;
 
         case "/dark-mode":

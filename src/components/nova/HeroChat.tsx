@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
+  CLASSIC_BUILD_LINE,
   CRITICAL_LINES,
   LOW_POWER_LINES,
   ROTATING_LINES,
 } from "@/content/nova-qa";
 import { usePower } from "@/hooks/usePower";
+import { classicHintPending, markClassicHintShown } from "@/lib/legacy";
 import type { PowerState } from "@/lib/power";
 import {
   askNova,
@@ -28,6 +30,8 @@ const WORD_REVEAL_MS = 420;
 const START_DELAY = 600;
 /** Window for a second tap to count as a double-tap. */
 const DOUBLE_TAP_MS = 320;
+/** Where the once-per-session classic-build mention sits in the rotation. */
+const CLASSIC_HINT_AT = 1;
 
 /**
  * NOVA's line and suggestion chips, bottom-left of the stage.
@@ -102,11 +106,19 @@ function LineRotator({ line, state }: { line: string; state: PowerState }) {
      narrating the section she's standing in would be the wrong voice entirely,
      and a dying one more so. `dead` keeps the critical script: she stopped
      mid-sentence, and what's on screen is where she stopped. */
+  /* The classic-build mention rides along until it has been said once. Second
+     in the pool rather than last: a line takes about ten seconds, the rotator
+     restarts on every scene change, and a mention buried four lines deep is one
+     most visitors would never reach. The scene line still goes first. */
+  const [classicHint, setClassicHint] = useState(classicHintPending);
+
   const lines = useMemo(() => {
     if (state === "critical" || state === "dead") return CRITICAL_LINES;
     if (state === "low") return LOW_POWER_LINES;
-    return [line, ...ROTATING_LINES];
-  }, [line, state]);
+    const pool = [line, ...ROTATING_LINES];
+    if (classicHint) pool.splice(CLASSIC_HINT_AT, 0, CLASSIC_BUILD_LINE);
+    return pool;
+  }, [line, state, classicHint]);
   const [index, setIndex] = useState(0);
   const [visible, setVisible] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -126,6 +138,7 @@ function LineRotator({ line, state }: { line: string; state: PowerState }) {
 
   const current = lines[index];
   const words = useMemo(() => current.split(" "), [current]);
+  const showingClassicHint = current === CLASSIC_BUILD_LINE;
 
   // Reveal the line, then hand over to the hold timer below.
   useEffect(() => {
@@ -134,6 +147,10 @@ function LineRotator({ line, state }: { line: string; state: PowerState }) {
     const show = window.setTimeout(
       () => {
         setVisible(true);
+        // Counted as said the moment it's on screen, not when it rotates away:
+        // the rotator remounts on every scene change, and a visitor who reads
+        // it and then navigates has been told.
+        if (showingClassicHint) markClassicHintShown();
         // Reveal finishes when the last word's transition ends.
         const revealMs = reduced
           ? 0
@@ -145,7 +162,7 @@ function LineRotator({ line, state }: { line: string; state: PowerState }) {
     );
 
     return () => window.clearTimeout(show);
-  }, [index, words.length]);
+  }, [index, words.length, showingClassicHint]);
 
   // The hold. Re-runs on pause changes, banking the time already served.
   useEffect(() => {
@@ -162,11 +179,19 @@ function LineRotator({ line, state }: { line: string; state: PowerState }) {
     const timer = window.setTimeout(() => {
       remaining.current = null;
       setVisible(false);
-      setIndex((i) => (i + 1) % lines.length);
+      if (showingClassicHint) {
+        // Retire it on the way out, and hand over by position rather than by
+        // increment: dropping it shifts the rest of the pool down one, so a
+        // plain `i + 1` would step straight over the line that follows it.
+        setClassicHint(false);
+        setIndex(CLASSIC_HINT_AT);
+      } else {
+        setIndex((i) => (i + 1) % lines.length);
+      }
     }, remaining.current);
 
     return () => window.clearTimeout(timer);
-  }, [paused, index, visible, lines.length]);
+  }, [paused, index, visible, lines.length, showingClassicHint]);
 
   return (
     <p

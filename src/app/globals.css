@@ -908,6 +908,115 @@ html[data-theme-shift="true"] *::after {
   color: var(--color-faint);
 }
 
+/* -------------------------------------------------------------------------- */
+/* Boot: build selector                                                        */
+/* -------------------------------------------------------------------------- */
+
+/* Two builds of this portfolio exist, and the boot screen is where saying so
+   costs nothing: it overlays stages that were already running, so the wait is
+   the same whether the visitor reads it or not. Static by design — nothing here
+   animates, so reduced motion needs no separate treatment. */
+.boot-select {
+  margin-top: 1.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  line-height: 1.9;
+  letter-spacing: 0.08em;
+  color: var(--color-faint);
+}
+
+.boot-select-title {
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.boot-option {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+  width: 100%;
+  /* Comfortably tappable on a phone without opening up the block on desktop,
+     where these are two lines of a monospace menu and should read as such. */
+  min-height: 1.9rem;
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* The caret column is held open by the marked option, so the unmarked one lines
+   up under it exactly the way it would in a real terminal menu. */
+.boot-option-mark {
+  width: 0.8em;
+  flex: none;
+  color: var(--color-accent);
+}
+
+.boot-option-name {
+  flex: none;
+  color: var(--color-chrome);
+}
+
+.boot-option[data-current="true"] .boot-option-name {
+  color: var(--color-accent-ink);
+}
+
+.boot-option-note {
+  /* Falls away first when the line runs out of room — the build names are the
+     choice, the notes are the footnote. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.boot-option:hover .boot-option-note,
+.boot-option:hover .boot-option-name {
+  color: var(--color-accent-ink);
+}
+
+/* The returning visitor's version: under a second of boot, so one line. */
+.boot-select[data-compact="true"] {
+  margin-top: 1.1rem;
+  text-transform: none;
+}
+
+.boot-option-inline {
+  font: inherit;
+  letter-spacing: inherit;
+  color: var(--color-chrome);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.boot-option-inline:hover {
+  color: var(--color-accent-ink);
+}
+
+.boot-select-switching {
+  margin-top: 1.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  color: var(--color-accent-ink);
+}
+
+@media (max-width: 640px) {
+  /* Names above notes: side by side, the note would be ellipsed to nothing. */
+  .boot-option {
+    flex-wrap: wrap;
+    row-gap: 0;
+    min-height: 2.4rem;
+  }
+
+  .boot-option-note {
+    width: 100%;
+    padding-left: 1.3em;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .nova-boot {
     transition: opacity 150ms ease;
