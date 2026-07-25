@@ -52,6 +52,7 @@ type NovaTerminalProps = {
   onToggleMaximize: () => void;
   onScene: (sceneId: string) => void;
   onProject: (slug: string) => void;
+  onCompose: (subject: string) => void;
 };
 
 /** Longest string every candidate starts with — bash's first-Tab target. */
@@ -97,6 +98,7 @@ export function NovaTerminal({
   onToggleMaximize,
   onScene,
   onProject,
+  onCompose,
 }: NovaTerminalProps) {
   const minimized = windowState === "minimized";
   const [draft, setDraft] = useState("");
@@ -590,6 +592,7 @@ export function NovaTerminal({
                 entry={entry}
                 onScene={onScene}
                 onProject={onProject}
+                onCompose={onCompose}
               />
           ))}
         </div>
@@ -623,6 +626,7 @@ export function NovaTerminal({
                 entry={entry}
                 onScene={onScene}
                 onProject={onProject}
+                onCompose={onCompose}
               />
           ))}
 
@@ -719,10 +723,12 @@ function TerminalRow({
   entry,
   onScene,
   onProject,
+  onCompose,
 }: {
   entry: TerminalLine;
   onScene: (sceneId: string) => void;
   onProject: (slug: string) => void;
+  onCompose: (subject: string) => void;
 }) {
   const scene = entry.scene
     ? scenes.find((s) => s.id === entry.scene)
@@ -782,6 +788,17 @@ function TerminalRow({
             </li>
           ))}
         </ul>
+      )}
+
+      {/* The point of the whole site, in one button. */}
+      {entry.compose && (
+        <button
+          type="button"
+          className="term-nav term-nav-send"
+          onClick={() => onCompose(entry.compose!)}
+        >
+          COMPOSE_EMAIL →
+        </button>
       )}
 
       {scene && (

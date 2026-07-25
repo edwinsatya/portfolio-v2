@@ -1,3 +1,4 @@
+import { BootNova } from "@/components/nova/BootNova";
 import { BootSequence } from "@/components/nova/BootSequence";
 
 /**
@@ -19,7 +20,8 @@ import { BootSequence } from "@/components/nova/BootSequence";
  * The boot still gates a first load: a link to a case study from outside opens
  * through the same splash as the front door. It is the same component the stage
  * uses and it knows when the session has already booted, so arriving here from
- * `/work` doesn't replay it.
+ * `/work` doesn't replay it — and `BootNova` puts the robot it is narrating on
+ * screen for the length of it, since there is no stage here holding one.
  */
 export default function ArtifactLayout({
   children,
@@ -27,6 +29,7 @@ export default function ArtifactLayout({
   return (
     <>
       {children}
+      <BootNova />
       <BootSequence />
     </>
   );

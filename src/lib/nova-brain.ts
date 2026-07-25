@@ -13,6 +13,8 @@ export type NovaReply = {
   scene?: string;
   /** Project slug to offer an OPEN_[…] button for. */
   project?: string;
+  /** Subject line to offer a COMPOSE_EMAIL button for. */
+  compose?: string;
   /** Chips to offer next. */
   suggestions: string[];
 };
@@ -169,16 +171,44 @@ export function matchProject(question: string): WorkCard | null {
       // The whole name, said as a phrase. Strongest signal there is.
       if (text.includes(name)) consider(card, 90);
 
+      /*
+       * Each name also matches by its own words, so "food" finds Food Analyzer
+       * and "google" finds Mini-Google without either having to be a prefix of
+       * the whole compacted name.
+       */
       const compact = name.replace(/\s+/g, "");
-      for (const token of tokens) {
-        if (token === compact) consider(card, 100);
-        // A prefix, and the closer to the whole word the better: "weather"
-        // beats "weat" for Weathernime, and neither is confused for anything.
-        else if (compact.startsWith(token)) {
-          consider(card, 80 - Math.min(20, compact.length - token.length));
-        } else if (token.startsWith(compact)) consider(card, 70);
-        else if (token.length >= 5 && editDistance(token, compact) <= 1) {
-          consider(card, 60);
+      const candidates = [compact, ...name.split(" ")].filter(
+        (candidate) => candidate.length >= NAME_MIN,
+      );
+
+      for (const candidate of candidates) {
+        for (const token of tokens) {
+          if (token === candidate) {
+            consider(card, 100);
+            continue;
+          }
+
+          /*
+           * A prefix — but it has to be most of the word.
+           *
+           * "weather" → Weathernime is a name being typed; "work" → workspace
+           * is a common English word colliding with an alias, and it cost the
+           * CONTACT scene its whole flow ("is he open to work?" came back with
+           * DeskLab). Requiring the token to cover half the candidate keeps the
+           * first and rejects the second.
+           */
+          if (
+            candidate.startsWith(token) &&
+            token.length * 2 >= candidate.length
+          ) {
+            consider(card, 80 - Math.min(20, candidate.length - token.length));
+            continue;
+          }
+
+          if (token.startsWith(candidate)) consider(card, 70);
+          else if (token.length >= 5 && editDistance(token, candidate) <= 1) {
+            consider(card, 60);
+          }
         }
       }
     }
@@ -216,6 +246,7 @@ export const scriptedResponder: NovaResponder = async (question, context) => {
   return {
     text: intent.answer(context),
     scene: intent.scene,
+    compose: intent.compose,
     suggestions: intent.followUps ?? DEFAULT_SUGGESTIONS,
   };
 };

@@ -48,6 +48,8 @@ export type TerminalLine = {
   project?: string;
   /** `/projects`: the whole list, as clickable rows. */
   projects?: string[];
+  /** On a reply: offer a COMPOSE_EMAIL button with this subject prefilled. */
+  compose?: string;
   /** Newly-landed replies type themselves; replayed history does not. */
   fresh?: boolean;
   /**
@@ -332,6 +334,24 @@ export function useNovaChat({
     [close, router],
   );
 
+  /**
+   * Opens the visitor's mail client with the subject already written.
+   *
+   * The terminal keeps the window: a `mailto:` doesn't navigate anywhere, and
+   * closing NOVA behind it would look like the click broke something. She
+   * reacts instead — this is the one action on the site that Edwin actually
+   * wants, so it's the one that gets a celebration.
+   */
+  const compose = useCallback(
+    (subject: string) => {
+      const url = `mailto:${profile.email}?subject=${encodeURIComponent(subject)}`;
+      window.location.href = url;
+      celebrate("hop");
+      push({ kind: "status", text: "// nice. he'll like this one." });
+    },
+    [push],
+  );
+
   /** Same, for a project's detail route — the palette's whole point. */
   const goToProject = useCallback(
     (slug: string) => {
@@ -551,6 +571,7 @@ export function useNovaChat({
               text: sleepy(reply.text),
               scene: reply.scene,
               project: reply.project,
+              compose: reply.compose,
               fresh: true,
             });
             setSuggestions(reply.suggestions);
@@ -707,6 +728,7 @@ export function useNovaChat({
     clear,
     goToScene,
     goToProject,
+    compose,
   };
 }
 
