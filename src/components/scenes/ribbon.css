@@ -1,0 +1,129 @@
+/* -------------------------------------------------------------------------- */
+/* Classic-build ribbon — right-edge portal                                    */
+/* -------------------------------------------------------------------------- */
+
+.classic-ribbon {
+  /* Sage/mint that reads as an accent in both themes — a bright tab on a dark
+     page, a fresh one on a light page. The centre text stays dark green on it
+     either way, which clears contrast on the mint. */
+  --ribbon: #6ee7b7;
+  --ribbon-ink: #0f2c22;
+
+  position: fixed;
+  right: 0;
+  top: 58%;
+  z-index: 46;
+  /* Vertical centring and the horizontal tuck are separate properties, so the
+     tuck can spring on its own without disturbing the centring. */
+  transform: translateY(-50%);
+  translate: 34% 0;
+  transition: translate 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  display: flex;
+  align-items: center;
+  /* The layer passes clicks through; the tab opts back in. */
+  pointer-events: none;
+}
+
+/* Slides fully out on hover / keyboard focus / while loading. */
+.classic-ribbon:hover,
+.classic-ribbon:focus-within,
+.classic-ribbon[data-loading] {
+  translate: 0 0;
+}
+
+.classic-ribbon-tab {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  width: 2.4rem;
+  padding: 0.7rem 0.35rem 0.8rem;
+  border: 1px solid color-mix(in oklab, var(--ribbon-ink) 22%, var(--ribbon));
+  border-right: none;
+  border-radius: 0.85rem 0 0 0.85rem;
+  background: var(--ribbon);
+  color: var(--ribbon-ink);
+  box-shadow: -8px 0 22px -10px rgb(20 22 31 / 0.35);
+  cursor: pointer;
+}
+
+.classic-ribbon-mono {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.classic-ribbon-vert {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.classic-ribbon-tip {
+  position: absolute;
+  right: calc(100% + 0.55rem);
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  padding: 0.32rem 0.6rem;
+  border-radius: 0.5rem;
+  background: var(--color-chrome);
+  color: var(--color-bg);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  box-shadow: 0 8px 22px -12px rgb(20 22 31 / 0.5);
+  opacity: 0;
+  translate: 6px 0;
+  transition:
+    opacity 200ms ease,
+    translate 200ms ease;
+  pointer-events: none;
+}
+
+.classic-ribbon:hover .classic-ribbon-tip,
+.classic-ribbon:focus-within .classic-ribbon-tip,
+.classic-ribbon[data-loading] .classic-ribbon-tip {
+  opacity: 1;
+  translate: 0 0;
+}
+
+/* The loading line reads as active. */
+.classic-ribbon[data-loading] .classic-ribbon-tip {
+  color: var(--color-accent-ink);
+  background: color-mix(in oklab, var(--color-chrome) 88%, var(--color-accent));
+}
+
+/* --- Phones ------------------------------------------------------------- */
+
+/* On phones the edge ribbon would float over the content it's trying to get out
+   of the way of, so it's dropped entirely — the classic access docks at the end
+   of the ABOUT read instead (`.about-classic-link`). */
+@media (max-width: 639px) {
+  .classic-ribbon {
+    display: none;
+  }
+}
+
+/* Tablet touch (no hover to spring it out): rest mostly out so a tap lands. */
+@media (hover: none) and (min-width: 640px) {
+  .classic-ribbon {
+    translate: 12% 0;
+  }
+}
+
+/* --- Reduced motion ----------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .classic-ribbon {
+    transition: none;
+  }
+}

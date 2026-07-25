@@ -8,6 +8,7 @@ import {
   type Capability,
 } from "@/content/profile";
 import type { ResumeTheme, WindowState } from "@/hooks/useResumeWindow";
+import type { ResumeSection } from "@/lib/nova-bus";
 import {
   Badge,
   Cloud,
@@ -45,6 +46,9 @@ type ResumeWindowProps = {
   isOpen: boolean;
   windowState: WindowState;
   theme: ResumeTheme;
+  /** A section to land on when the window opens, with a nonce so a repeat fires. */
+  focusSection: { id: ResumeSection; nonce: number } | null;
+  onFocusSectionConsumed: () => void;
   onClose: () => void;
   onMinimize: () => void;
   onToggleMaximize: () => void;
@@ -65,6 +69,8 @@ export function ResumeWindow({
   isOpen,
   windowState,
   theme,
+  focusSection,
+  onFocusSectionConsumed,
   onClose,
   onMinimize,
   onToggleMaximize,
@@ -218,6 +224,22 @@ export function ResumeWindow({
     requestAnimationFrame(step);
     setActive(id);
   }, []);
+
+  /*
+   * Land on a requested section when the window opens at one.
+   *
+   * Keyed on the nonce so opening at the same section twice still scrolls, and
+   * consumed straight after so a later plain open() doesn't re-jump. A beat of
+   * delay lets the dialog finish mounting before `scrollTo` reads `offsetTop`.
+   */
+  useEffect(() => {
+    if (!engaged || !focusSection) return;
+    const timer = window.setTimeout(() => {
+      scrollTo(focusSection.id);
+      onFocusSectionConsumed();
+    }, 90);
+    return () => window.clearTimeout(timer);
+  }, [engaged, focusSection, scrollTo, onFocusSectionConsumed]);
 
   const nav = (
     <>

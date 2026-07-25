@@ -18,23 +18,37 @@ export function SceneShell({
   children,
   /** Where the content sits relative to NOVA. */
   side = "right",
+  /**
+   * Optional layer rendered as a sibling of the scrolling content, not inside
+   * it — for decoration that must stay put while the content scrolls and reach
+   * outside the content column (ABOUT's floating badges and trajectory ticker).
+   * Position it with `position: absolute`; the scene box is the containing block.
+   */
+  overlay,
 }: {
   children: React.ReactNode;
   side?: "right" | "full";
+  overlay?: React.ReactNode;
 }) {
   const pathname = usePathname();
 
   // Keyed by pathname: React discards the old box and mounts a fresh one in its
   // pre-transition state, so there's nothing to reset and no cascading render.
-  return <SceneBox key={pathname} side={side}>{children}</SceneBox>;
+  return (
+    <SceneBox key={pathname} side={side} overlay={overlay}>
+      {children}
+    </SceneBox>
+  );
 }
 
 function SceneBox({
   children,
   side,
+  overlay,
 }: {
   children: React.ReactNode;
   side: "right" | "full";
+  overlay?: React.ReactNode;
 }) {
   const [entered, setEntered] = useState(false);
 
@@ -50,6 +64,7 @@ function SceneBox({
   return (
     <div className="scene" data-side={side} data-entered={entered}>
       <div className="scene-scroll">{children}</div>
+      {overlay}
     </div>
   );
 }

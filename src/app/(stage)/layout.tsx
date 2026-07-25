@@ -4,6 +4,8 @@ import { BootSequence } from "@/components/nova/BootSequence";
 import { MusicWidget } from "@/components/nova/MusicWidget";
 import { PowerVoid } from "@/components/nova/PowerVoid";
 import { StageFrame } from "@/components/stage/StageFrame";
+import { ClassicRibbon } from "@/components/scenes/ClassicRibbon";
+import { TrajectoryTicker } from "@/components/scenes/TrajectoryTicker";
 
 /**
  * The persistent stage.
@@ -22,6 +24,11 @@ export default function StageLayout({
       <StageFrame>{children}</StageFrame>
       {/* Fixed layer above the stage — NOVA, her speech bubble, and the chat. */}
       <NovaStage />
+      {/* Fixed chrome, siblings of the stage so their `position: fixed` anchors
+          to the viewport rather than to a scene's transformed box: the bottom
+          trajectory ticker (ABOUT) and the classic-build ribbon (all scenes). */}
+      <TrajectoryTicker />
+      <ClassicRibbon />
       {/* Sibling of the stage, not inside it — see the note in `music.css`. */}
       <MusicWidget />
       {/* Also a sibling, and for the opposite reason: its two layers have to sit

@@ -99,6 +99,28 @@ export const novaIntents: NovaIntent[] = [
     followUps: ["What's his tech stack?", "Where has he worked?", "Is he available?"],
   },
   {
+    id: "why-fullstack",
+    keywords: [
+      "why full stack",
+      "why fullstack",
+      "why full-stack",
+      "full stack",
+      "fullstack",
+      "both halves",
+      "front and back",
+      "why both",
+      "front to back",
+    ],
+    answer: ({ name }) =>
+      greet(
+        name,
+        "Because he hates handing off, {name}. He likes owning the whole thing — the interface that feels right in your hand and the back end that holds when it matters. Fewer seams, fewer people to blame. Also: it's more fun.",
+        "Because he hates handing off. He likes owning the whole thing — the interface that feels right in your hand and the back end that holds when it matters. Fewer seams, fewer people to blame. Also: it's more fun.",
+      ),
+    scene: "about",
+    followUps: ["Who is Edwin?", "What's his tech stack?", "Is he open to work?"],
+  },
+  {
     id: "skills",
     keywords: [
       "skill",

@@ -88,6 +88,8 @@ export type NovaState =
   | "balance"
   /** A slow look back over her shoulder, and around again. */
   | "peek"
+  /** A curious lean toward the right edge — she noticed the classic-build tab. */
+  | "lean"
   /* --- The light-switch gag ---------------------------------------------- */
   /** "hello? still there?" — a look around, ending on the camera. */
   | "wonder"
@@ -142,6 +144,7 @@ export const STATE_MS: Record<TimedState, number> = {
   dust: 1800,
   balance: 2400,
   peek: 3000,
+  lean: 1700,
   wonder: 2000,
   idea: 1500,
   /* Longer than the gap between flicks on purpose. Every flick re-enters this
@@ -663,6 +666,30 @@ function peek(now: number, elapsed: number): Pose {
   };
 }
 
+/**
+ * A lean toward the right edge, and a curious craning of the head.
+ *
+ * Triggered when the classic-build ribbon over there is hovered — she leans out
+ * to see what caught the visitor's eye. Positive `bodyRot` tips her towards
+ * screen-right (see `.nova-lean` in `nova.css`), and the gaze is aimed the same
+ * way from `GAZE_BIAS`. Eases in, holds, eases back, so it reads as a look
+ * rather than a jolt.
+ */
+function lean(now: number, elapsed: number): Pose {
+  const base = idle(now);
+  const p = Math.min(1, elapsed / STATE_MS.lean);
+  const t = p < 0.3 ? ease(p / 0.3) : p > 0.82 ? ease((1 - p) / 0.18) : 1;
+
+  return {
+    ...base,
+    bodyRot: base.bodyRot + 6 * t,
+    bodyY: base.bodyY - 1.5 * t,
+    headRot: base.headRot + 4 * t,
+    armR: base.armR + 5 * t,
+    foreR: base.foreR - 6 * t,
+  };
+}
+
 /* -------------------------------------------------------------------------- */
 /* The light-switch gag                                                        */
 /* -------------------------------------------------------------------------- */
@@ -950,6 +977,8 @@ export function poseFor(
       return balance(now, elapsed);
     case "peek":
       return peek(now, elapsed);
+    case "lean":
+      return lean(now, elapsed);
     case "wonder":
       return wonder(now, elapsed);
     case "idea":

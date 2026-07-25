@@ -49,10 +49,12 @@ const CLASSIC_HINT_AT = 1;
 export function HeroChat({
   sceneId,
   line,
+  taglines,
   chips,
 }: {
   sceneId: string;
   line: string;
+  taglines?: string[];
   chips: string[];
 }) {
   const power = usePower();
@@ -68,6 +70,7 @@ export function HeroChat({
       <LineRotator
         key={`${sceneId}-${power.state}`}
         line={line}
+        taglines={taglines}
         state={power.state}
       />
 
@@ -107,7 +110,15 @@ export function HeroChat({
  * has the chat open (they're busy), and resumes with the remaining time intact
  * rather than restarting the clock.
  */
-function LineRotator({ line, state }: { line: string; state: PowerState }) {
+function LineRotator({
+  line,
+  taglines,
+  state,
+}: {
+  line: string;
+  taglines?: string[];
+  state: PowerState;
+}) {
   /* Scene line first, then the rotating ones — unless she's flat, in which case
      the power set replaces the lot, scene line included. A tired robot
      narrating the section she's standing in would be the wrong voice entirely,
@@ -122,10 +133,13 @@ function LineRotator({ line, state }: { line: string; state: PowerState }) {
   const lines = useMemo(() => {
     if (state === "critical" || state === "dead") return CRITICAL_LINES;
     if (state === "low") return LOW_POWER_LINES;
-    const pool = [line, ...ROTATING_LINES];
+    // Scene line first, then any scene-specific taglines, then the shared pool —
+    // so ABOUT introduces itself, riffs on its own theme, and only then reaches
+    // for the scene-agnostic filler.
+    const pool = [line, ...(taglines ?? []), ...ROTATING_LINES];
     if (classicHint) pool.splice(CLASSIC_HINT_AT, 0, CLASSIC_BUILD_LINE);
     return pool;
-  }, [line, state, classicHint]);
+  }, [line, taglines, state, classicHint]);
   const [index, setIndex] = useState(0);
   const [visible, setVisible] = useState(false);
   const [hovered, setHovered] = useState(false);
