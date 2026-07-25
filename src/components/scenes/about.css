@@ -1,0 +1,646 @@
+/* -------------------------------------------------------------------------- */
+/* ABOUT scene                                                                 */
+/*                                                                             */
+/* Loaded only while the ABOUT route is mounted. Everything reads through the  */
+/* design tokens, so the dark theme and the battery-saver dimming come for     */
+/* free — there are no literal colours here except the one AWS orange, which   */
+/* is a brand mark rather than a themeable surface.                            */
+/* -------------------------------------------------------------------------- */
+
+/* --- NOVA steps into the left third -------------------------------------- */
+
+/*
+ * Desktop only. The stage loop positions NOVA by measuring the reserved slot's
+ * box every frame, so translating the *slot* glides her across: each frame reads
+ * the animated rect and she follows it, no separate animation on the robot. The
+ * layout box (and thus her compact size) is untouched — `translate` doesn't
+ * reflow. Below `lg` she stays centred above the stacked content.
+ */
+@media (min-width: 1024px) {
+  /* Gated on boot being over: during the POST/splash NOVA belongs dead-centre
+     with the boot readout, and only glides into the left third once the scene
+     is actually revealed (`data-booting` is "true" through the splash, "out"
+     through the dissolve, then gone). */
+  html:not([data-booting="true"]) .stage-nova[data-scene="about"] .stage-nova-slot {
+    translate: clamp(-18rem, -16vw, -8rem) 0;
+    transition: translate 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+/* --- Content column ------------------------------------------------------- */
+
+/*
+ * The about column carries more than a normal scene, so it gets a touch more
+ * width and is nudged right to clear NOVA and her badges. Scoped with `:has`
+ * so no other `side="right"` scene is affected.
+ */
+@media (min-width: 1024px) {
+  .scene[data-side="right"]:has(.about-col) {
+    padding-left: 54%;
+  }
+
+  .scene[data-side="right"]:has(.about-col) .scene-scroll {
+    max-width: 29rem;
+    /* The whole point of the scene is that it fits the viewport — the trajectory
+       lives in the fixed bottom strip precisely so the content never has to
+       scroll. Clip rather than scroll so no bar appears; the rhythm below is
+       tuned to fit the column down to short laptops. */
+    overflow: hidden;
+  }
+}
+
+.about-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.about-crumb {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--color-accent-ink);
+}
+
+/* The breadcrumb inside the column is the phone stand-in for the overlay lede. */
+.about-crumb-inline {
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+@media (min-width: 1024px) {
+  .about-crumb-inline {
+    display: none;
+  }
+}
+
+.about-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.02;
+  font-size: clamp(1.9rem, 5.2vw, 2.55rem);
+  color: var(--color-ink);
+  text-wrap: balance;
+}
+
+.about-name-dot {
+  color: var(--color-accent-ink);
+}
+
+.about-role {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-accent-ink);
+}
+
+.about-role i {
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.6;
+}
+
+.about-bio {
+  margin-top: 0.95rem;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--color-muted);
+}
+
+/* --- By the numbers ------------------------------------------------------- */
+
+.about-numbers {
+  margin-top: 1.15rem;
+}
+
+.about-numbers-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.about-numbers-count {
+  color: var(--color-faint);
+  opacity: 0.7;
+}
+
+.about-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.7rem;
+}
+
+.about-stat {
+  padding: 0.7rem 0.7rem 0.75rem;
+  border: 1px solid var(--color-line);
+  border-radius: 0.8rem;
+  background: color-mix(in oklab, var(--color-surface) 70%, transparent);
+}
+
+.about-stat-value {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.35rem, 4vw, 1.7rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--color-accent-ink);
+}
+
+.about-stat-label {
+  margin-top: 0.5rem;
+  font-size: 0.56rem;
+  letter-spacing: 0.13em;
+  line-height: 1.3;
+  color: var(--color-faint);
+}
+
+/* Phones stack the cards into full-width rows — number left, label right — the
+   way the reference does, rather than squeezing three columns onto a narrow
+   screen. */
+@media (max-width: 1023px) {
+  .about-stats {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.55rem;
+  }
+
+  .about-stat {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .about-stat-label {
+    margin-top: 0;
+    font-size: 0.6rem;
+    text-align: right;
+  }
+}
+
+/* --- Manifesto ------------------------------------------------------------ */
+
+.about-manifesto {
+  margin-top: 1.05rem;
+  padding: 0.85rem 1rem 0.95rem;
+  border: 1px solid var(--color-line);
+  border-left: 2px solid var(--color-accent-ink);
+  border-radius: 0.8rem;
+  background: color-mix(in oklab, var(--color-surface) 60%, transparent);
+}
+
+.about-manifesto-label {
+  color: var(--color-accent-ink);
+}
+
+.about-manifesto-body {
+  margin-top: 0.5rem;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--color-muted);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Reserve-power offline note (0% battery)                                     */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * When the battery is flat every token collapses towards the background — the
+ * whole page dims on purpose. This line opts back out with its own literal
+ * colour, the same trick the battery readout uses, so the scene reads as "NOVA
+ * is napping, the content's still here" rather than as a broken page.
+ */
+.about-offline {
+  margin-bottom: 1rem;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid #2a2f3d;
+  border-left: 2px solid #4b5566;
+  border-radius: 0.6rem;
+  background: rgb(12 14 20 / 0.6);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  line-height: 1.5;
+  color: #8b93a9;
+}
+
+.about-offline span {
+  color: var(--color-love);
+  margin-right: 0.15rem;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Overlay (desktop) — lede, badge field, ticker                              */
+/* -------------------------------------------------------------------------- */
+
+.about-overlay {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .about-overlay {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    /* The layer itself passes clicks through; the badges and the ticker opt
+       back in. */
+    pointer-events: none;
+  }
+}
+
+/* Lede, tucked into the top-left under the stage identity. */
+.about-lede {
+  position: absolute;
+  top: 0.5rem;
+  left: 0;
+  width: min(24rem, 30%);
+}
+
+.about-intro {
+  margin-top: 0.7rem;
+  font-size: 1.02rem;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  color: var(--color-ink);
+  text-wrap: balance;
+}
+
+.about-badge-field {
+  position: absolute;
+  inset: 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Badges                                                                      */
+/* -------------------------------------------------------------------------- */
+
+.nova-badge {
+  --badge-size: 5.4rem;
+
+  width: var(--badge-size);
+  height: var(--badge-size);
+  position: relative;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  pointer-events: auto;
+  color: inherit;
+  rotate: var(--rot, 0deg);
+  animation: about-badge-float 5s ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+  transition:
+    rotate 0.35s ease,
+    scale 0.35s ease;
+  filter: drop-shadow(0 6px 14px rgb(20 22 31 / 0.14));
+}
+
+/* Scatter variant is absolutely placed inside the field. */
+.about-badge-field .nova-badge {
+  position: absolute;
+}
+
+.nova-badge:hover,
+.nova-badge:focus-visible {
+  rotate: 0deg;
+  scale: 1.09;
+  animation-play-state: paused;
+  z-index: 4;
+  outline: none;
+}
+
+@keyframes about-badge-float {
+  50% {
+    translate: 0 -7px;
+  }
+}
+
+/* Tones. `--badge` is the mark colour; `--badge-on` is what sits on it when the
+   disc is filled (real credentials). */
+.nova-badge[data-tone="mint"] {
+  --badge: var(--color-accent-ink);
+  --badge-on: #ffffff;
+}
+.nova-badge[data-tone="violet"] {
+  --badge: var(--color-violet);
+  --badge-on: #ffffff;
+}
+.nova-badge[data-tone="love"] {
+  --badge: var(--color-love);
+  --badge-on: #ffffff;
+}
+.nova-badge[data-tone="aws"] {
+  --badge: #ec7211;
+  --badge-on: #1b1205;
+}
+
+.nova-badge-ring {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Outlined (the gag badges): pale disc, coloured hoop and text. */
+.nova-badge-disc {
+  fill: var(--color-surface);
+}
+.nova-badge-hoop {
+  fill: none;
+  stroke: var(--badge);
+  stroke-width: 2;
+}
+.nova-badge-inner {
+  fill: none;
+  stroke: color-mix(in oklab, var(--badge) 34%, transparent);
+  stroke-width: 0.8;
+}
+.nova-badge-rim {
+  fill: var(--badge);
+  font-family: var(--font-mono);
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+}
+
+/* Real credentials: solid disc, so they read as genuine among the jokes. */
+.nova-badge[data-real] .nova-badge-disc {
+  fill: var(--badge);
+}
+.nova-badge[data-real] .nova-badge-hoop {
+  stroke: color-mix(in oklab, #000 20%, var(--badge));
+}
+.nova-badge[data-real] .nova-badge-inner {
+  stroke: color-mix(in oklab, var(--badge-on) 42%, transparent);
+}
+.nova-badge[data-real] .nova-badge-rim {
+  fill: var(--badge-on);
+}
+
+.nova-badge-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  pointer-events: none;
+  text-align: center;
+}
+
+.nova-badge-emblem {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--badge);
+}
+
+.nova-badge-caption {
+  font-family: var(--font-mono);
+  font-size: 0.4rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--badge) 80%, var(--color-muted));
+}
+
+.nova-badge-sub {
+  font-family: var(--font-mono);
+  font-size: 0.34rem;
+  letter-spacing: 0.04em;
+  color: color-mix(in oklab, var(--badge) 55%, var(--color-faint));
+  opacity: 0.85;
+}
+
+/* On a filled credential the centre text flips to the on-colour. */
+.nova-badge[data-real] .nova-badge-emblem,
+.nova-badge[data-real] .nova-badge-caption,
+.nova-badge[data-real] .nova-badge-sub {
+  color: var(--badge-on);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Phone-only inline badge row                                                */
+/* -------------------------------------------------------------------------- */
+
+.about-badge-row {
+  display: flex;
+  gap: 0.85rem;
+  margin-top: 1.6rem;
+  padding: 0.5rem 1.25rem 0.5rem 0;
+  margin-right: -1.25rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.about-badge-row::-webkit-scrollbar {
+  display: none;
+}
+
+.about-badge-row .nova-badge {
+  --badge-size: 5.6rem;
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Phone footer — static trajectory chips + docked classic access             */
+/* -------------------------------------------------------------------------- */
+
+.about-mobile-foot {
+  margin-top: 1.6rem;
+}
+
+.about-traj-chips .about-traj-label {
+  display: block;
+  margin-bottom: 0.6rem;
+}
+
+.about-traj-chips ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.about-traj-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--color-surface) 70%, transparent);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.about-traj-year {
+  color: var(--color-accent-ink);
+  font-weight: 600;
+}
+
+/* The classic-build access, docked at the end of the read rather than floating
+   on the edge — mint pill, full width, tap to switch. */
+.about-classic-link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  margin-top: 1.25rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid color-mix(in oklab, #0f2c22 22%, #6ee7b7);
+  border-radius: 0.8rem;
+  background: #6ee7b7;
+  color: #0f2c22;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.about-classic-mono {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.about-classic-text {
+  flex: 1;
+  text-align: left;
+}
+
+.about-classic-v {
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.about-classic-link[data-loading] {
+  color: #0f2c22;
+  opacity: 0.85;
+}
+
+/* Desktop hides the whole phone stack — badges scatter in the overlay, the
+   trajectory is the fixed ticker, and the classic access is the edge ribbon. */
+@media (min-width: 1024px) {
+  .about-badge-row,
+  .about-mobile-foot {
+    display: none;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Phone about — a clean, readable content page                               */
+/*                                                                            */
+/* NOVA, her tagline, and the chip shortcuts step aside so the content is the */
+/* whole screen; the trajectory becomes static chips and the classic access   */
+/* docks at the end of the read (see above). Scoped to the ABOUT scene only — */
+/* HOME keeps its robot.                                                      */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 639px) {
+  /* Collapse NOVA's reserved slot so the content takes the space… */
+  .stage[data-scene="about"] .stage-nova {
+    display: none;
+  }
+
+  /* …and hide the robot herself and her bubble. Power-aware: when the battery
+     is critical or flat she comes back (docked in the corner) so the visitor
+     can still see her go dark and plug her in — hiding a robot you then need to
+     charge would be a dead end. */
+  html:not([data-power="critical"]):not([data-power="dead"])
+    body:has(.stage[data-scene="about"]) .nova-anchor,
+  html:not([data-power="critical"]):not([data-power="dead"])
+    body:has(.stage[data-scene="about"]) .nova-speech-anchor {
+    display: none;
+  }
+
+  /* The tagline, the chips, and the like hint go — the content is the point. */
+  .stage[data-scene="about"] .stage-chat,
+  .stage[data-scene="about"] .stage-hint {
+    display: none;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Stagger reveal                                                             */
+/* -------------------------------------------------------------------------- */
+
+.scene [data-reveal] {
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(var(--i, 0) * 55ms + 120ms);
+}
+
+.scene[data-entered="true"] [data-reveal] {
+  opacity: 1;
+  transform: none;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Dark theme nudges                                                          */
+/* -------------------------------------------------------------------------- */
+
+html[data-theme="dark"] .nova-badge {
+  filter: drop-shadow(0 8px 18px rgb(0 0 0 / 0.5));
+}
+
+/* The pale disc is the light surface; on dark it becomes the dark surface, which
+   the token already does — but the outlined disc wants a hair more separation
+   from the near-black page. */
+html[data-theme="dark"] .nova-badge:not([data-real]) .nova-badge-disc {
+  fill: color-mix(in oklab, var(--color-surface) 88%, var(--badge));
+}
+
+/* Badges go quiet when she runs out — grayscale and dimmed, so the one bright
+   literal (the AWS orange, which no token can dim) doesn't blaze on through the
+   dark while everything else collapses. Placed *after* the dark nudge above so
+   it wins the equal-specificity tie at 0%, where both rules match. */
+html[data-power="dead"] .nova-badge,
+html[data-power="critical"] .nova-badge {
+  filter: grayscale(1) opacity(0.42);
+  animation-play-state: paused;
+  transition: filter 600ms ease;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Reduced motion                                                            */
+/* -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  /* No glide, no float, no marquee, no reveal travel — a static grid. */
+  .stage-nova[data-scene="about"] .stage-nova-slot {
+    transition: none;
+  }
+
+  .nova-badge {
+    animation: none;
+    translate: none;
+  }
+
+  .scene [data-reveal] {
+    transform: none;
+    transition: opacity 0.2s ease;
+    transition-delay: 0ms;
+  }
+}

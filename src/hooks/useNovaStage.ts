@@ -7,6 +7,7 @@ import {
   onCelebrate,
   onLike,
   onNovaBooted,
+  onPeekRibbon,
   onVibeChange,
   setNovaPort,
   type Celebration,
@@ -157,6 +158,10 @@ const PRIORITY: Record<NovaState, number> = {
   dust: 10,
   balance: 10,
   peek: 10,
+  // Below the waves and celebrations, so a like still lands over it, but above
+  // the plain idle it plays out of — she'll lean, and drop it the moment
+  // anything she'd rather do comes along.
+  lean: 15,
 
   idle: 0,
 };
@@ -202,6 +207,8 @@ const GAZE_BIAS: Partial<Record<NovaState, { x: number; y: number }>> = {
   tilt: { x: -0.8, y: -0.25 },
   inspect: { x: 0.45, y: 0.5 },
   balance: { x: 0, y: -0.35 },
+  /* Toward the ribbon on the right edge — the eyes go with the lean. */
+  lean: { x: 0.92, y: 0.12 },
   /* The gag. The switch is drawn to her left and a little below her eyeline, so
      that is where she looks while her hand is on it; `caught` is the only entry
      here that aims at nothing, because straight down the lens *is* the pose. */
@@ -829,6 +836,20 @@ export function useNovaStage({
       enterState("wave", performance.now());
     };
 
+    /**
+     * The ribbon on the right edge was hovered — lean over and look.
+     *
+     * Same guards as the wave: only from a standing idle, only when she has the
+     * power for it, never over the light-switch gag. A one-shot rather than a
+     * held pose, so a visitor sweeping past the ribbon gets one glance, not a
+     * robot frozen mid-lean until they move the cursor away.
+     */
+    const leanPeek = () => {
+      if (reducedMotion.matches || busy() || mischief) return;
+      if (getPower().state !== "normal") return;
+      enterState("lean", performance.now());
+    };
+
     /* ---------------------------------------------------------------- */
     /* Idle repertoire                                                   */
     /* ---------------------------------------------------------------- */
@@ -1231,6 +1252,7 @@ export function useNovaStage({
     const offVibe = onVibeChange(runVibe);
     const offTemper = onTemperChange(runTemper);
     const offLights = onLightsBeat(runLightsBeat);
+    const offPeek = onPeekRibbon(leanPeek);
     /*
      * Subscribed to the like itself rather than to a celebration, because past
      * stage one there *is* no celebration — that's the whole point. What's left
@@ -1274,6 +1296,7 @@ export function useNovaStage({
       offVibe();
       offTemper();
       offLights();
+      offPeek();
       offLike();
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("pointermove", handlePointerMove);

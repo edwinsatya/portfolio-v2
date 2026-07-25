@@ -1,7 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { noPower, onOpenResume, setWindowOpen } from "@/lib/nova-bus";
+import {
+  noPower,
+  onOpenResume,
+  setWindowOpen,
+  type ResumeSection,
+} from "@/lib/nova-bus";
 import { isDead, onPowerEvent } from "@/lib/power";
 
 /** How the resume window is presented. Mirrors the traffic lights. */
@@ -23,8 +28,17 @@ export function useResumeWindow() {
   const [isOpen, setIsOpen] = useState(false);
   const [windowState, setWindowState] = useState<WindowState>("normal");
   const [theme, setTheme] = useState<ResumeTheme>("light");
+  /**
+   * A section the window should jump to on open, and a nonce so asking for the
+   * *same* section twice still fires — reopening at Experience after having
+   * scrolled away must move again. The window clears it once consumed.
+   */
+  const [focusSection, setFocusSection] = useState<{
+    id: ResumeSection;
+    nonce: number;
+  } | null>(null);
 
-  const open = useCallback(() => {
+  const open = useCallback((section?: ResumeSection) => {
     // Locked at 0%, same as the terminal: the resume is NOVA rendering a
     // document, and she has nothing to render it with.
     if (isDead()) {
@@ -35,7 +49,10 @@ export function useResumeWindow() {
     // Reopening from the dock restores the window rather than leaving it
     // collapsed, which would look like the click did nothing.
     setWindowState((w) => (w === "minimized" ? "normal" : w));
+    if (section) setFocusSection({ id: section, nonce: Date.now() });
   }, []);
+
+  const consumeFocusSection = useCallback(() => setFocusSection(null), []);
 
   const close = useCallback(() => {
     setIsOpen(false);
@@ -86,6 +103,8 @@ export function useResumeWindow() {
     windowState,
     isEngaged,
     theme,
+    focusSection,
+    consumeFocusSection,
     open,
     close,
     minimize,

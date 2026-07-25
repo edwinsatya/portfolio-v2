@@ -279,17 +279,50 @@ export function getNovaPort(): { x: number; y: number } {
 /* The nav's resume icon opens the live resume, and the two live on opposite
    sides of the tree — same reason `onAskNova` exists. */
 
-const resumeListeners = new Set<() => void>();
+/** A section anchor inside the resume the window should land on when it opens. */
+export type ResumeSection = "resume-about" | "resume-experience" | "resume-capabilities";
 
-export function onOpenResume(listener: () => void): () => void {
+type ResumeListener = (section?: ResumeSection) => void;
+
+const resumeListeners = new Set<ResumeListener>();
+
+export function onOpenResume(listener: ResumeListener): () => void {
   resumeListeners.add(listener);
   return () => {
     resumeListeners.delete(listener);
   };
 }
 
-export function openResume(): void {
-  resumeListeners.forEach((listener) => listener());
+/**
+ * Opens the live resume. With a `section`, the window scrolls straight to it
+ * once it's up — the ABOUT scene's trajectory ticker opens it at Experience.
+ */
+export function openResume(section?: ResumeSection): void {
+  resumeListeners.forEach((listener) => listener(section));
+}
+
+/* -------------------------------------------------------------------------- */
+/* Peek at the classic-build ribbon                                            */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The classic-build ribbon lives on the edge of the layout; NOVA lives on the
+ * fixed stage layer. Nothing wraps both — same reason as `onAskNova`. Hovering
+ * the ribbon asks her to lean over and look; the stage decides whether she's
+ * free to (idle, charged, not mid-tantrum).
+ */
+
+const peekListeners = new Set<() => void>();
+
+export function onPeekRibbon(listener: () => void): () => void {
+  peekListeners.add(listener);
+  return () => {
+    peekListeners.delete(listener);
+  };
+}
+
+export function peekRibbon(): void {
+  peekListeners.forEach((listener) => listener());
 }
 
 /* -------------------------------------------------------------------------- */

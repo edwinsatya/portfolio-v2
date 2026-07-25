@@ -20,6 +20,12 @@ export type Scene = {
   mood: NovaMood;
   /** Typed out bottom-left when the scene opens. */
   line: string;
+  /**
+   * Scene-specific taglines that rotate *after* the scene's `line` and before
+   * the scene-agnostic `ROTATING_LINES`. Optional — most scenes are happy with
+   * one line and the shared pool; ABOUT wants a few of its own.
+   */
+  taglines?: string[];
   /** Shown under the line. Three, to fit one row on desktop. */
   chips: string[];
 };
@@ -47,7 +53,12 @@ export const scenes: Scene[] = [
     label: "About",
     mood: "warm",
     line: "small town, big web. here's the human i work for.",
-    chips: ["who is edwin?", "where is he based?", "is he available?"],
+    taglines: [
+      "this is my favorite human. i'm contractually obligated to say that.",
+      "i wrote his bio. he approved it. reluctantly.",
+      "the badges? i issued those myself.",
+    ],
+    chips: ["who is edwin?", "why full-stack?", "is he open to work?"],
   },
   {
     id: "contact",

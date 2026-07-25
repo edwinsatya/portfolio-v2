@@ -23,7 +23,7 @@ export function StageFrame({ children }: { children: React.ReactNode }) {
   const isHome = scene.id === "home";
 
   return (
-    <div className="stage">
+    <div className="stage" data-scene={scene.id}>
       <LikeCounter />
 
       {/* Identity, top-left. */}
@@ -48,7 +48,7 @@ export function StageFrame({ children }: { children: React.ReactNode }) {
 
       {/* NOVA's landing spot. She's rendered on the fixed stage layer, not here;
           this only reserves the space she's pinned over. */}
-      <div className="stage-nova" data-compact={!isHome}>
+      <div className="stage-nova" data-compact={!isHome} data-scene={scene.id}>
         <div data-nova-slot className="stage-nova-slot" />
       </div>
 
@@ -58,7 +58,12 @@ export function StageFrame({ children }: { children: React.ReactNode }) {
       {/* Bottom band. */}
       <div className="stage-foot">
         <div>
-          <HeroChat sceneId={scene.id} line={scene.line} chips={scene.chips} />
+          <HeroChat
+            sceneId={scene.id}
+            line={scene.line}
+            taglines={scene.taglines}
+            chips={scene.chips}
+          />
           {/* Two phrasings: "press L" is meaningless without a keyboard, so
               touch devices get the tap wording instead. CSS picks. */}
           <p className="stage-hint">

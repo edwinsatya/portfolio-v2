@@ -212,6 +212,8 @@ export function NovaStage() {
         isOpen={resume.isOpen}
         windowState={resume.windowState}
         theme={resume.theme}
+        focusSection={resume.focusSection}
+        onFocusSectionConsumed={resume.consumeFocusSection}
         onClose={resume.close}
         onMinimize={resume.minimize}
         onToggleMaximize={resume.toggleMaximize}
