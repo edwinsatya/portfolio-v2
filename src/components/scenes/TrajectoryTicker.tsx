@@ -24,16 +24,16 @@ import "./ticker.css";
 /** One pass of the loop. Two of these sit back to back for a seamless scroll. */
 function Segment() {
   return (
-    <span className="about-ticker-seg">
-      <span className="about-ticker-lead">Trajectory</span>
-      <span className="about-ticker-dash" aria-hidden>
+    <span className="scene-ticker-seg">
+      <span className="scene-ticker-lead">Trajectory</span>
+      <span className="scene-ticker-dash" aria-hidden>
         —
       </span>
       {trajectory.map((stop) => (
-        <span className="about-ticker-item" key={stop.year + stop.label}>
-          <span className="about-ticker-year">{stop.year}</span>
+        <span className="scene-ticker-item" key={stop.year + stop.label}>
+          <span className="scene-ticker-year">{stop.year}</span>
           {stop.label}
-          <span className="about-ticker-dot" aria-hidden>
+          <span className="scene-ticker-dot" aria-hidden>
             ·
           </span>
         </span>
@@ -48,16 +48,16 @@ export function TrajectoryTicker() {
   const show = segment === "about" && bootComplete;
 
   return (
-    <div className="about-ticker" data-show={show} aria-hidden={!show}>
+    <div className="scene-ticker" data-show={show} aria-hidden={!show}>
       <button
         type="button"
-        className="about-ticker-btn"
+        className="scene-ticker-btn"
         onClick={() => openResume("resume-experience")}
         tabIndex={show ? 0 : -1}
         aria-label="Open the live resume at Edwin's experience"
       >
-        <span className="about-ticker-viewport">
-          <span className="about-ticker-track" aria-hidden>
+        <span className="scene-ticker-viewport">
+          <span className="scene-ticker-track" aria-hidden>
             <Segment />
             <Segment />
           </span>

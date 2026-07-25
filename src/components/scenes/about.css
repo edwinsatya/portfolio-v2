@@ -663,23 +663,8 @@
   }
 }
 
-/* -------------------------------------------------------------------------- */
-/* Stagger reveal                                                             */
-/* -------------------------------------------------------------------------- */
-
-.scene [data-reveal] {
-  opacity: 0;
-  transform: translateY(10px);
-  transition:
-    opacity 0.5s ease,
-    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-  transition-delay: calc(var(--i, 0) * 55ms + 120ms);
-}
-
-.scene[data-entered="true"] [data-reveal] {
-  opacity: 1;
-  transform: none;
-}
+/* The stagger reveal every scene uses now lives in `globals.css`, beside the
+   `.scene` rules it belongs with — it was never about ABOUT. */
 
 /* -------------------------------------------------------------------------- */
 /* Dark theme nudges                                                          */
@@ -712,7 +697,8 @@ html[data-power="critical"] .nova-badge {
 /* -------------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
-  /* No glide, no float, no marquee, no reveal travel — a static grid. */
+  /* No glide, no float, no marquee — a static grid. (The reveal's own
+     reduced-motion case moved to `globals.css` with the rule itself.) */
   .stage-nova[data-scene="about"] .stage-nova-slot {
     transition: none;
   }
@@ -720,11 +706,5 @@ html[data-power="critical"] .nova-badge {
   .nova-badge {
     animation: none;
     translate: none;
-  }
-
-  .scene [data-reveal] {
-    transform: none;
-    transition: opacity 0.2s ease;
-    transition-delay: 0ms;
   }
 }

@@ -4,8 +4,10 @@ import { BootSequence } from "@/components/nova/BootSequence";
 import { MusicWidget } from "@/components/nova/MusicWidget";
 import { PowerAuraVignette } from "@/components/nova/PowerAura";
 import { PowerVoid } from "@/components/nova/PowerVoid";
+import { SearchPill } from "@/components/nova/SearchPill";
 import { StageFrame } from "@/components/stage/StageFrame";
 import { ClassicRibbon } from "@/components/scenes/ClassicRibbon";
+import { StackTicker } from "@/components/scenes/StackTicker";
 import { TrajectoryTicker } from "@/components/scenes/TrajectoryTicker";
 
 /**
@@ -29,9 +31,13 @@ export default function StageLayout({
           to the viewport rather than to a scene's transformed box: the bottom
           trajectory ticker (ABOUT) and the classic-build ribbon (all scenes). */}
       <TrajectoryTicker />
+      <StackTicker />
       <ClassicRibbon />
       {/* Sibling of the stage, not inside it — see the note in `music.css`. */}
       <MusicWidget />
+      {/* The command palette's front door, in the corner rail beside the music
+          card. Desktop only; it opens the terminal over the bus. */}
+      <SearchPill />
       {/* Also a sibling, and for the opposite reason: its two layers have to sit
           on either side of NOVA's, which is impossible from inside one of
           them. See the z-index note in `power.css`. */}

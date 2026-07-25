@@ -326,6 +326,62 @@ export function peekRibbon(): void {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Command palette                                                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * "Open the terminal as a search box."
+ *
+ * Distinct from `askNova()`, which opens it to answer a specific question: this
+ * opens it empty, focused, and with the one-off hint that it can be searched.
+ * The Search pill fires it; ⌘K is handled inside the chat hook, which owns the
+ * same guards the `/` shortcut uses.
+ */
+const searchListeners = new Set<() => void>();
+
+export function onOpenSearch(listener: () => void): () => void {
+  searchListeners.add(listener);
+  return () => {
+    searchListeners.delete(listener);
+  };
+}
+
+export function openSearch(): void {
+  searchListeners.forEach((listener) => listener());
+}
+
+/* -------------------------------------------------------------------------- */
+/* Glancing                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * "Look over there."
+ *
+ * The WORK scene puts a career column on her left and a project list on her
+ * right, and she stands between them — so moving through either should get a
+ * flicker of attention rather than a robot staring dead ahead while the visitor
+ * works. Same contract as `peekRibbon`, which is really this with one hardcoded
+ * direction: the caller asks, and the stage decides whether she's free to (idle,
+ * charged, not mid-tantrum) and picks the move.
+ */
+export type GlanceSide = "left" | "right";
+
+const glanceListeners = new Set<(side: GlanceSide) => void>();
+
+export function onNovaGlance(
+  listener: (side: GlanceSide) => void,
+): () => void {
+  glanceListeners.add(listener);
+  return () => {
+    glanceListeners.delete(listener);
+  };
+}
+
+export function novaGlance(side: GlanceSide): void {
+  glanceListeners.forEach((listener) => listener(side));
+}
+
+/* -------------------------------------------------------------------------- */
 /* Stage occupancy                                                             */
 /* -------------------------------------------------------------------------- */
 

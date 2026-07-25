@@ -7,6 +7,7 @@ import {
   onCelebrate,
   onLike,
   onNovaBooted,
+  onNovaGlance,
   onPeekRibbon,
   onVibeChange,
   setNovaPort,
@@ -1099,6 +1100,22 @@ export function useNovaStage({
       enterState("lean", performance.now());
     };
 
+    /**
+     * Something on one side of her asked for a look — the WORK scene's career
+     * column on the left, its project list on the right.
+     *
+     * Reuses the repertoire rather than adding poses: `lean` already cranes her
+     * toward screen-right with the gaze to match (it's what the ribbon uses),
+     * and `tilt` is the small head-tilt whose gaze bias points left. Same guards
+     * as the peek, and the same one-shot shape — a visitor running down a list
+     * gets a flicker of attention, not a robot held mid-lean.
+     */
+    const glanceAside = (side: "left" | "right") => {
+      if (reducedMotion.matches || busy() || mischief) return;
+      if (getPower().state !== "normal") return;
+      enterState(side === "right" ? "lean" : "tilt", performance.now());
+    };
+
     /* ---------------------------------------------------------------- */
     /* Idle repertoire                                                   */
     /* ---------------------------------------------------------------- */
@@ -1532,6 +1549,7 @@ export function useNovaStage({
     const offTemper = onTemperChange(runTemper);
     const offLights = onLightsBeat(runLightsBeat);
     const offPeek = onPeekRibbon(leanPeek);
+    const offGlance = onNovaGlance(glanceAside);
     /*
      * Subscribed to the like itself rather than to a celebration, because past
      * stage one there *is* no celebration — that's the whole point. What's left
@@ -1577,6 +1595,7 @@ export function useNovaStage({
       offTemper();
       offLights();
       offPeek();
+      offGlance();
       offLike();
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("pointermove", handlePointerMove);

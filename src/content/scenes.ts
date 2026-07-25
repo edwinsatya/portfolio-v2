@@ -44,8 +44,12 @@ export const scenes: Scene[] = [
     href: "/work",
     label: "Work",
     mood: "excited",
-    line: "eleven shipped projects, the stack behind them, and where it all happened.",
-    chips: ["what's his tech stack?", "show me his best work", "where has he worked?"],
+    line: "ten shipped projects, the stack behind them, and where it all happened.",
+    taglines: [
+      "ten projects. i have favorites. i'm not supposed to, but i do.",
+      "ask me which one nearly broke him.",
+    ],
+    chips: ["which is his best?", "what did he build at magloft?", "show me the AI stuff"],
   },
   {
     id: "about",

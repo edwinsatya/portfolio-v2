@@ -1,8 +1,9 @@
 /* -------------------------------------------------------------------------- */
-/* Trajectory ticker — fixed bottom strip                                      */
+/* Scene ticker — the fixed bottom strip                                       */
 /*                                                                             */
-/* Loaded with the layout (the component is always mounted), so the stage      */
-/* padding rule below is always available and applies only on ABOUT.           */
+/* One strip, two tenants: ABOUT's trajectory and WORK's stack marquee. Loaded  */
+/* with the layout (both components are always mounted), so the stage padding   */
+/* rule below is always available and applies only on the scenes that show it.  */
 /* -------------------------------------------------------------------------- */
 
 :root {
@@ -14,25 +15,28 @@
    the stage room it needs — only exist from 640px up. Gated on boot being over
    so the splash never reserves a gap for a strip that isn't shown yet. */
 @media (min-width: 640px) {
-  html:not([data-booting="true"]) .stage[data-scene="about"] {
+  html:not([data-booting="true"]) .stage[data-scene="about"],
+  html:not([data-booting="true"]) .stage[data-scene="work"] {
     padding-bottom: calc(var(--ticker-h) + 1.7rem);
   }
 }
 
 @media (max-width: 639px) {
-  .about-ticker {
+  .scene-ticker {
     display: none;
   }
 }
 
-.about-ticker {
+.scene-ticker {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
   z-index: 30;
   height: var(--ticker-h);
-  border-top: 1px solid var(--color-line);
+  /* No rule along the top. The strip is the last line of the page, not a
+     separate bar bolted to the bottom of it — the marquee's own end-fades and
+     its distance from the foot are the whole separation it needs. */
   background: color-mix(in oklab, var(--color-bg) 82%, transparent);
   backdrop-filter: blur(6px);
   /* Hidden and inert off its home scene; a fade is the seam for showing it
@@ -45,7 +49,7 @@
     visibility 0s linear 320ms;
 }
 
-.about-ticker[data-show="true"] {
+.scene-ticker[data-show="true"] {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
@@ -55,11 +59,21 @@
 }
 
 /* No cycles burned scrolling a hidden strip. */
-.about-ticker:not([data-show="true"]) .about-ticker-track {
+.scene-ticker:not([data-show="true"]) .scene-ticker-track {
   animation-play-state: paused;
 }
 
-.about-ticker-btn {
+/* The non-interactive tenant (WORK's stack strip). Same box as the button
+   below, without pretending to be a control. */
+.scene-ticker-static {
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+}
+
+.scene-ticker-btn {
   display: block;
   width: 100%;
   height: 100%;
@@ -72,11 +86,11 @@
   transition: color 160ms ease;
 }
 
-.about-ticker-btn:hover {
+.scene-ticker-btn:hover {
   color: var(--color-ink);
 }
 
-.about-ticker-viewport {
+.scene-ticker-viewport {
   display: block;
   height: 100%;
   overflow: hidden;
@@ -90,31 +104,31 @@
   );
 }
 
-.about-ticker-track {
+.scene-ticker-track {
   display: inline-flex;
   align-items: center;
   height: 100%;
   white-space: nowrap;
   will-change: transform;
-  animation: about-ticker-scroll 40s linear infinite;
+  animation: scene-ticker-scroll 40s linear infinite;
 }
 
-.about-ticker:hover .about-ticker-track {
+.scene-ticker:hover .scene-ticker-track {
   animation-play-state: paused;
 }
 
-@keyframes about-ticker-scroll {
+@keyframes scene-ticker-scroll {
   to {
     transform: translateX(-50%);
   }
 }
 
-.about-ticker-seg {
+.scene-ticker-seg {
   display: inline-flex;
   align-items: center;
 }
 
-.about-ticker-lead {
+.scene-ticker-lead {
   font-size: 0.62rem;
   font-weight: 600;
   letter-spacing: 0.22em;
@@ -123,12 +137,12 @@
   padding: 0 0.5rem 0 1.25rem;
 }
 
-.about-ticker-dash {
+.scene-ticker-dash {
   color: var(--color-faint);
   padding-right: 0.75rem;
 }
 
-.about-ticker-item {
+.scene-ticker-item {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -138,23 +152,23 @@
   padding-right: 0.7rem;
 }
 
-.about-ticker-year {
+.scene-ticker-year {
   color: var(--color-accent-ink);
   font-weight: 600;
 }
 
-.about-ticker-dot {
+.scene-ticker-dot {
   color: var(--color-faint);
   opacity: 0.55;
   padding-left: 0.2rem;
 }
 
 @media (max-width: 639px) {
-  .about-ticker-lead {
+  .scene-ticker-lead {
     font-size: 0.55rem;
     padding-left: 1rem;
   }
-  .about-ticker-item {
+  .scene-ticker-item {
     font-size: 0.6rem;
     letter-spacing: 0.1em;
   }
@@ -163,7 +177,7 @@
 /* Reduced motion: no scroll. The strip is static, the ends still faded, so what
    fits is readable and the rest is truncated rather than moving. */
 @media (prefers-reduced-motion: reduce) {
-  .about-ticker-track {
+  .scene-ticker-track {
     animation: none;
   }
 }

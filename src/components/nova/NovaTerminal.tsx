@@ -9,9 +9,13 @@ import {
 } from "@/hooks/useNovaChat";
 import { TERMINAL_CHIPS } from "@/content/nova-qa";
 import { scenes } from "@/content/scenes";
+import { workBySlug, workCards, type WorkCard } from "@/content/work";
 
 /** Characters per tick while a reply types itself out. */
 const TYPE_MS = 12;
+
+/** The other completable pool, beside the commands. */
+const PROJECT_NAMES = workCards.map((card) => card.name);
 
 /**
  * Session history depth.
@@ -47,6 +51,7 @@ type NovaTerminalProps = {
   onMinimize: () => void;
   onToggleMaximize: () => void;
   onScene: (sceneId: string) => void;
+  onProject: (slug: string) => void;
 };
 
 /** Longest string every candidate starts with — bash's first-Tab target. */
@@ -91,6 +96,7 @@ export function NovaTerminal({
   onMinimize,
   onToggleMaximize,
   onScene,
+  onProject,
 }: NovaTerminalProps) {
   const minimized = windowState === "minimized";
   const [draft, setDraft] = useState("");
@@ -125,6 +131,9 @@ export function NovaTerminal({
 
     const hit =
       COMMANDS.find((c) => c.startsWith(typed) && c.length > typed.length) ??
+      PROJECT_NAMES.find(
+        (n) => n.toLowerCase().startsWith(typed) && n.length > typed.length,
+      ) ??
       TERMINAL_CHIPS.find(
         (q) => q.toLowerCase().startsWith(typed) && q.length > typed.length,
       );
@@ -347,6 +356,34 @@ export function NovaTerminal({
       return true;
     }
 
+    // Not a command: the ten project names are the other completable pool, and
+    // they come before the suggestion chips because someone half-typing
+    // "weath" is naming a thing, not starting a sentence.
+    const typed = draft.toLowerCase();
+    const names = PROJECT_NAMES.filter((n) => n.toLowerCase().startsWith(typed));
+    if (typed.trim() && names.length) {
+      if (names.length === 1) {
+        setDraft(names[0]);
+        tabbed.current = false;
+        caretToEnd();
+        return true;
+      }
+      const prefix = commonPrefix(names.map((n) => n.toLowerCase()));
+      if (prefix.length > draft.length) {
+        setDraft(prefix);
+        tabbed.current = false;
+        caretToEnd();
+        return true;
+      }
+      if (!tabbed.current) {
+        tabbed.current = true;
+        return true;
+      }
+      onPrint(names.join("  "));
+      tabbed.current = false;
+      return true;
+    }
+
     return accept();
   }
 
@@ -548,7 +585,12 @@ export function NovaTerminal({
 
         <div className="term-head-lines">
           {header.map((entry) => (
-            <TerminalRow key={entry.id} entry={entry} onScene={onScene} />
+            <TerminalRow
+                key={entry.id}
+                entry={entry}
+                onScene={onScene}
+                onProject={onProject}
+              />
           ))}
         </div>
 
@@ -576,7 +618,12 @@ export function NovaTerminal({
           aria-atomic="false"
         >
           {body.map((entry) => (
-            <TerminalRow key={entry.id} entry={entry} onScene={onScene} />
+            <TerminalRow
+                key={entry.id}
+                entry={entry}
+                onScene={onScene}
+                onProject={onProject}
+              />
           ))}
 
           {isThinking && (
@@ -671,13 +718,19 @@ export function NovaTerminal({
 function TerminalRow({
   entry,
   onScene,
+  onProject,
 }: {
   entry: TerminalLine;
   onScene: (sceneId: string) => void;
+  onProject: (slug: string) => void;
 }) {
   const scene = entry.scene
     ? scenes.find((s) => s.id === entry.scene)
     : undefined;
+  const project = entry.project ? workBySlug(entry.project) : undefined;
+  const listed = entry.projects
+    ?.map((slug) => workBySlug(slug))
+    .filter((card): card is WorkCard => Boolean(card));
 
   return (
     <div className="term-row">
@@ -698,6 +751,38 @@ function TerminalRow({
           entry.text
         )}
       </p>
+
+      {/* The palette's payoff: one keystroke from a name to the case study. */}
+      {project && (
+        <button
+          type="button"
+          className="term-nav"
+          onClick={() => onProject(project.slug)}
+        >
+          OPEN_[{project.name.toUpperCase()}] →
+        </button>
+      )}
+
+      {listed && listed.length > 0 && (
+        <ul className="term-projects">
+          {listed.map((card) => (
+            <li key={card.slug}>
+              <button
+                type="button"
+                className="term-project"
+                onClick={() => onProject(card.slug)}
+              >
+                <span className="term-project-no">{card.no}</span>
+                <span className="term-project-name">{card.name}</span>
+                <span className="term-project-cat">{card.category}</span>
+                <span className="term-project-go" aria-hidden>
+                  →
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {scene && (
         <button
