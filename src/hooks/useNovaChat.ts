@@ -91,6 +91,14 @@ export function useNovaChat({
           ]);
           setSuggestions(reply.suggestions);
           if (reply.scrollTo) scrollToSection(reply.scrollTo);
+          // Leave a beat so the visitor can read the line before we send them
+          // off-site (same tab, as requested).
+          if (reply.navigateTo) {
+            const url = reply.navigateTo;
+            window.setTimeout(() => {
+              window.location.href = url;
+            }, 1200);
+          }
         } finally {
           setIsThinking(false);
           busy.current = false;

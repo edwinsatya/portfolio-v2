@@ -202,6 +202,41 @@
     text-transform: uppercase;
     color: var(--color-accent);
   }
+
+  /* A living gradient ring — hints there's a fancier "flagship" edition to try.
+     The border is drawn with a masked pseudo-element so it can animate on its
+     own without a second wrapper element. */
+  .flagship-ring {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .flagship-ring::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      120deg,
+      var(--color-accent),
+      var(--color-violet),
+      var(--color-accent)
+    );
+    background-size: 220% 100%;
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: flagship-pan 4.5s linear infinite;
+  }
+
+  @keyframes flagship-pan {
+    to {
+      background-position: 220% 0;
+    }
+  }
 }
 
 /* -------------------------------------------------------------------------- */

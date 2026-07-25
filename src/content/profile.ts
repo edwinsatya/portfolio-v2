@@ -27,6 +27,8 @@ export const profile = {
     linkedin: "https://www.linkedin.com/in/edwin-satya-yudistira/",
     resume:
       "https://drive.google.com/file/d/1lVwiO2EFELfN9PNNiT_h7xVXcecw5r7H/view",
+    /** The redesigned "flagship" edition of this portfolio. */
+    flagship: "https://edwin.touchsimpledev.site",
   },
 } as const;
 

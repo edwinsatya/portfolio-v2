@@ -10,6 +10,8 @@ export type NovaReply = {
   text: string;
   /** Section id to smooth-scroll to once the reply lands. */
   scrollTo?: string;
+  /** URL to send the visitor to once the reply lands (e.g. the flagship site). */
+  navigateTo?: string;
   /** Chips to offer next. */
   suggestions: string[];
 };
@@ -102,6 +104,7 @@ export const scriptedResponder: NovaResponder = async (question, context) => {
   return {
     text: intent.answer(context),
     scrollTo: intent.scrollTo,
+    navigateTo: intent.navigateTo,
     suggestions: intent.followUps ?? DEFAULT_SUGGESTIONS,
   };
 };

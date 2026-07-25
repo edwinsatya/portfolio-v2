@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { profile, sections } from "@/content/profile";
 import { useActiveSection } from "@/hooks/useActiveSection";
-import { ArrowUpRight } from "@/components/ui/Icons";
+import { ArrowUpRight, Sparkle } from "@/components/ui/Icons";
 
 // Module scope so the array identity is stable across renders.
 const SECTION_IDS = sections.map((section) => section.id);
@@ -88,6 +88,16 @@ export function Nav() {
 
         <div className="flex items-center gap-2">
           <a
+            href={profile.links.flagship}
+            title="Experience the flagship edition of this portfolio"
+            className="flagship-ring group relative hidden items-center gap-1.5 rounded-full bg-surface/40 px-4 py-2 text-sm font-medium text-ink transition-colors hover:bg-surface/70 sm:inline-flex"
+          >
+            <Sparkle className="size-3.5 text-violet transition-transform duration-500 group-hover:rotate-90" />
+            <span className="text-gradient">Flagship</span>
+            <ArrowUpRight className="size-3.5 text-violet" />
+          </a>
+
+          <a
             href={profile.links.resume}
             target="_blank"
             rel="noopener noreferrer"
@@ -129,6 +139,32 @@ export function Nav() {
         hidden={!menuOpen}
         className="border-y border-line bg-bg/95 backdrop-blur-xl md:hidden"
       >
+        <div className="mx-auto max-w-6xl px-6 pt-4">
+          <a
+            href={profile.links.flagship}
+            onClick={() => setMenuOpen(false)}
+            className="flagship-ring group relative flex items-center gap-3 rounded-2xl bg-surface/50 p-4"
+          >
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet/10">
+              <Sparkle className="size-5 text-violet transition-transform duration-500 group-hover:rotate-90" />
+            </span>
+            <span className="flex-1">
+              <span className="flex items-center gap-2">
+                <span className="text-gradient text-base font-semibold">
+                  Flagship edition
+                </span>
+                <span className="rounded-full border border-violet/40 px-1.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-wider text-violet">
+                  New
+                </span>
+              </span>
+              <span className="mt-0.5 block text-sm text-muted">
+                A bolder redesign of this portfolio — take a look.
+              </span>
+            </span>
+            <ArrowUpRight className="size-5 shrink-0 text-violet" />
+          </a>
+        </div>
+
         <ul className="mx-auto max-w-6xl px-6 py-4">
           {NAV_ITEMS.map((section) => (
             <li key={section.id}>

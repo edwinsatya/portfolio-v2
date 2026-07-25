@@ -29,6 +29,8 @@ export type NovaIntent = {
   answer: (context: NovaAnswerContext) => string;
   /** Section to smooth-scroll to after answering. */
   scrollTo?: string;
+  /** URL to send the visitor to after answering (e.g. the flagship edition). */
+  navigateTo?: string;
   /** Chips offered once this answer has been given. */
   followUps?: string[];
 };
@@ -67,7 +69,28 @@ export const novaIntents: NovaIntent[] = [
     keywords: ["who are you", "what are you", "your name", "about you", "robot"],
     answer: () =>
       "I'm NOVA. I live on this page and I know an unreasonable amount about Edwin. That's the whole job.",
-    followUps: ["Who is Edwin?", "Show me his best work", "How do I contact him?"],
+    followUps: ["Who is Edwin?", "See the flagship ✦", "How do I contact him?"],
+  },
+  {
+    id: "flagship",
+    keywords: [
+      "flagship",
+      "other version",
+      "new version",
+      "another version",
+      "redesign",
+      "fancy version",
+      "the new one",
+      "premium",
+    ],
+    answer: ({ name }) =>
+      greet(
+        name,
+        "Good eye, {name} — there's a flagship edition of this portfolio, a bolder redesign. Taking you there now.",
+        "Good eye — there's a flagship edition of this portfolio, a bolder redesign. Taking you there now.",
+      ),
+    navigateTo: profile.links.flagship,
+    followUps: ["Who is Edwin?", "Show me his best work", "Is he available?"],
   },
   {
     id: "who",
@@ -266,7 +289,7 @@ export const NOVA_FALLBACK =
 export const DEFAULT_SUGGESTIONS = [
   "Who is Edwin?",
   "Show me his best work",
-  "Is he available?",
+  "See the flagship ✦",
 ];
 
 export const CHAT_GREETING = (name: string | null) =>
