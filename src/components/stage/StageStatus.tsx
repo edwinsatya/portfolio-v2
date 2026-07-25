@@ -7,7 +7,7 @@ import {
   subscribeNovaStatus,
   type NovaStatus,
 } from "@/lib/nova-bus";
-import { batteryCells } from "@/lib/power";
+import { batteryCells, batteryUrgency } from "@/lib/power";
 import { usePower } from "@/hooks/usePower";
 
 /**
@@ -45,6 +45,7 @@ export function StageStatus() {
   );
   const power = usePower();
   const label = power.state === "dead" ? OFFLINE : READOUT[status];
+  const urgency = batteryUrgency(power.level, power.charging);
 
   return (
     <div
@@ -54,9 +55,18 @@ export function StageStatus() {
       data-power={power.state}
       data-charging={power.charging}
     >
+      {/* The caption still dims with the page; the battery span holds a literal
+          colour per urgency tier, so the one number explaining the state opts
+          out of the low-power token muting the rest of the line inherits. */}
       <p className="mono-label stage-status-read text-center text-faint">
-        {label} · {power.charging && <span className="stage-status-bolt">⚡</span>}
-        {batteryCells(power.level)} {power.level}%
+        {label} ·{" "}
+        <span className="battery-gauge" data-batt={urgency}>
+          {power.charging && <span className="stage-status-bolt">⚡</span>}
+          {batteryCells(power.level)} {power.level}%
+        </span>
+        {urgency === "critical" && (
+          <span className="battery-low-tag">⚠ Low power</span>
+        )}
       </p>
 
       {/* The one place the page admits it has a shell. Dropped at 0%, where the

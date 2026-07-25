@@ -821,10 +821,57 @@
 
 .nova-antenna {
   transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Stands to attention as she charges — the bobble perking up with the
+     power-up. Zero when `--nova-charge` is unset, so nothing moves off the
+     mains. Cocked moods (thinking) win at higher specificity. */
+  transform: translateY(calc(var(--nova-charge, 0) * -4px));
 }
 
 .nova-glowing {
   animation: nova-glow 2.8s ease-in-out infinite;
+}
+
+/* --- Anime power-up charge glow ------------------------------------------- */
+/*
+ * `--nova-charge` (0–1) is written every frame by the stage loop while NOVA is
+ * plugged in and past battery saver; `--nova-aura` / `--nova-aura-hot` are the
+ * charge-coloured aura tints `PowerAura` publishes on the document root. They
+ * light her from within as she powers up — the visor and every lamp take on the
+ * aura colour and burn brighter, the chest lamp most of all.
+ *
+ * A posture, not a movement: it holds at a steady value under reduced motion,
+ * where `PowerAura` itself falls back to a static glow of the same colour, so
+ * this is the one part of the effect that reads identically in both modes.
+ */
+.nova {
+  --nova-charge: 0;
+  --nova-aura: var(--color-accent);
+  --nova-aura-hot: #eafcff;
+}
+
+/* Inner light on the visor, scaled by charge. `drop-shadow` rather than a fill
+   so it reads as the plate glowing from behind rather than as paint on it. */
+.nova[data-charging="true"] .nova-visor {
+  filter: drop-shadow(
+    0 0 calc(var(--nova-charge) * 14px)
+      color-mix(in oklab, var(--nova-aura) calc(var(--nova-charge) * 85%), transparent)
+  );
+}
+
+/* Eyes and every lamp pick up the aura colour and brighten with it. */
+.nova[data-charging="true"] :is(.nova-eye, .nova-lamp) {
+  filter: drop-shadow(
+    0 0 calc(4px + var(--nova-charge) * 9px)
+      color-mix(in oklab, var(--nova-aura-hot) calc(var(--nova-charge) * 90%), transparent)
+  );
+}
+
+/* The chest lamp — her charging port — is the source, so it burns hardest. */
+.nova[data-charging="true"] .nova-torso .nova-lamp {
+  filter: drop-shadow(
+    0 0 calc(6px + var(--nova-charge) * 14px)
+      color-mix(in oklab, var(--nova-aura-hot) calc(var(--nova-charge) * 100%), transparent)
+  );
 }
 
 @keyframes nova-glow {

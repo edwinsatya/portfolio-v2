@@ -18,6 +18,7 @@ import {
   getDroop,
   getPower,
   getSlump,
+  LOW_AT,
   onPowerEvent,
   type PowerEvent,
 } from "@/lib/power";
@@ -42,6 +43,8 @@ const BASE_HEIGHT = BASE_WIDTH * ASPECT;
 const DOCK_WIDTH = 118;
 const DOCK_WIDTH_SMALL = 86;
 const DOCK_MARGIN = 20;
+/** Clearance kept between her feet and a bottom tab bar while charging. */
+const CHARGE_DOCK_GAP = 14;
 const SMALL_SCREEN = 640;
 /** Size NOVA steps aside to when the terminal is up — about 45% of full. */
 const SIDELINE_WIDTH = 172;
@@ -88,6 +91,10 @@ const YAWN_MAX_MS = 34000;
     critical battery losing the fight *is* the idle. */
 const NOD_MIN_MS = 7000;
 const NOD_MAX_MS = 14000;
+/** Gap between the anime power-up poses she strikes while charging past saver.
+    Frequent — it's the idle *of* charging, the beat the wake-ups punctuate. */
+const POWERUP_MIN_MS = 2600;
+const POWERUP_MAX_MS = 4600;
 /** How long the visor's reboot flicker runs. Matches `nova-spark` in nova.css. */
 const SPARK_MS = 1300;
 /** How long the joyful face lingers after the last like. */
@@ -135,6 +142,12 @@ const PRIORITY: Record<NovaState, number> = {
   shake: 40,
   nod: 40,
   yawn: 40,
+
+  // Below the celebrations and the wave, so a like or a greeting still lands
+  // over her mid-flex — she's charging, not unavailable — but above the plain
+  // idle it plays out of. The wake-up beats (40) always outrank it, which is
+  // exactly the "layered under the staged wake-up" the power-up is meant to be.
+  powerup: 18,
 
   annoyed: 30,
   turnAway: 30,
@@ -283,6 +296,13 @@ export function useNovaStage({
     let nextWanderAt = 0;
     let isDocked = false;
     let isSidelined = false;
+    /** Eased upward offset that keeps the charging aura clear of a bottom bar. */
+    let chargeLift = 0;
+    /** Keeps the "charging" flag (and so her mobile-ABOUT visibility) alive for a
+        grace beat after the cable leaves, so the finale and victory dance play
+        out rather than blinking off the instant the charge completes. */
+    let chargeHoldUntil = 0;
+    let wasCharging = false;
     let ready = false;
     let slot: HTMLElement | null = null;
     let nav: HTMLElement | null = null;
@@ -395,7 +415,8 @@ export function useNovaStage({
         nav = document.querySelector<HTMLElement>("[data-site-nav]");
       }
       const slotRect = slot?.getBoundingClientRect() ?? null;
-      const navBottom = nav?.getBoundingClientRect().bottom ?? NAV_FALLBACK;
+      const navRect = nav?.getBoundingClientRect() ?? null;
+      const navBottom = navRect?.bottom ?? NAV_FALLBACK;
 
       // Measured every frame, open or not. The bubble hides with `visibility`,
       // which keeps its layout box, so these are real numbers throughout —
@@ -438,6 +459,26 @@ export function useNovaStage({
         centerY = slotRect.top + slotRect.height / 2;
       }
 
+      /* Charging in the corner: lift her clear of the bottom tab bar.
+       *
+       * On a phone the non-home scenes dock her to the bottom-right, which tucks
+       * her lower half — and the base of her charging aura — behind the nav bar
+       * (z-index 50, above the stage). While the cable is in, raise her just far
+       * enough that her feet sit above the bar, so the whole power-up is on
+       * screen rather than erupting from behind it. Only when docked and only
+       * when the nav is actually a bottom bar (its top past mid-screen); the
+       * desktop nav lives at the top and must never pull her up. Eased so
+       * plugging in lifts her rather than teleporting her. */
+      const barTop = navRect && navRect.top > vh * 0.5 ? navRect.top : vh;
+      const feet = centerY + (BASE_HEIGHT * scale) / 2;
+      const wantLift =
+        shouldDock && getPower().charging
+          ? Math.max(0, feet - (barTop - CHARGE_DOCK_GAP))
+          : 0;
+      chargeLift += (wantLift - chargeLift) * 0.12;
+      if (wantLift === 0 && chargeLift < 0.2) chargeLift = 0;
+      centerY -= chargeLift;
+
       // Only transition on the flight itself. While tracking the hero slot the
       // transform is rewritten every frame, and a transition would read as lag.
       if (shouldDock !== isDocked) {
@@ -459,9 +500,47 @@ export function useNovaStage({
         }, SIDELINE_MS);
       }
 
-      anchor.style.transform = `translate(${centerX - BASE_WIDTH / 2}px, ${
-        centerY - BASE_HEIGHT / 2
-      }px) scale(${scale})`;
+      /* --- Anime power-up charge (see PowerAura) ----------------------
+       * One envelope drives the whole power-up read: zero below the
+       * battery-saver line, ramping to one at a full charge. It sets how hard
+       * her visor glows and how upright her antenna stands (a *posture*, so it
+       * survives reduced motion as a gentle static glow), and — motion allowed
+       * — a body tremble that intensifies with the percentage plus an
+       * occasional energy pulse that lifts her a few px. The tremble is folded
+       * into the anchor transform below so it costs no extra write; a ±2px
+       * jitter is invisible against a docking flight, so it needs no guard. */
+      const chargePow = getPower();
+      const chargeK = chargePow.charging
+        ? clamp((chargePow.level - LOW_AT) / (100 - LOW_AT), 0, 1)
+        : 0;
+
+      let trembleX = 0;
+      let trembleY = 0;
+      let pulseK = 0;
+      if (chargeK > 0 && !reducedMotion.matches) {
+        // Two detuned sines per axis read as an organic shudder rather than a
+        // wobble; amplitude climbs from a barely-there hum to ~2px near full.
+        const amp = 0.5 + chargeK * 1.6;
+        trembleX = (Math.sin(now / 41) + Math.sin(now / 27)) * 0.5 * amp;
+        trembleY = (Math.sin(now / 49) + Math.sin(now / 33)) * 0.5 * amp;
+        // A brief raised-cosine surge every ~2.6s, stronger the fuller she is —
+        // she lifts, and `PowerAura` reads the same value to flare the aura.
+        const phase = (now % 2600) / 2600;
+        if (phase < 0.2) {
+          pulseK = Math.sin((phase / 0.2) * Math.PI) * (0.45 + chargeK * 0.55);
+          trembleY -= pulseK * 5;
+        }
+      }
+      svg.style.setProperty("--nova-charge", chargeK.toFixed(3));
+      // Published for PowerAura: the energy pulse it flares on, and the tremble
+      // it leans the whole pillar with so the aura shakes when she does.
+      const root = document.documentElement.style;
+      root.setProperty("--nova-pulse", pulseK.toFixed(3));
+      root.setProperty("--nova-tremble-x", trembleX.toFixed(2));
+
+      anchor.style.transform = `translate(${
+        centerX - BASE_WIDTH / 2 + trembleX
+      }px, ${centerY - BASE_HEIGHT / 2 + trembleY}px) scale(${scale})`;
 
       if (!ready) {
         ready = true;
@@ -504,6 +583,24 @@ export function useNovaStage({
       else delete svg.dataset.port;
       if (power.charging) svg.dataset.charging = "true";
       else delete svg.dataset.charging;
+
+      // Mirrored onto <html> so page-level rules can react to charging — most
+      // importantly the mobile ABOUT scene, which hides the docked robot but
+      // must keep her (and her power-up aura) on screen while she's plugged in.
+      // Held a beat past the disconnect so the 100% finale and the victory dance
+      // it fires aren't cut off the instant the charge tops out. Guarded so it
+      // writes only on the transition, not every frame.
+      if (power.charging) wasCharging = true;
+      else if (wasCharging) {
+        wasCharging = false;
+        chargeHoldUntil = now + 1800;
+      }
+      const rootEl = document.documentElement;
+      const chargingFlag = power.charging || now < chargeHoldUntil ? "true" : undefined;
+      if (rootEl.dataset.charging !== chargingFlag) {
+        if (chargingFlag) rootEl.dataset.charging = chargingFlag;
+        else delete rootEl.dataset.charging;
+      }
 
       if (reducedMotion.matches) {
         // Held at a fixed rest pose — the engine's idle still breathes and
@@ -970,6 +1067,36 @@ export function useNovaStage({
     };
 
     /*
+     * The power-up flex — the shonen charging pose, on the same one-shot
+     * schedule as the wave and the yawn.
+     *
+     * Only while plugged in and only above the battery-saver line: below it she
+     * is still waking up, and the staged revival (twitch, stretch, shake) owns
+     * that band — those fire straight through `enterState` and outrank this, so
+     * a power-up never steps on a wake-up beat, it fills the gaps between them.
+     * From `idle` only, like every other scheduled gesture, so a like or a
+     * greeting she's mid-flex for still lands.
+     */
+    const schedulePowerup = () => {
+      later(
+        () => {
+          const power = getPower();
+          if (
+            power.charging &&
+            power.level > LOW_AT &&
+            !busy() &&
+            !mischief &&
+            !reducedMotion.matches
+          ) {
+            enterState("powerup", performance.now());
+          }
+          schedulePowerup();
+        },
+        POWERUP_MIN_MS + Math.random() * (POWERUP_MAX_MS - POWERUP_MIN_MS),
+      );
+    };
+
+    /*
      * The revival, staged.
      *
      * Each beat is a gesture rather than a blend, because the continuous part —
@@ -1284,6 +1411,7 @@ export function useNovaStage({
       scheduleWave();
       scheduleYawn();
       scheduleNod();
+      schedulePowerup();
       scheduleIdleAct();
     }
 
@@ -1302,6 +1430,8 @@ export function useNovaStage({
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerout", handlePointerOut);
       window.removeEventListener("pointerdown", handlePointerDown);
+      // Don't leave a stale charging flag pinning the mobile-ABOUT robot on.
+      delete document.documentElement.dataset.charging;
     };
   }, []);
 

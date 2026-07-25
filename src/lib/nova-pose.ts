@@ -72,6 +72,12 @@ export type NovaState =
   | "stretch"
   /** "I'm back!" — the happy wiggle when the charge clears battery saver. */
   | "shake"
+  /**
+   * Charging past battery saver: the shonen power-up pose she strikes between
+   * the wake-up beats — gather down into a crouch, fists in at the sides, then
+   * draw up and tense. See `powerup` below and `PowerAura`.
+   */
+  | "powerup"
   /* --- Music ------------------------------------------------------------- */
   /** Headphones on, in the zone. Runs until the player closes. */
   | "vibe"
@@ -138,6 +144,7 @@ export const STATE_MS: Record<TimedState, number> = {
   twitch: 720,
   stretch: 2600,
   shake: 1100,
+  powerup: 1700,
   tilt: 2200,
   inspect: 2800,
   hum: 2600,
@@ -439,6 +446,47 @@ function shake(now: number, elapsed: number, intensity: number): Pose {
     bodyRot: w * 7 * amp * env,
     bodyY: base.bodyY - 2.5 * env,
     headRot: -w * 5 * env,
+  };
+}
+
+/**
+ * The power-up pose — the beat between the wake-up gestures while she charges.
+ *
+ * The whole read is in the two halves. She *gathers* over the first stretch:
+ * sinks into a crouch, squashes down, draws her fists in tight at her sides, and
+ * drops her head. Then she *rises* — drives up out of the crouch past standing,
+ * chest out, chin lifting, arms braced. A shonen character loading up, one rep.
+ *
+ * Kept restrained on the limbs on purpose: the aura, the tremble, and the
+ * lightning in `PowerAura` are doing the shouting, and a body that also flailed
+ * would fight them. Built on the plain idle — she only strikes this above the
+ * battery-saver line, where the droop is already gone.
+ */
+function powerup(now: number, elapsed: number): Pose {
+  const base = idle(now);
+  const p = Math.min(1, elapsed / STATE_MS.powerup);
+
+  // Gather down over the first 45%, then draw up and hold the rest.
+  const gather = p < 0.45 ? ease(p / 0.45) : 1;
+  const rise = p < 0.45 ? 0 : ease((p - 0.45) / 0.55);
+  // Peaks at the turn — deepest crouch is the instant before she launches up.
+  const crouch = gather - rise;
+
+  return {
+    ...base,
+    // Fists in tight at the sides, elbows tucked; braced a touch wider on rise.
+    armL: lerp(base.armL, -3, gather) + rise * 4,
+    armR: lerp(base.armR, 3, gather) - rise * 4,
+    foreL: lerp(base.foreL, 10, gather),
+    foreR: lerp(base.foreR, -10, gather),
+    // Down into the crouch, then punch up past neutral as she powers up.
+    bodyY: base.bodyY + 6 * crouch - 4 * rise,
+    bodySx: base.bodySx + 0.035 * crouch,
+    bodySy: base.bodySy - 0.04 * crouch + 0.022 * rise,
+    chest: base.chest + 0.035 * rise,
+    // Head bows while gathering, then lifts and tips back on the surge.
+    headRot: base.headRot + 9 * gather - 13 * rise,
+    headY: base.headY + 2.5 * gather - 2 * rise,
   };
 }
 
@@ -955,6 +1003,8 @@ export function poseFor(
       return happy(now, elapsed, intensity);
     case "shake":
       return shake(now, elapsed, intensity);
+    case "powerup":
+      return powerup(now, elapsed);
     case "yawn":
       return yawn(now, elapsed, droop, slump);
     case "nod":

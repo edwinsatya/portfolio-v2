@@ -1429,6 +1429,159 @@ html.stage-root body {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Battery gauge — the one readout that never dims                             */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The battery portion of the status readout is the single element that tells a
+ * visitor what state the page is in, so it is deliberately exempt from the
+ * low-power token dimming that mutes everything else. Each urgency tier names a
+ * *literal* colour — nothing a `data-power` block redefines — so it holds full
+ * contrast in both themes, on desktop and phone, and only grows louder as the
+ * charge drops. The `.battery-chip` shares every colour here; it is the phone's
+ * fixed low-power copy of the same gauge, defined below.
+ */
+.battery-gauge,
+.battery-chip {
+  --batt-amber: #ffb454;
+  --batt-orange: #ff7a3c;
+  --batt-red: #ff5f4f;
+  --batt-live: #34d8c0;
+
+  font-variant-numeric: tabular-nums;
+  transition: color 300ms ease;
+}
+
+/* ≤20% — the battery-saver line. Amber, a hair larger and heavier, so the
+   number starts pulling the eye a beat before it is an emergency. */
+.battery-gauge[data-batt="warn"],
+.battery-chip[data-batt="warn"] {
+  color: var(--batt-amber);
+  font-weight: 600;
+  font-size: 1.04em;
+}
+
+/* ≤10% — red-orange, with the slow heartbeat. Calm, not blinking. */
+.battery-gauge[data-batt="urgent"],
+.battery-chip[data-batt="urgent"] {
+  color: var(--batt-orange);
+  font-weight: 600;
+  font-size: 1.05em;
+  animation: battery-pulse 1.5s ease-in-out infinite;
+}
+
+/* ≤5% — red, the same heartbeat, and the spelled-out tag alongside. */
+.battery-gauge[data-batt="critical"],
+.battery-chip[data-batt="critical"] {
+  color: var(--batt-red);
+  font-weight: 700;
+  font-size: 1.06em;
+  animation: battery-pulse 1.5s ease-in-out infinite;
+}
+
+/* 0% — red and still. The "· powered off ·" label owns the motion here. */
+.battery-gauge[data-batt="dead"],
+.battery-chip[data-batt="dead"] {
+  color: var(--batt-red);
+  font-weight: 700;
+}
+
+/* Charging outranks every level: green, full brightness, no pulse. */
+.battery-gauge[data-batt="charging"],
+.battery-chip[data-batt="charging"] {
+  color: var(--batt-live);
+  font-weight: 600;
+  animation: none;
+}
+
+/* The spelled-out warning beside a critical readout. Its own centred line so it
+   never widens the `nowrap` status strip. */
+.battery-low-tag {
+  display: block;
+  width: 100%;
+  margin-top: 0.2rem;
+  font-family: var(--font-mono);
+  font-size: 0.78em;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-align: center;
+  color: #ff5f4f;
+  animation: battery-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes battery-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/*
+ * The phone's low-power battery chip.
+ *
+ * Hidden outright on desktop, where the centre-bottom readout keeps the corner
+ * the vignette never takes. On phones the readout lives top-left, the first
+ * place the dark closes over, so from ≤20% it hands the number here — a chip on
+ * the `power-void-ui` layer (z 55), above both the vignette and the tab bar.
+ */
+.battery-chip {
+  display: none;
+}
+
+@media (max-width: 639px) {
+  .battery-chip {
+    position: absolute;
+    left: 50%;
+    bottom: calc(8rem + env(safe-area-inset-bottom));
+    translate: -50% 0;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.1rem 0.4rem;
+    max-width: calc(100vw - 2rem);
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background: rgb(6 7 12 / 0.9);
+    border: 1px solid rgb(255 255 255 / 0.06);
+    box-shadow: 0 8px 24px -12px rgb(0 0 0 / 0.7);
+
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+
+    opacity: 0;
+    transition: opacity 400ms ease;
+    pointer-events: none;
+  }
+
+  .battery-chip[data-show="true"] {
+    opacity: 1;
+  }
+
+  /* One number in one place: the moment the chip takes over, the top-left
+     readout steps out rather than repeat it from a dimming corner. */
+  .stage-status-line[data-power="low"],
+  .stage-status-line[data-power="critical"],
+  .stage-status-line[data-power="dead"] {
+    display: none;
+  }
+}
+
+/* Reduced motion keeps the urgency colours but drops every heartbeat. */
+@media (prefers-reduced-motion: reduce) {
+  .battery-gauge,
+  .battery-chip,
+  .battery-low-tag {
+    animation: none;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
 /* Scenes                                                                      */
 /* -------------------------------------------------------------------------- */
 
