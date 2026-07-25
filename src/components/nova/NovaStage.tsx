@@ -216,6 +216,7 @@ export function NovaStage() {
         onToggleMaximize={chat.toggleMaximize}
         onScene={chat.goToScene}
         onProject={chat.goToProject}
+        onCompose={chat.compose}
       />
 
       <ResumeWindow

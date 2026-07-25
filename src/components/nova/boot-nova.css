@@ -1,0 +1,52 @@
+/* -------------------------------------------------------------------------- */
+/* Boot NOVA — the splash's robot on routes without a stage                    */
+/*                                                                             */
+/* Sized and placed to land where the stage puts her during a boot: above the  */
+/* readout, which the overlay pins to the lower fifth of the screen. Same       */
+/* z-index the stage layer is lifted to while booting (95), so she is over the  */
+/* splash rather than under it.                                                 */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Stood on top of the readout rather than centred on the screen.
+ *
+ * The overlay pins its readout 18svh off the bottom, and that block runs about
+ * 17.5rem tall at its fullest (six POST lines, the bar, the status row and the
+ * build selector). Anchoring her bottom just above the sum keeps her feet clear
+ * of the log at every viewport height instead of printing "INDEXING 11 SHIPPED
+ * PROJECTS" through her legs.
+ */
+.boot-nova {
+  position: fixed;
+  left: 50%;
+  bottom: calc(18svh + 19rem);
+  z-index: 95;
+  width: min(12rem, 24svh);
+  translate: -50% 0;
+  pointer-events: none;
+
+  opacity: 0;
+  transition: opacity 420ms ease;
+}
+
+@media (min-width: 640px) {
+  .boot-nova {
+    width: min(15rem, 26svh);
+  }
+}
+
+/*
+ * Present for the whole splash *and* its dissolve — matched on the attribute's
+ * presence, not on `true`, the same way the stage's own lift is: `BootSequence`
+ * flips it to "out" for the length of the fade, and a robot that vanished on
+ * the first frame of it would be the flash the dissolve exists to prevent.
+ */
+html[data-booting] .boot-nova {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boot-nova {
+    transition: none;
+  }
+}

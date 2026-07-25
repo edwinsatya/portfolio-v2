@@ -233,7 +233,7 @@ export const caseStudies: Record<string, CaseStudy> = {
     role: "Full Stack Developer",
     timeline: "2023 — 2025",
     glance: { label: "Built at", value: "Magloft" },
-    stack: ["Vue.js", "Node.js", "GraphQL", "Tailwind CSS"],
+    stack: ["Next.js", "Angular", "Node.js", "Express", "GraphQL", "Tailwind CSS"],
     confidential: true,
     lede: "Digital publishing at scale — the platform that turns magazines and long-form issues into apps and web readers — worked on across the stack for nearly two years.",
     sections: {

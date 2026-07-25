@@ -119,7 +119,7 @@ const CARDS: Omit<WorkCard, "no">[] = [
     name: "Magloft",
     blurb:
       "Digital publishing at scale — turning magazines and long-form issues into apps and web readers.",
-    tags: ["Vue.js", "GraphQL"],
+    tags: ["Next.js", "GraphQL"],
     image: "magloft.png",
     aliases: ["publishing", "magazine"],
     org: "magloft",

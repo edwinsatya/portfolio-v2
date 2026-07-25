@@ -74,7 +74,11 @@ export const scenes: Scene[] = [
     label: "Contact",
     mood: "waving",
     line: "he usually replies within 24 hours. go on, say hi.",
-    chips: ["how do i contact him?", "is he available?", "can i see his cv?"],
+    taglines: [
+      "this is the part where you say hi. go on.",
+      "he actually replies. i make sure of it.",
+    ],
+    chips: ["is he open to work?", "what's his rate?", "email him"],
   },
 ];
 

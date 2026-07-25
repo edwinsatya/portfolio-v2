@@ -36,6 +36,14 @@ export type NovaIntent = {
   answer: (context: NovaAnswerContext) => string;
   /** Scene to navigate to after answering. Renders as a NAVIGATE_TO button. */
   scene?: string;
+  /**
+   * Offers a COMPOSE_EMAIL button, prefilled with this subject.
+   *
+   * On the intents where the honest answer is "email him", the button is the
+   * answer: a visitor who has just been told to send an email should not then
+   * have to go and find the address.
+   */
+  compose?: string;
   /** Chips offered once this answer has been given. */
   followUps?: string[];
 };
@@ -273,6 +281,7 @@ export const novaIntents: NovaIntent[] = [
         "Yes — he's taking on new projects and roles, and he usually replies inside 24 hours. Rates depend on the shape of the work, so email him and he'll give you a straight answer.",
       ),
     scene: "contact",
+    compose: "Work with Edwin",
     followUps: ["How do I contact him?", "What can he build?", "Can I see his CV?"],
   },
   {
@@ -294,6 +303,7 @@ export const novaIntents: NovaIntent[] = [
         name ? ` Tell him ${name} sent you.` : ""
       }`,
     scene: "contact",
+    compose: "Hello Edwin",
     followUps: ["Is he available?", "Can I see his CV?", "Show me his best work"],
   },
   {
