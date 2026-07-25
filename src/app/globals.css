@@ -1149,6 +1149,23 @@ html.stage-root body {
   display: grid;
   height: 100svh;
   width: 100%;
+  /*
+   * The page must never pan sideways, on any scene, at any width.
+   *
+   * `clip` rather than `hidden`: hidden would make the stage a scroll container
+   * — which is exactly the bug, since a container that *can* scroll will be
+   * scrolled by a stray touch — and would also trap the badges' focus rings and
+   * NOVA's overlay in a box that scrolls. `clip` just clips. The vertical axis
+   * stays `visible` so nothing that hangs out of the stage on purpose (the
+   * charging aura, a bubble) is cut; pairing `clip` with `visible` is the one
+   * combination that doesn't force the other axis to `auto`.
+   *
+   * This is the backstop. The elements that actually overflow — the wordmark
+   * below, the bleeding rows — are fixed at their own source too, so nothing
+   * relies on being clipped to look right.
+   */
+  overflow-x: clip;
+  overflow-y: visible;
   /* identity / middle / foot. The middle row absorbs all spare height, which is
      what keeps NOVA optically centred as scene content changes size. */
   grid-template-rows: auto minmax(0, 1fr) auto;
@@ -1197,6 +1214,20 @@ html.stage-root body {
   justify-content: center;
   transform: translateY(-50%);
   pointer-events: none;
+  /*
+   * "edwin.dev" at 27vw is wider than a phone — by 40px each side at 393px —
+   * and it's `nowrap` by design. That overhang was the horizontal scroll: the
+   * mark itself is invisible enough not to look wrong, so the only symptom was
+   * a page that could be dragged 40px sideways, taking the identity and the
+   * scene's left edge off screen with it.
+   *
+   * Clipped to the viewport here rather than shrunk — the mark is *meant* to
+   * run off both edges. `clip` on x with `visible` on y keeps the blur bleeding
+   * above and below, where there's no scroll to cause.
+   */
+  max-width: 100%;
+  overflow-x: clip;
+  overflow-y: visible;
 }
 
 /* NOVA's slot: centred in the middle row.
@@ -1618,6 +1649,12 @@ html.stage-root body {
   width: 100%;
   max-height: 100%;
   overflow-y: auto;
+  /* One axis only. `overflow-y: auto` alone leaves x at `visible`, and a
+     `visible` axis paired with a scrolling one computes to `auto` — so the
+     column quietly became a sideways scroller too, and the badge row's
+     edge-bleed handed it 16px to pan. Naming x explicitly is what stops that;
+     nothing here is meant to scroll horizontally. */
+  overflow-x: clip;
   overscroll-behavior: contain;
   scrollbar-width: thin;
   padding-right: 0.25rem;
@@ -1626,6 +1663,21 @@ html.stage-root body {
 @media (min-width: 1024px) {
   .scene-scroll {
     max-width: 30rem;
+  }
+}
+
+/* Phones get no rails: the scene reads as a page, not as a panel with a
+   scrollbar down its side. The gutter the rail needed goes with it.
+   Phones only — from 640px up the column is still a box that scrolls inside the
+   stage, and there the rail is the only thing saying so. */
+@media (max-width: 639px) {
+  .scene-scroll {
+    padding-right: 0;
+    scrollbar-width: none;
+  }
+
+  .scene-scroll::-webkit-scrollbar {
+    display: none;
   }
 }
 
