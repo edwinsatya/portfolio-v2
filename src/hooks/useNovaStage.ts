@@ -60,6 +60,26 @@ const PORT_LINE = 215 / 320;
 /** The ground she stands on. The "powered off" label hangs below it. */
 const FOOT_LINE = 303 / 320;
 
+/**
+ * NOVA's local box, and the lines across it that everything else measures from.
+ *
+ * The anchor is `BASE_WIDTH` wide and this tall, and anything rendered *inside*
+ * it is laid out in these coordinates. That's what lets the charging aura live
+ * in her anchor and be placed with constants rather than tracked frame by
+ * frame: her transform is then the only thing that ever moves it.
+ */
+export const NOVA_BOX = {
+  width: BASE_WIDTH,
+  height: BASE_HEIGHT,
+  centreX: BASE_WIDTH / 2,
+  headY: BASE_HEIGHT * HEAD_TOP,
+  /** Her chest lamp — where the cable plugs in and the finale erupts from. */
+  portY: BASE_HEIGHT * PORT_LINE,
+  footY: BASE_HEIGHT * FOOT_LINE,
+  /** Head to foot: "her height", for anything that scales with her. */
+  span: BASE_HEIGHT * (FOOT_LINE - HEAD_TOP),
+} as const;
+
 /** Clearance the bubble keeps from every viewport edge. */
 const EDGE_PAD = 12;
 /** Gap between the bubble and NOVA herself. */
@@ -68,17 +88,59 @@ const BUBBLE_GAP = 10;
 const NAV_FALLBACK = 64;
 /** How far in from the bubble's corner the tail sits. */
 const TAIL_INSET = 20;
+/**
+ * How close to a viewport edge she has to be before the finale's label stops
+ * centring on her and hangs inward instead. Half the label's widest rendering
+ * plus a margin — see `.power-aura-max`.
+ */
+const LABEL_REACH = 130;
 
 const clamp = (value: number, min: number, max: number) =>
   // Guards the case where the bubble is taller than the space it has to fit in:
   // min wins, so it stays below the nav rather than sliding under it.
   Math.max(min, Math.min(max, value));
 
+/**
+ * A CSS `cubic-bezier(x1, y1, x2, y2)` as a plain function of 0–1.
+ *
+ * The flights used to be CSS transitions on the anchor, which is why they need
+ * an equivalent here — see the note on the rendered position in the loop. Solved
+ * by bisection rather than Newton: twelve halvings is well under a pixel of
+ * error on an 800ms move and has no derivative to blow up on a curve with
+ * overshoot (`y` outside 0–1 is deliberate on the step-aside).
+ */
+function cubicBezier(x1: number, y1: number, x2: number, y2: number) {
+  const axis = (a: number, b: number, t: number) => {
+    const u = 1 - t;
+    return 3 * u * u * t * a + 3 * u * t * t * b + t * t * t;
+  };
+
+  return (x: number) => {
+    if (x <= 0) return 0;
+    if (x >= 1) return 1;
+    let lo = 0;
+    let hi = 1;
+    let t = x;
+    for (let i = 0; i < 12; i++) {
+      const at = axis(x1, x2, t);
+      if (Math.abs(at - x) < 1e-4) break;
+      if (at < x) lo = t;
+      else hi = t;
+      t = (lo + hi) / 2;
+    }
+    return axis(y1, y2, t);
+  };
+}
+
+/** The hero↔dock flight, and the shorter step aside. Were CSS, now ours. */
+const EASE_FLY = cubicBezier(0.4, 0.1, 0.2, 1);
+const EASE_STEP = cubicBezier(0.34, 1.1, 0.4, 1);
+
 /** How far the pointer travels, in px, before the gaze is fully committed. */
 const REACH = 380;
 /** Silence after which NOVA stops tracking and starts looking around alone. */
 const IDLE_AFTER = 3200;
-/** Length of the flight between hero and dock; matches the CSS transition. */
+/** Length of the flight between hero and dock. Eased in the loop — see `EASE_FLY`. */
 const FLY_MS = 800;
 /** Randomised gap between idle waves. */
 const WAVE_MIN_MS = 15000;
@@ -296,6 +358,31 @@ export function useNovaStage({
     let nextWanderAt = 0;
     let isDocked = false;
     let isSidelined = false;
+    /*
+     * Where she is actually drawn, as opposed to where she is heading.
+     *
+     * These two used to be the same number: the loop wrote the target transform
+     * and a CSS transition on the anchor eased the element to it. Everything
+     * else that draws around her — the cable, the bubble, the hearts, the notes,
+     * the lamp, and anything reading `--nova-head-*` — is placed from what this
+     * loop publishes, so all of it jumped to the target on the first frame of a
+     * flight and stood there waiting for the robot to arrive. That is the
+     * detachment. The flight is eased here instead, and every consumer is fed
+     * the eased value, so the whole ensemble moves on one clock.
+     */
+    let renderX = 0;
+    let renderY = 0;
+    let renderScale = 0;
+    let placed = false;
+    /** The move in progress: where it started, when, how long, and its curve. */
+    let flight: {
+      x: number;
+      y: number;
+      scale: number;
+      at: number;
+      ms: number;
+      ease: (t: number) => number;
+    } | null = null;
     /** Eased upward offset that keeps the charging aura clear of a bottom bar. */
     let chargeLift = 0;
     /** Keeps the "charging" flag (and so her mobile-ABOUT visibility) alive for a
@@ -399,6 +486,17 @@ export function useNovaStage({
       nextWanderAt = now + 2000 + Math.random() * 2000;
     };
 
+    /**
+     * Begin a move, easing from wherever she is drawn right now.
+     *
+     * Reduced motion cuts instead, as the CSS transition this replaces did: a
+     * robot gliding across the viewport is the thing that preference turns off.
+     */
+    const takeOff = (now: number, ms: number, ease: (t: number) => number) => {
+      if (reducedMotion.matches) return;
+      flight = { x: renderX, y: renderY, scale: renderScale, at: now, ms, ease };
+    };
+
     /* ---------------------------------------------------------------- */
     /* Frame                                                             */
     /* ---------------------------------------------------------------- */
@@ -479,26 +577,76 @@ export function useNovaStage({
       if (wantLift === 0 && chargeLift < 0.2) chargeLift = 0;
       centerY -= chargeLift;
 
-      // Only transition on the flight itself. While tracking the hero slot the
-      // transform is rewritten every frame, and a transition would read as lag.
+      /* --- Where she is, versus where she is going --------------------
+       * First frame: she belongs at the target, not flying in from the origin.
+       */
+      if (!placed) {
+        renderX = centerX;
+        renderY = centerY;
+        renderScale = scale;
+        placed = true;
+      }
+
+      // Only eased on the flight itself. While tracking the hero slot she is
+      // written straight through every frame, and easing would read as lag.
       if (shouldDock !== isDocked) {
         isDocked = shouldDock;
         setDocked(shouldDock);
+        takeOff(now, FLY_MS, EASE_FLY);
         anchor.dataset.flying = "true";
         later(() => {
           anchor.dataset.flying = "false";
         }, FLY_MS);
       }
 
-      // Stepping aside gets its own, shorter transition.
+      // Stepping aside gets its own, shorter move.
       if (shouldSideline !== isSidelined) {
         isSidelined = shouldSideline;
         anchor.dataset.sideline = String(shouldSideline);
+        takeOff(now, SIDELINE_MS, EASE_STEP);
         anchor.dataset.stepping = "true";
         later(() => {
           anchor.dataset.stepping = "false";
         }, SIDELINE_MS);
       }
+
+      if (flight) {
+        const t = (now - flight.at) / flight.ms;
+        if (t >= 1) {
+          flight = null;
+        } else {
+          // Toward the *live* target rather than a snapshot of it, so a slot
+          // that is itself still animating is caught rather than chased.
+          const k = flight.ease(t);
+          renderX = flight.x + (centerX - flight.x) * k;
+          renderY = flight.y + (centerY - flight.y) * k;
+          renderScale = flight.scale + (scale - flight.scale) * k;
+        }
+      }
+      if (!flight) {
+        renderX = centerX;
+        renderY = centerY;
+        renderScale = scale;
+      }
+
+      // From here down there is only one position, and it's the drawn one.
+      centerX = renderX;
+      centerY = renderY;
+      scale = renderScale;
+
+      /* Which side the one label inside her anchor — the finale's power level —
+         has to hang from so it can't run off the screen. Derived from where she
+         *is*: keyed to the flight's destination instead, it flipped to centred
+         on the first frame of a flight out of the corner and stayed clipped for
+         the length of it. Compared before writing; this runs every frame and
+         changes a handful of times a session. */
+      const edge =
+        centerX > vw - LABEL_REACH
+          ? "right"
+          : centerX < LABEL_REACH
+            ? "left"
+            : "";
+      if (anchor.dataset.edge !== edge) anchor.dataset.edge = edge;
 
       /* --- Anime power-up charge (see PowerAura) ----------------------
        * One envelope drives the whole power-up read: zero below the
@@ -537,6 +685,10 @@ export function useNovaStage({
       const root = document.documentElement.style;
       root.setProperty("--nova-pulse", pulseK.toFixed(3));
       root.setProperty("--nova-tremble-x", trembleX.toFixed(2));
+      // How far down she is scaled, for the one thing inside her anchor that
+      // must *not* scale with her: the finale's power-level label, which would
+      // otherwise shrink to a third of itself in the corner dock.
+      root.setProperty("--nova-scale", scale.toFixed(4));
 
       anchor.style.transform = `translate(${
         centerX - BASE_WIDTH / 2 + trembleX

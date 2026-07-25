@@ -2,7 +2,7 @@ import { Nav } from "@/components/layout/Nav";
 import { NovaStage } from "@/components/nova/NovaStage";
 import { BootSequence } from "@/components/nova/BootSequence";
 import { MusicWidget } from "@/components/nova/MusicWidget";
-import { PowerAura } from "@/components/nova/PowerAura";
+import { PowerAuraVignette } from "@/components/nova/PowerAura";
 import { PowerVoid } from "@/components/nova/PowerVoid";
 import { StageFrame } from "@/components/stage/StageFrame";
 import { ClassicRibbon } from "@/components/scenes/ClassicRibbon";
@@ -36,10 +36,11 @@ export default function StageLayout({
           on either side of NOVA's, which is impossible from inside one of
           them. See the z-index note in `power.css`. */}
       <PowerVoid />
-      {/* The charging power-up: a glowing aura, lightning, and floating debris
-          on layers either side of NOVA's stage — same split as PowerVoid, so
-          she stands inside her own glow. Only alive while the cable is in. */}
-      <PowerAura />
+      {/* The charging power-up itself lives inside NOVA's anchor (see
+          `NovaStage`), so it can never drift from her. This is the one piece of
+          it that can't: a full-viewport tint under her layer, which has no
+          position to get wrong and so is free to stay out here at z 38. */}
+      <PowerAuraVignette />
       <BootSequence />
     </>
   );

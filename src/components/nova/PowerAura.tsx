@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { getNovaPort } from "@/lib/nova-bus";
+import { NOVA_BOX } from "@/hooks/useNovaStage";
 import { getPower, onCharged } from "@/lib/power";
 import "./power-aura.css";
 
@@ -16,21 +16,31 @@ import "./power-aura.css";
  * (60–100%). At a full charge the whole pillar collapses inward and erupts.
  * Original styling — an energy-aura trope, no copyrighted character in it.
  *
- * Built like `PowerSocket`: one rAF loop owns everything continuous — the
- * pillar's placement and colour, the three animated flame silhouettes (their
- * `d` regenerated each frame so the spikes grow, split, and collapse), the
- * arcs, and the debris — writing DOM directly rather than through React,
- * because re-rendering a component sixty times a second to move a `<path>` is
- * the most expensive thing a page can do. React owns only the keyed one-shot
- * finale, the same way `PowerVoid` keys its toast.
+ * ## One transform root
  *
- * It tracks NOVA off the custom properties the stage loop already publishes on
- * the document root each frame (`--nova-head-x/y`, `--nova-foot-y`, plus
- * `--nova-pulse` and `--nova-tremble-x`), so it never measures the SVG.
+ * This whole component renders *inside* NOVA's anchor, and everything it draws
+ * is laid out in her local box (`NOVA_BOX`) — the pillar, the ground pool, the
+ * arcs, the debris, the finale burst and its label. None of it has a viewport
+ * position of its own, so none of it can drift from her: a scene change, the
+ * flight to the corner dock, the charging tremble and the surge all move the
+ * ensemble because they move the one transform it all hangs off, in the same
+ * frame, with the same easing. It is not tracking her; it *is* her.
+ *
+ * The one piece that stays outside is `PowerAuraVignette`, a full-viewport tint
+ * that has no position to trail with.
+ *
+ * The loop below therefore writes no coordinates. It owns what genuinely
+ * changes over time — presence, colour, the surge scale, the flame silhouettes'
+ * `d`, and the spawning of arcs and debris — writing DOM directly rather than
+ * through React, because re-rendering a component sixty times a second to move
+ * a `<path>` is the most expensive thing a page can do. React owns only the
+ * keyed one-shot finale.
  */
 
 /** How long the 100% finale runs before the aura is left to dissipate. */
 const FINALE_MS = 1400;
+/** The label outlives the burst; this is when the last of it is off screen. */
+const FINALE_TAIL_MS = 1800;
 /** Aura fade when the cable comes out under a full charge. */
 const DISSIPATE_MS = 640;
 /** Cap on live arcs, so a full charge crackles hard without unbounded DOM. */
@@ -42,6 +52,11 @@ const FLAME_POINTS = 58;
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const TAU = Math.PI * 2;
+
+/* Her local geometry. Constants, because the aura lives in her box now. */
+const CENTRE_X = NOVA_BOX.centreX;
+const FOOT_Y = NOVA_BOX.footY;
+const SPAN = NOVA_BOX.span;
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -137,28 +152,34 @@ function buildFlame(
   return `${d}Z`;
 }
 
-type FinaleAt = { id: number; x: number; y: number; top: number };
-
 export function PowerAura() {
   const rootRef = useRef<HTMLDivElement>(null);
-  const bodyRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
   const outerRef = useRef<SVGPathElement>(null);
   const midRef = useRef<SVGPathElement>(null);
-  const innerRef = useRef<SVGPathElement>(null);
+  const coreRef = useRef<SVGPathElement>(null);
   const boltsRef = useRef<SVGGElement>(null);
   const debrisRef = useRef<HTMLDivElement>(null);
 
-  const [finale, setFinale] = useState<FinaleAt | null>(null);
+  /** The keyed one-shot finale. `null` is the resting state, and the only one
+      that may survive a disconnect — see the teardown in the loop. */
+  const [finale, setFinale] = useState<number | null>(null);
+  /** Shared with the loop, which drives the pillar's collapse-and-erupt off the
+      same instant the React finale is keyed to. */
+  const finaleAtRef = useRef(-Infinity);
 
   /* The 100% finale — fired once by the store when the charge tops out. */
   useEffect(() => {
     let clear = 0;
     const off = onCharged(() => {
-      const port = getNovaPort();
       const id = performance.now();
-      setFinale({ id, x: port.x, y: port.y, top: readVar("--nova-head-y") });
+      finaleAtRef.current = id;
+      setFinale(id);
+      // Re-armed rather than stacked: a second completion (she drained and was
+      // charged again) restarts the one finale instead of racing an old timer
+      // that would clear the new one halfway through.
       window.clearTimeout(clear);
-      clear = window.setTimeout(() => setFinale(null), FINALE_MS + 200);
+      clear = window.setTimeout(() => setFinale(null), FINALE_TAIL_MS);
     });
     return () => {
       off();
@@ -169,13 +190,13 @@ export function PowerAura() {
   /* The continuous aura, arcs, and debris. */
   useEffect(() => {
     const root = rootRef.current;
-    const body = bodyRef.current;
+    const inner = innerRef.current;
     const outer = outerRef.current;
     const midEl = midRef.current;
-    const inner = innerRef.current;
+    const core = coreRef.current;
     const bolts = boltsRef.current;
     const debrisHost = debrisRef.current;
-    if (!root || !body || !outer || !midEl || !inner || !bolts || !debrisHost) {
+    if (!root || !inner || !outer || !midEl || !core || !bolts || !debrisHost) {
       return;
     }
 
@@ -203,25 +224,18 @@ export function PowerAura() {
     });
 
     let presence = 0;
-    let finaleAt = -Infinity;
     let boltCooldown = 0;
     let lastNow = performance.now();
     let live = 0;
     let frame = 0;
-
-    const offCharged = onCharged(() => {
-      finaleAt = performance.now();
-    });
+    let wasOn = false;
 
     /** One jagged arc across the aura surface, plus a spark off a kink. */
-    const spawnBolt = (
-      cx: number,
-      cy: number,
-      h: number,
-      colour: string,
-      frac: number,
-    ) => {
+    const spawnBolt = (colour: string, frac: number) => {
       if (live >= MAX_BOLTS) return;
+      const cx = CENTRE_X;
+      const cy = FOOT_Y - SPAN * 0.55;
+      const h = SPAN;
       const ang = Math.random() * TAU;
       // Reach out toward the aura's spikes — an upward-biased ellipse, so most
       // arcs crackle across the pillar's surface rather than only on her body.
@@ -278,6 +292,31 @@ export function PowerAura() {
       }
     };
 
+    /**
+     * Back to nothing.
+     *
+     * Runs on the frame the effect stops existing, whichever way that happened:
+     * the cable pulled at 40%, the finale played out at 100%, the tab hidden
+     * through both. Everything the loop can leave behind is cleared here — live
+     * arcs, the last debris positions, the finale React still has mounted, and
+     * the presence the outside vignette reads — so "not charging" is a state
+     * with no charging visuals in it rather than a state that merely stops
+     * adding them.
+     */
+    const shutDown = () => {
+      bolts.replaceChildren();
+      live = 0;
+      pebbles.forEach((p) => {
+        p.el.style.opacity = "0";
+      });
+      boltCooldown = 0;
+      finaleAtRef.current = -Infinity;
+      document.documentElement.style.setProperty("--aura-presence", "0");
+      root.style.setProperty("--aura-presence", "0");
+      root.style.setProperty("--aura-strength", "0");
+      setFinale(null);
+    };
+
     const tick = (now: number) => {
       frame = requestAnimationFrame(tick);
       const dt = Math.min(64, now - lastNow);
@@ -287,12 +326,12 @@ export function PowerAura() {
       const charging = power.charging;
       const frac = clamp(power.level / 100, 0, 1);
       const isReduced = reduced.matches;
-      const inFinale = now - finaleAt < FINALE_MS;
+      const inFinale = now - finaleAtRef.current < FINALE_MS;
 
       // Presence: rises fast on connect; dissipates over ~640ms on a plain
       // disconnect, or is driven by the finale's scripted pop at 100%.
       if (inFinale) {
-        const ft = (now - finaleAt) / FINALE_MS;
+        const ft = (now - finaleAtRef.current) / FINALE_MS;
         presence = ft < 0.16 ? 1 : 1 - ease((ft - 0.16) / 0.84);
       } else if (charging) {
         presence += (1 - presence) * Math.min(1, dt / 120);
@@ -301,19 +340,12 @@ export function PowerAura() {
       }
 
       const on = presence > 0.004;
-      if (root.dataset.on !== String(on)) root.dataset.on = String(on);
-      if (!on) {
-        root.style.setProperty("--aura-presence", "0");
-        return;
+      if (on !== wasOn) {
+        wasOn = on;
+        root.dataset.on = String(on);
+        if (!on) shutDown();
       }
-
-      const cx = readVar("--nova-head-x");
-      const topY = readVar("--nova-head-y");
-      const footY = readVar("--nova-foot-y");
-      if (!Number.isFinite(cx) || !Number.isFinite(topY) || !Number.isFinite(footY)) {
-        return;
-      }
-      const h = Math.max(1, footY - topY);
+      if (!on) return;
 
       // Colour tiers derived from one primary, published on the root so NOVA's
       // own visor/lamp glow can share the mid/core (see nova.css).
@@ -329,6 +361,10 @@ export function PowerAura() {
       rs.setProperty("--aura-rim", rimC);
       rs.setProperty("--nova-aura", midC);
       rs.setProperty("--nova-aura-hot", coreC);
+      // The page vignette lives outside her anchor — it tints the whole
+      // viewport and has no position to trail with — so it reads presence from
+      // the root rather than from this subtree.
+      rs.setProperty("--aura-presence", presence.toFixed(3));
 
       const pulse = readVar("--nova-pulse") || 0;
 
@@ -340,7 +376,7 @@ export function PowerAura() {
       // A quick collapse at the top of the finale, then the eruption outward.
       let contract = 1;
       if (inFinale) {
-        const ft = (now - finaleAt) / FINALE_MS;
+        const ft = (now - finaleAtRef.current) / FINALE_MS;
         contract =
           ft < 0.16
             ? lerp(1, 0.42, ease(ft / 0.16))
@@ -353,15 +389,7 @@ export function PowerAura() {
       root.style.setProperty("--aura-presence", presence.toFixed(3));
       root.style.setProperty("--aura-strength", strength.toFixed(3));
       root.style.setProperty("--aura-frac", frac.toFixed(3));
-      body.style.setProperty("--aura-h", `${h.toFixed(1)}px`);
-      body.style.setProperty("--aura-scale", scale.toFixed(3));
-      // Pillar box: ~1.5× her height wide (~2× her body width), ~2.4× tall,
-      // base at her feet.
-      body.style.setProperty("--aura-w", `${(h * 1.5).toFixed(1)}px`);
-      body.style.setProperty("--aura-tall", `${(h * 2.4).toFixed(1)}px`);
-      body.style.transform = `translate(${cx.toFixed(1)}px, ${footY.toFixed(
-        1,
-      )}px) translate(-50%, -100%)`;
+      inner.style.setProperty("--aura-scale", scale.toFixed(3));
 
       /* --- Flame silhouettes ----------------------------------------- */
       // Regenerated each frame so the spikes whip; frozen under reduced motion,
@@ -370,23 +398,22 @@ export function PowerAura() {
         const t = now / 1000;
         outer.setAttribute("d", buildFlame(t, 0.4, 1, 1));
         midEl.setAttribute("d", buildFlame(t, 0.4, 0.82, 0.85));
-        inner.setAttribute("d", buildFlame(t, 0.4, 0.6, 0.6));
+        core.setAttribute("d", buildFlame(t, 0.4, 0.6, 0.6));
       }
 
       /* --- Lightning across the surface ------------------------------ */
       if (!isReduced && charging && power.level > 4) {
-        const cyMid = footY - h * 0.55;
         boltCooldown -= dt;
         if (boltCooldown <= 0) {
-          spawnBolt(cx, cyMid, h, rimC, frac);
-          if (frac > 0.85 && Math.random() < 0.6) spawnBolt(cx, cyMid, h, coreC, frac);
+          spawnBolt(rimC, frac);
+          if (frac > 0.85 && Math.random() < 0.6) spawnBolt(coreC, frac);
           boltCooldown = lerp(680, 85, frac) * (0.6 + Math.random() * 0.7);
         }
       }
 
       /* --- Debris rising through the aura ---------------------------- */
-      const ground = footY - 2;
-      const maxLift = h * 0.62;
+      const ground = FOOT_Y - 2;
+      const maxLift = SPAN * 0.62;
       for (const p of pebbles) {
         if (isReduced) {
           p.el.style.opacity = "0";
@@ -397,7 +424,7 @@ export function PowerAura() {
         const climb = charging
           ? ((now / (p.rate * (1.6 - frac)) + p.phase) % 1)
           : 0;
-        const x = cx + p.off * h + Math.sin(now / 300 + p.phase) * 3 * frac;
+        const x = CENTRE_X + p.off * SPAN + Math.sin(now / 300 + p.phase) * 3 * frac;
         const y = charging ? ground - climb * maxLift * p.rise : ground;
         p.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
         // Fade in off the floor, out near the top of its climb.
@@ -409,7 +436,9 @@ export function PowerAura() {
     frame = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(frame);
-      offCharged();
+      // Unmounting counts as "not charging" too — a navigation that tore the
+      // stage down mid-charge must not leave the page tinted.
+      document.documentElement.style.setProperty("--aura-presence", "0");
       pebbles.forEach((p) => p.el.remove());
       bolts.replaceChildren();
     };
@@ -421,15 +450,28 @@ export function PowerAura() {
   const streaks = [0, 1, 2, 3];
 
   return (
-    <div className="power-aura" aria-hidden ref={rootRef} data-on="false">
-      {/* Behind everything: a faint vignette that tints the page so the pillar
-          reads against it. */}
-      <div className="power-aura-vignette" />
-
+    <div
+      className="power-aura"
+      aria-hidden
+      ref={rootRef}
+      data-on="false"
+      /* Her box, handed to CSS once. Every offset below is a fraction of these,
+         so the whole ensemble is laid out in NOVA's own coordinates and needs
+         no per-frame placement at all. */
+      style={
+        {
+          "--nova-cx": `${CENTRE_X}px`,
+          "--nova-head": `${NOVA_BOX.headY}px`,
+          "--nova-port": `${NOVA_BOX.portY}px`,
+          "--nova-foot": `${FOOT_Y}px`,
+          "--aura-h": `${SPAN}px`,
+        } as React.CSSProperties
+      }
+    >
       {/* Behind NOVA: the pillar. */}
       <div className="power-aura-back">
-        <div className="power-aura-body" ref={bodyRef}>
-          <div className="power-aura-inner">
+        <div className="power-aura-body">
+          <div className="power-aura-inner" ref={innerRef}>
             {/* The rippling shockwave pool on the floor. */}
             <div className="power-aura-pool">
               {rings.map((i) => (
@@ -452,7 +494,7 @@ export function PowerAura() {
             >
               <path className="power-aura-layer power-aura-outer" ref={outerRef} />
               <path className="power-aura-layer power-aura-mid" ref={midRef} />
-              <path className="power-aura-layer power-aura-innermost" ref={innerRef} />
+              <path className="power-aura-layer power-aura-innermost" ref={coreRef} />
             </svg>
 
             {/* Internal energy streaks racing from base to tip. */}
@@ -476,24 +518,31 @@ export function PowerAura() {
         </svg>
         <div className="power-aura-debris" ref={debrisRef} />
 
-        {finale && (
-          <div
-            key={finale.id}
-            className="power-aura-finale"
-            style={
-              {
-                "--fx": `${finale.x}px`,
-                "--fy": `${finale.y}px`,
-                "--ftop": `${finale.top}px`,
-              } as React.CSSProperties
-            }
-          >
+        {finale !== null && (
+          <div key={finale} className="power-aura-finale">
             <span className="power-aura-burst" />
             <span className="power-aura-ring" />
-            <p className="power-aura-max">{"// POWER LEVEL: MAXIMUM"}</p>
+            {/* The one thing here that must not scale with her: at dock size
+                the label would be a third of its size, so the holder undoes the
+                anchor's scale around the point above her head. */}
+            <span className="power-aura-max-hold">
+              <p className="power-aura-max">{"// POWER LEVEL: MAXIMUM"}</p>
+            </span>
           </div>
         )}
       </div>
     </div>
   );
+}
+
+/**
+ * The page tint behind the pillar.
+ *
+ * The only charging visual that isn't in NOVA's anchor, and the only one that
+ * can't drift from her: it covers the whole viewport, so it has no position to
+ * be wrong about. Rendered as a sibling of the stage precisely so it can sit
+ * *under* the NOVA layer at z 38, which nothing inside her anchor can do.
+ */
+export function PowerAuraVignette() {
+  return <div className="power-aura-vignette" aria-hidden />;
 }
