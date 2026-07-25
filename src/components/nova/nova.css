@@ -1511,11 +1511,19 @@ html[data-theme="dark"] .nova-speech {
   transition: opacity 260ms ease;
 }
 
-/* Stepping aside is its own, shorter move than the hero/dock flight. */
-.nova-anchor[data-stepping="true"] {
-  transition: transform 400ms cubic-bezier(0.34, 1.1, 0.4, 1);
-}
-
+/*
+ * No transition on the transform, deliberately.
+ *
+ * The flight to the dock and the step aside are both eased in `useNovaStage`
+ * now. When CSS owned them the loop wrote the *destination* and the browser
+ * eased the element to it — so the robot glided while everything placed from
+ * the numbers the loop publishes (the cable, the bubble, the hearts, the lamp)
+ * teleported to the destination and waited there. One clock, one easing, one
+ * position: see the note on the rendered position in the hook.
+ *
+ * `data-flying`, `data-stepping` and `data-sideline` are still written; they
+ * mark the move for anything that wants to know it's happening.
+ */
 .nova-anchor {
   position: absolute;
   top: 0;
@@ -1524,12 +1532,6 @@ html[data-theme="dark"] .nova-speech {
   width: 380px;
   transform-origin: center center;
   will-change: transform;
-}
-
-/* Only while flying between hero and dock — during hero tracking the transform
-   is rewritten every frame and any transition would read as lag. */
-.nova-anchor[data-flying="true"] {
-  transition: transform 780ms cubic-bezier(0.4, 0.1, 0.2, 1);
 }
 
 /* Invisible click target sitting over the robot's silhouette. Insets keep it off
@@ -1984,6 +1986,85 @@ html[data-power="critical"] .term-layer {
 .term-nav:hover {
   background: color-mix(in oklab, var(--term-green) 18%, transparent);
   border-color: var(--term-green);
+}
+
+/* --- `/projects`: the whole list, as rows ------------------------------- */
+
+/* A directory listing, not a menu — numbered, aligned, and every row a link to
+   the case study. Same green as the nav button, one step quieter, because ten
+   of them at full strength would be a wall. */
+.term-projects {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.55rem;
+  border-left: 1px solid color-mix(in oklab, var(--term-green) 28%, transparent);
+}
+
+.term-project {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.3rem 0.6rem;
+  color: color-mix(in oklab, var(--term-green) 78%, #ffffff);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.term-project-no {
+  flex: none;
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+
+.term-project-name {
+  flex: none;
+}
+
+/* Falls away first when the window is narrow — the name is the row. */
+.term-project-cat {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.5;
+  text-transform: uppercase;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+}
+
+.term-project-go {
+  flex: none;
+  opacity: 0;
+  translate: -3px 0;
+  transition:
+    opacity 140ms ease,
+    translate 140ms ease;
+}
+
+.term-project:hover,
+.term-project:focus-visible {
+  background: color-mix(in oklab, var(--term-green) 12%, transparent);
+  color: var(--term-green);
+}
+
+.term-project:hover .term-project-go,
+.term-project:focus-visible .term-project-go {
+  opacity: 1;
+  translate: 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .term-project,
+  .term-project-go {
+    transition: none;
+  }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -2499,10 +2580,6 @@ html[data-power="critical"] .term-layer {
   .nova .nova-eyes,
   .nova .nova-lamp {
     transition: opacity 600ms ease !important;
-  }
-
-  .nova-anchor[data-flying="true"] {
-    transition: none;
   }
 
   .nova-speech,

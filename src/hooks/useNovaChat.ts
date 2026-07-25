@@ -10,12 +10,19 @@ import {
 } from "@/content/nova-qa";
 import { scenes } from "@/content/scenes";
 import { profile } from "@/content/profile";
-import { matchIntent, scriptedResponder, type NovaResponder } from "@/lib/nova-brain";
+import {
+  matchIntent,
+  matchProject,
+  scriptedResponder,
+  type NovaResponder,
+} from "@/lib/nova-brain";
+import { workBySlug, workCards } from "@/content/work";
 import {
   celebrate,
   getStageBusy,
   noPower,
   onAskNova,
+  onOpenSearch,
   setNovaThinking,
   setWindowOpen,
 } from "@/lib/nova-bus";
@@ -37,6 +44,10 @@ export type TerminalLine = {
   text: string;
   /** On a reply: offer a NAVIGATE_TO button for this scene. */
   scene?: string;
+  /** On a reply: offer an OPEN_[…] button for this project slug. */
+  project?: string;
+  /** `/projects`: the whole list, as clickable rows. */
+  projects?: string[];
   /** Newly-landed replies type themselves; replayed history does not. */
   fresh?: boolean;
   /**
@@ -63,6 +74,7 @@ const THINKING_MS = 520;
  */
 export const COMMANDS = [
   "/work",
+  "/projects",
   "/about",
   "/contact",
   "/cv",
@@ -84,6 +96,7 @@ export type Command = (typeof COMMANDS)[number];
  */
 const COMMAND_HELP: Record<Command, string> = {
   "/work": "jump to the work scene",
+  "/projects": "list all ten projects (⌘k searches them)",
   "/about": "jump to the about scene",
   "/contact": "jump to the contact scene",
   "/cv": "open edwin's resume in a new tab",
@@ -93,6 +106,29 @@ const COMMAND_HELP: Record<Command, string> = {
   "/clear": "wipe the screen (ctrl+l)",
   "/help": "print this list",
 };
+
+/**
+ * Whether this machine says ⌘ or Ctrl.
+ *
+ * `userAgentData.platform` where it exists, `navigator.platform` behind it —
+ * deprecated, but it is still the only reliable answer in Safari and Firefox,
+ * and getting this wrong prints a shortcut nobody can press. Anything
+ * unrecognised gets Ctrl, which is the safer wrong answer: a Mac user who reads
+ * "ctrl k" will still find ⌘K by instinct, and a Windows user reading "⌘K"
+ * won't.
+ */
+export function isApplePlatform(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const data = (navigator as Navigator & { userAgentData?: { platform?: string } })
+    .userAgentData;
+  const platform = data?.platform ?? navigator.platform ?? "";
+  return /mac|iphone|ipad|ipod/i.test(platform || navigator.userAgent);
+}
+
+/** How the palette shortcut is written, for this machine. */
+export function paletteKey(): string {
+  return isApplePlatform() ? "⌘k" : "ctrl+k";
+}
 
 /** How the terminal window is presented. Mirrors the traffic lights. */
 export type WindowState = "normal" | "minimized" | "maximized";
@@ -205,6 +241,8 @@ export function useNovaChat({
   const busy = useRef(false);
   // True between NOVA asking the visitor's name and them answering.
   const awaitingName = useRef(false);
+  // The palette tip is a once-a-session line. See `openPalette`.
+  const tipped = useRef(false);
 
   const push = useCallback((l: Omit<TerminalLine, "id">) => {
     setLines((current) => [...current, line(l)]);
@@ -294,6 +332,40 @@ export function useNovaChat({
     [close, router],
   );
 
+  /** Same, for a project's detail route — the palette's whole point. */
+  const goToProject = useCallback(
+    (slug: string) => {
+      if (!workBySlug(slug)) return;
+      close();
+      router.push(`/work/${slug}`);
+    },
+    [close, router],
+  );
+
+  /**
+   * Opened as a search box: ⌘K, or the Search pill.
+   *
+   * Empty prompt, focused, and the one line that says what this window can do
+   * besides answer questions. Printed once a session — a tip that reappears
+   * every time you open the thing stops being a tip and starts being noise.
+   */
+  const openPalette = useCallback(() => {
+    if (isDead()) {
+      noPower();
+      return;
+    }
+    open();
+    if (!tipped.current) {
+      tipped.current = true;
+      push({
+        kind: "hint",
+        text: "// tip: type a project name, or /help for commands",
+      });
+    }
+    // Empty, and focused: the prefill effect in the terminal takes the caret.
+    setPrefill({ text: "", nonce: nextPrefill++ });
+  }, [open, push]);
+
   /** Returns true if the input was a command and has been handled. */
   const runCommand = useCallback(
     (raw: string): boolean => {
@@ -381,15 +453,29 @@ export function useNovaChat({
           return true;
         }
 
+        case "/projects":
+          // The list is the answer; the rows are the buttons. One line rather
+          // than ten, so `/clear` and the scroll-back treat it as one thing.
+          push({
+            kind: "reply",
+            text: `${workCards.length} shipped projects. pick one, or just type a name:`,
+            projects: workCards.map((card) => card.slug),
+          });
+          return true;
+
         case "/help": {
           // Padded into a column, which `.term-line`'s `pre-wrap` and the
           // monospace face turn into an actual aligned table.
           const width = Math.max(...COMMANDS.map((c) => c.length));
           push({
             kind: "hint",
-            text: COMMANDS.map(
-              (c) => `  ${c.padEnd(width)}   ${COMMAND_HELP[c]}`,
-            ).join("\n"),
+            text: [
+              ...COMMANDS.map((c) => `  ${c.padEnd(width)}   ${COMMAND_HELP[c]}`),
+              // The shortcut belongs in the same table even though it isn't a
+              // command — it's the fastest way back to this window, and a list
+              // of commands that doesn't mention it is an incomplete answer.
+              `  ${paletteKey().padEnd(width)}   open this terminal from anywhere`,
+            ].join("\n"),
           });
           return true;
         }
@@ -428,8 +514,12 @@ export function useNovaChat({
         try {
           // While waiting on a name, anything that isn't recognisably a question
           // is taken as the answer. Checking the intent first means "what has he
-          // built?" still gets answered rather than stored as someone's name.
-          const takingName = awaitingName.current && !matchIntent(question);
+          // built?" still gets answered rather than stored as someone's name —
+          // and checking the projects means the same for "weathernime", which a
+          // first-time visitor opening the palette is very likely to type
+          // before they have answered her.
+          const takingName =
+            awaitingName.current && !matchIntent(question) && !matchProject(question);
 
           const [reply] = await Promise.all([
             takingName ? Promise.resolve(null) : respond(question, { name }),
@@ -460,6 +550,7 @@ export function useNovaChat({
               kind: "reply",
               text: sleepy(reply.text),
               scene: reply.scene,
+              project: reply.project,
               fresh: true,
             });
             setSuggestions(reply.suggestions);
@@ -496,6 +587,40 @@ export function useNovaChat({
    */
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      /*
+       * ⌘K / Ctrl+K — the palette shortcut.
+       *
+       * Handled before the bare-key branch below, and on its own terms: it is
+       * the one shortcut allowed to fire *from* an input, because the input it
+       * most often fires from is the terminal's own, where the job is simply to
+       * put the caret back. Everything else — the boot, a flat battery, another
+       * window holding the visitor — is guarded exactly as `/` is.
+       */
+      if ((event.metaKey || event.ctrlKey) && (event.key === "k" || event.key === "K")) {
+        if (document.documentElement.dataset.booting) return;
+
+        const target = event.target as HTMLElement | null;
+        const inTerminal = Boolean(target?.closest?.(".term"));
+        // Already open: this is a "take me back to the prompt", not a re-open.
+        if (isOpen && windowState !== "minimized") {
+          event.preventDefault();
+          if (isDead()) {
+            noPower();
+            return;
+          }
+          setPrefill({ text: "", nonce: nextPrefill++ });
+          return;
+        }
+        // Something else has the visitor (the resume window). Leave it alone —
+        // unless the keystroke came from inside the terminal, handled above.
+        if (!inTerminal && getStageBusy()) return;
+
+        // Chrome and Firefox both bind ⌘K to the address/search bar.
+        event.preventDefault();
+        openPalette();
+        return;
+      }
+
       if (event.metaKey || event.ctrlKey || event.altKey) return;
 
       const wantsPrompt = event.key === "/";
@@ -533,7 +658,10 @@ export function useNovaChat({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open]);
+  }, [open, openPalette, isOpen, windowState]);
+
+  // The Search pill, which lives out on the stage layer and can't call in.
+  useEffect(() => onOpenSearch(openPalette), [openPalette]);
 
   /**
    * "Occupying the visitor" — drives NOVA stepping aside and the tagline
@@ -578,6 +706,7 @@ export function useNovaChat({
     print,
     clear,
     goToScene,
+    goToProject,
   };
 }
 

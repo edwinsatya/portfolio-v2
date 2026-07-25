@@ -1,20 +1,30 @@
 /*
  * The charging power-up — NOVA's fighting-game full-power aura.
  *
- * A tall pillar of energy behind her (z 39), arcs and debris in front (z 44),
- * and a faint page vignette behind both (z 38) — the same either-side-of-NOVA
- * split `PowerVoid` uses, so she stands inside her own glow. The wrapper is
- * `display: contents` so it makes no stacking context and the layers really sit
- * at those depths.
+ * ## One transform root
+ *
+ * Everything here except the page vignette is rendered *inside* NOVA's anchor
+ * and positioned in her local box, from the four lines `PowerAura` hands down
+ * as custom properties (`--nova-cx`, `--nova-head`, `--nova-port`,
+ * `--nova-foot`, plus `--aura-h`, her head-to-foot height). Nothing in this
+ * file names a viewport coordinate. That is the whole fix for the effect
+ * drifting away from her during a scene change: it can't drift from a robot
+ * whose transform it is drawn inside.
+ *
+ * Depth is therefore local too — the pillar at z -1 behind her, the arcs and
+ * debris at z 2 in front — rather than the z 39/44 either side of the NOVA
+ * layer they used to sit at. The anchor is a stacking context, so those two
+ * layers straddle her exactly as before.
  *
  * The loop feeds it, per frame:
  *   --aura-presence  0–1, how present the whole effect is
  *   --aura-strength  presence folded with charge and the surge, floored so the
  *                    pillar always reads once it is up
  *   --aura-frac      raw charge, 0–1
- *   --aura-w/-tall/-h/-scale  the pillar box and its surge scale
+ *   --aura-scale     the surge scale
  * and, on the document root, the colour tiers --aura-outer/-mid/-core/-rim
- * (also --nova-aura/-hot, which NOVA's own glow shares).
+ * (also --nova-aura/-hot, which NOVA's own glow shares) and --aura-presence,
+ * which the detached vignette reads.
  *
  * Additive over the dark stage (screen); a normal blend on the light one where
  * screen would wash out. Photosensitivity-safe: the surges are scale changes
@@ -22,21 +32,52 @@
  * to a static coloured core with no spikes, arcs, pool, or burst.
  */
 
+/* No box of its own: it must not become a stacking context, or the pillar's
+   negative z-index would be trapped behind the wrapper instead of behind her. */
 .power-aura {
   display: contents;
 }
 
-.power-aura-vignette,
+/* Both layers *are* her box: the anchor is 380px wide and as tall as her SVG,
+   which is the coordinate system every offset here is written in. Nothing is
+   clipped to it — the pillar stands two and a half times her height. */
 .power-aura-back,
 .power-aura-fore {
-  position: fixed;
+  position: absolute;
   inset: 0;
   pointer-events: none;
 }
 
-/* A wash that pulls the page down a touch so the pillar pops against it. */
+.power-aura-back {
+  z-index: -1;
+  mix-blend-mode: screen;
+}
+
+.power-aura-fore {
+  z-index: 2;
+  mix-blend-mode: screen;
+}
+
+html[data-theme="light"] .power-aura-back,
+html[data-theme="light"] .power-aura-fore {
+  mix-blend-mode: normal;
+}
+
+/* Off means gone, not transparent: nothing of the charge may be left in the
+   page once the cable is out and the aura has dissipated. */
+.power-aura[data-on="false"] .power-aura-back,
+.power-aura[data-on="false"] .power-aura-fore {
+  display: none;
+}
+
+/* A wash that pulls the page down a touch so the pillar pops against it.
+   The one piece outside her anchor — full-viewport, so it has no position to
+   trail with — which is why it reads presence off the document root. */
 .power-aura-vignette {
+  position: fixed;
+  inset: 0;
   z-index: 38;
+  pointer-events: none;
   opacity: calc(var(--aura-presence, 0) * 0.4);
   background: radial-gradient(
     130% 100% at 50% 66%,
@@ -54,48 +95,29 @@ html[data-theme="light"] .power-aura-vignette {
   );
 }
 
-.power-aura-back {
-  z-index: 39;
-  mix-blend-mode: screen;
-}
-
-.power-aura-fore {
-  z-index: 44;
-  mix-blend-mode: screen;
-}
-
-html[data-theme="light"] .power-aura-back,
-html[data-theme="light"] .power-aura-fore {
-  mix-blend-mode: normal;
-}
-
-.power-aura[data-on="false"] .power-aura-vignette,
-.power-aura[data-on="false"] .power-aura-back,
-.power-aura[data-on="false"] .power-aura-fore {
-  opacity: 0;
-}
-
 /* -------------------------------------------------------------------------- */
 /* The pillar                                                                 */
 /* -------------------------------------------------------------------------- */
 
-/* Box anchored bottom-centre at NOVA's feet; `transform` written every frame. */
+/* ~1.5× her height wide (about twice her body), ~2.4× tall, base at her feet —
+   all in her local box, so this is a static rule rather than a per-frame write.
+   She scales; it scales with her, because it is inside her. */
 .power-aura-body {
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: var(--aura-w, 260px);
-  height: var(--aura-tall, 480px);
-  will-change: transform;
+  position: absolute;
+  left: var(--nova-cx);
+  top: var(--nova-foot);
+  width: calc(var(--aura-h) * 1.5);
+  height: calc(var(--aura-h) * 2.4);
+  transform: translate(-50%, -100%);
 }
 
-/* Surge scale and the tremble lean, from a floor at her feet. */
+/* Surge scale, from a floor at her feet. The charging tremble is no longer
+   applied here: the anchor above already trembles, and the aura rides it. */
 .power-aura-inner {
   position: absolute;
   inset: 0;
   opacity: var(--aura-strength, 0);
-  transform: translateX(calc(var(--nova-tremble-x, 0) * 2px))
-    scale(var(--aura-scale, 1));
+  transform: scale(var(--aura-scale, 1));
   transform-origin: 50% 100%;
   will-change: transform, opacity;
 }
@@ -351,6 +373,13 @@ html[data-theme="light"] .power-aura-fore {
 /* The 100% finale — collapse inward, then erupt                              */
 /* -------------------------------------------------------------------------- */
 
+/*
+ * All three pieces are placed off her chest port and her head line — local
+ * coordinates, like everything else here. They used to be pinned to a snapshot
+ * of her viewport position taken the instant the charge topped out, which is
+ * why a scene change during the 1.4s finale left the burst and the label
+ * hanging in empty space behind her.
+ */
 .power-aura-finale {
   position: absolute;
   inset: 0;
@@ -358,10 +387,10 @@ html[data-theme="light"] .power-aura-fore {
 
 .power-aura-burst {
   position: absolute;
-  left: var(--fx);
-  top: var(--fy);
-  width: 42vmax;
-  height: 42vmax;
+  left: var(--nova-cx);
+  top: var(--nova-port);
+  width: calc(var(--aura-h) * 1.3);
+  height: calc(var(--aura-h) * 1.3);
   border-radius: 50%;
   background: radial-gradient(
     50% 50% at 50% 50%,
@@ -391,10 +420,10 @@ html[data-theme="light"] .power-aura-fore {
 
 .power-aura-ring {
   position: absolute;
-  left: var(--fx);
-  top: var(--fy);
-  width: 16vmax;
-  height: 16vmax;
+  left: var(--nova-cx);
+  top: var(--nova-port);
+  width: calc(var(--aura-h) * 0.6);
+  height: calc(var(--aura-h) * 0.6);
   border-radius: 50%;
   border: 3px solid color-mix(in oklab, var(--aura-core, #fff) 82%, transparent);
   box-shadow: 0 0 22px color-mix(in oklab, var(--aura-mid, #3ad8f2) 60%, transparent);
@@ -420,11 +449,29 @@ html[data-theme="light"] .power-aura-fore {
   }
 }
 
+/*
+ * The label holder: a zero-size point just above her antenna that undoes the
+ * anchor's scale, so the text stays the same size on screen whether she is
+ * standing full height in the hero or docked at a third of it in the corner.
+ * The label is inside her transform group like everything else — it moves with
+ * her — it simply refuses to be shrunk by it.
+ */
+.power-aura-max-hold {
+  position: absolute;
+  left: var(--nova-cx);
+  top: var(--nova-head);
+  width: 0;
+  height: 0;
+  transform: scale(calc(1 / var(--nova-scale, 1)));
+}
+
 .power-aura-max {
   position: absolute;
-  left: var(--fx);
-  top: calc(var(--ftop) - 2em);
-  transform: translate(-50%, 0);
+  left: 0;
+  bottom: 0.6em;
+  /* Centred over her. The entrance uses the standalone `translate` property so
+     the two never fight — see the docked case below, which replaces this. */
+  transform: translateX(-50%);
   margin: 0;
   font-family: var(--font-mono, ui-monospace, "SFMono-Regular", Menlo, monospace);
   font-size: clamp(0.7rem, 2.4vw, 0.95rem);
@@ -442,22 +489,37 @@ html[data-theme="light"] .power-aura-max {
   color: color-mix(in oklab, var(--aura-mid, #0e7490) 60%, #0b0d13);
 }
 
+/* Docked in a corner she is hard against a viewport edge, and a label centred
+   on her would run off the screen — which is exactly what it did. Hang it from
+   her centre line inward instead. The side is written by the stage loop from
+   where she is actually drawn, so it can't flip a flight too early. */
+.nova-anchor[data-edge="right"] .power-aura-max {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+.nova-anchor[data-edge="left"] .power-aura-max {
+  left: 0;
+  transform: none;
+}
+
 @keyframes aura-max {
   0% {
     opacity: 0;
-    transform: translate(-50%, 8px);
+    translate: 0 8px;
   }
   22% {
     opacity: 1;
-    transform: translate(-50%, 0);
+    translate: 0 0;
   }
   76% {
     opacity: 1;
-    transform: translate(-50%, 0);
+    translate: 0 0;
   }
   100% {
     opacity: 0;
-    transform: translate(-50%, -8px);
+    translate: 0 -8px;
   }
 }
 

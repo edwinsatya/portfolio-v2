@@ -2,10 +2,10 @@ import {
   experience,
   greetings,
   profile,
-  projects,
   services,
   skillGroups,
 } from "./profile";
+import { workCards } from "./work";
 
 /**
  * Everything NOVA can answer, as data.
@@ -45,11 +45,22 @@ function greet(name: string | null, withName: string, withoutName: string) {
   return name ? withName.replace("{name}", name) : withoutName;
 }
 
-const projectCount = projects.length;
+/*
+ * Both read from `work.ts`, not from `profile.ts`.
+ *
+ * The stage's WORK scene is the ten in `work.ts`, and the two cards badged
+ * NOVA'S PICK are the ones a visitor can actually see her choosing. Deriving her
+ * spoken answer from `profile.ts`'s longer `featured` list meant she named a
+ * project that isn't on the scene at all (Anivault) and skipped both of the
+ * ones wearing her badge — the site disagreeing with itself out loud.
+ */
+const projectCount = workCards.length;
 
-/** "A, B and C" — read from the `featured` flags rather than hard-coded. */
+/** "A and B" — read from the NOVA'S PICK badges rather than hard-coded. */
 const picks = (() => {
-  const names = projects.filter((p) => p.featured).map((p) => p.name);
+  const names = workCards
+    .filter((card) => card.badge?.toUpperCase().includes("PICK"))
+    .map((card) => card.name);
   if (names.length <= 1) return names[0] ?? "coming soon";
   return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 })();
@@ -144,6 +155,9 @@ export const novaIntents: NovaIntent[] = [
       "project",
       "portfolio",
       "best work",
+      // The WORK scene's chip is "which is his best?" — the phrase "best work"
+      // never appears in it, and without this the chip hit the fallback.
+      "best",
       "his work",
       "show me",
       "built",
@@ -153,8 +167,8 @@ export const novaIntents: NovaIntent[] = [
       "case study",
       "examples",
     ],
-    // Count and picks both derived, so flipping `featured` in profile.ts moves
-    // NOVA's answer with it instead of leaving her naming last month's three.
+    // Count and picks both derived, so badging a card NOVA'S PICK in `work.ts`
+    // moves her answer with it instead of leaving her naming last month's.
     answer: ({ name }) =>
       greet(
         name,

@@ -4,6 +4,7 @@
  * the two never drift apart.
  */
 export const trajectory = [
+  { year: "2026", label: "PT. Bank Rakyat Indonesia (PERSERO)" },
   { year: "2025", label: "Tola Solution" },
   { year: "2023", label: "Magloft" },
   { year: "2022", label: "Bountie" },

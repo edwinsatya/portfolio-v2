@@ -12,6 +12,7 @@ import { LoveBurst } from "./LoveBurst";
 import { MusicNotes } from "./MusicNotes";
 import { Nova } from "./Nova";
 import { NovaTerminal } from "./NovaTerminal";
+import { PowerAura } from "./PowerAura";
 import { PowerSocket } from "./PowerSocket";
 import { ResumeWindow } from "./ResumeWindow";
 import { StageLights } from "./StageLights";
@@ -138,6 +139,14 @@ export function NovaStage() {
       <StageLights />
 
       <div ref={anchorRef} className="nova-anchor">
+        {/* The charging power-up, inside her transform root rather than beside
+            it. The pillar, the ground pool, the arcs, the debris and the 100%
+            finale are all laid out in her local box, so a scene change, the
+            flight to the dock, and the charging tremble move the whole ensemble
+            with her — one transform, one frame, one easing. Nothing here has a
+            viewport position that could lag behind her. */}
+        <PowerAura />
+
         <Nova ref={svgRef} mood={mood} />
 
         {/* Invisible hit area over the robot's silhouette, so the click target
@@ -206,6 +215,7 @@ export function NovaStage() {
         onMinimize={chat.minimize}
         onToggleMaximize={chat.toggleMaximize}
         onScene={chat.goToScene}
+        onProject={chat.goToProject}
       />
 
       <ResumeWindow
