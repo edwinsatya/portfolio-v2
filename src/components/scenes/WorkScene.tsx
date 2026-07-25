@@ -7,6 +7,7 @@ import { SceneShell } from "@/components/stage/SceneShell";
 import {
   career,
   projectsFor,
+  stackInTheWild,
   workCards,
   type WorkCard,
   type WorkOrg,
@@ -49,7 +50,7 @@ export function WorkScene() {
       if (!next) return;
       const first = projectsFor(next)[0];
       const el = first && cardRefs.current.get(first.slug);
-      // Scroll the list rather than filter it: all ten stay reachable, and the
+      // Scroll the list rather than filter it: every card stays reachable, and the
       // one being asked about is brought to the top of the column, where the
       // answer to "what did he do there" should obviously be.
       el?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -62,7 +63,7 @@ export function WorkScene() {
   /*
    * Only quiet the list when there is something to quiet it *for*.
    *
-   * Two of the roles have nothing public attached, and dimming all ten to make
+   * Two of the roles have nothing public attached, and dimming every card to make
    * that point reads as the page breaking rather than as an answer — the note
    * above the list is the answer. So the cards are left alone and the visitor
    * keeps a readable list.
@@ -70,7 +71,9 @@ export function WorkScene() {
   const filtering = matches.length > 0;
 
   return (
-    <SceneShell side="full">
+    /* Eleven cards and a career column: on a phone that is a page, not a
+       window. See `.scene[data-flow="page"]` in globals.css. */
+    <SceneShell side="full" flow="page">
       <div className="work">
         {/* Lede. The breadcrumb and the intro share a line on desktop and
             stack on a phone. */}
@@ -78,6 +81,11 @@ export function WorkScene() {
           <p className="work-crumb" data-reveal style={cssIndex(0)}>
             02 / WORK
           </p>
+          {/* Phones only. On desktop the stage's own identity block and the
+              breadcrumb are enough; on a phone the page needs a title. */}
+          <h1 className="work-title" data-reveal style={cssIndex(1)}>
+            Selected work
+          </h1>
           <p className="work-intro" data-reveal style={cssIndex(1)}>
             Six years of shipped work — logistics, publishing, health, farming,
             and the web.
@@ -172,14 +180,23 @@ export function WorkScene() {
             )}
 
             <ul className="work-cards" data-filtered={filtering || undefined}>
-              {workCards.map((card) => (
+              {workCards.map((card, index) => (
                 <li
                   key={card.slug}
                   ref={(el) => {
                     if (el) cardRefs.current.set(card.slug, el);
                     else cardRefs.current.delete(card.slug);
                   }}
+                  /* The first card is the phone's featured slot — a full-width
+                     image card — and the rest become compact rows under a
+                     divider. One list, two treatments, no duplicate markup. */
+                  data-featured={index === 0 || undefined}
                 >
+                  {index === 1 && (
+                    <p className="work-more mono-label" aria-hidden>
+                      More work
+                    </p>
+                  )}
                   <WorkCardLink
                     card={card}
                     match={filtering ? card.org === active : undefined}
@@ -187,6 +204,20 @@ export function WorkScene() {
                 </li>
               ))}
             </ul>
+
+            {/* The stack marquee is a fixed bottom strip from 640px up, which
+                phones don't get — so its content comes back here, static, at
+                the end of the read. Same trade the trajectory makes on ABOUT. */}
+            <div className="work-stack-row" aria-hidden>
+              <span className="mono-label text-faint">Stack in the wild</span>
+              <ul>
+                {stackInTheWild.map((tech) => (
+                  <li className="work-stack-chip mono-label" key={tech}>
+                    {tech}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </section>
         </div>
       </div>

@@ -1135,10 +1135,17 @@ html[data-booting] .nova-tap {
 /* Stage                                                                       */
 /* -------------------------------------------------------------------------- */
 
-/* The stage is the viewport. The document itself never scrolls — only a scene's
-   own content box does, when it overflows. */
-html.stage-root,
-html.stage-root body {
+/*
+ * The stage is the viewport. The document itself never scrolls — only a scene's
+ * own content box does, when it overflows.
+ *
+ * Gated on a stage actually being mounted. The class is on `<html>` from the
+ * root layout, which is above both route groups, so without `:has` it locked the
+ * project pages too — and those are documents: long, scrolling case studies with
+ * no stage anywhere in them.
+ */
+html.stage-root:has(.stage),
+html.stage-root:has(.stage) body {
   height: 100%;
   overflow: hidden;
   overscroll-behavior: none;
@@ -1678,6 +1685,70 @@ html.stage-root body {
 
   .scene-scroll::-webkit-scrollbar {
     display: none;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Phone flow: one page, one scroll                                            */
+/*                                                                             */
+/* Opted into per scene with `flow="page"` on `SceneShell` (ABOUT and WORK).    */
+/*                                                                             */
+/* Everywhere else the stage *is* the viewport and a scene that overflows       */
+/* scrolls inside its own box. That's right for a scene that fits; a long read  */
+/* or a long list on a phone is not that — a 500px window scrolling inside a    */
+/* locked page gives it a nested scroller, a rail down the side, and no         */
+/* momentum worth the name. So on those scenes, at this width, the document     */
+/* scrolls again and the whole thing moves as one native flow.                  */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 639px) {
+  html.stage-root:has(.scene[data-flow="page"]),
+  html.stage-root:has(.scene[data-flow="page"]) body {
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
+  }
+
+  /* No rails on the page scroller — the scene's own were dropped above.
+     Scrolling works, nothing draws. */
+  html.stage-root:has(.scene[data-flow="page"]) {
+    scrollbar-width: none;
+  }
+
+  html.stage-root:has(.scene[data-flow="page"])::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* The stage stops being a fixed pane and becomes as tall as the content,
+     still filling the screen when the content is short. */
+  .stage:has(.scene[data-flow="page"]) {
+    height: auto;
+    min-height: 100svh;
+  }
+
+  /* …and the scene stops being a scroller, so there are no two scroll
+     containers to fight over a swipe. */
+  .scene[data-flow="page"] .scene-scroll {
+    max-height: none;
+    overflow: visible;
+  }
+
+  /* The wordmark is pinned to the middle of the *stage*, which is now the whole
+     document — it would sit halfway down the read. Fixed keeps it where it has
+     always been: a backdrop across the middle of the screen. */
+  .stage:has(.scene[data-flow="page"]) .stage-wordmark-wrap {
+    position: fixed;
+  }
+
+  /* The content now travels under the fixed top-right cluster, so the like
+     counter needs the frosted chip the utility pill beside it already has — a
+     bare number over moving body copy reads as a collision rather than as
+     chrome. Only on the scenes that scroll; elsewhere it floats over open page. */
+  body:has(.scene[data-flow="page"]) .like-counter {
+    background: color-mix(in oklab, var(--color-surface) 85%, transparent);
+    border: 1px solid var(--glass-edge);
+    box-shadow: 0 6px 20px -10px rgb(20 22 31 / 0.25);
+    backdrop-filter: blur(16px);
   }
 }
 

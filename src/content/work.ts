@@ -5,7 +5,7 @@
  * Kept apart from `profile.ts` on purpose. That file is the *classic* build's
  * source of truth and carries a longer, differently-shaped project list (it
  * includes Anivault, and its stacks were inferred rather than given); this one
- * is the stage's WORK scene as Edwin specified it — a fixed ten, in a fixed
+ * is the stage's WORK scene as Edwin specified it — a fixed list, in a fixed
  * order, each with the card copy, the category, and the badge it should show.
  * Where the two disagree about a stack, this file wins here, because these are
  * the lines Edwin wrote.
@@ -64,16 +64,17 @@ export type WorkCard = {
 };
 
 /**
- * The ten, in Edwin's order.
+ * The list, in Edwin's order.
  *
  * No invented metrics: a badge appears only where there is a real status to
  * report ("LIVE" — it is, and the URL is below) or a real opinion to give
  * ("NOVA'S PICK", which is mine).
+ *
+ * Written without `no` — see `workCards` below, which numbers them.
  */
-export const workCards: WorkCard[] = [
+const CARDS: Omit<WorkCard, "no">[] = [
   {
     slug: "weathernime",
-    no: "01",
     category: "Side project",
     name: "Weathernime",
     blurb:
@@ -81,14 +82,13 @@ export const workCards: WorkCard[] = [
     tags: ["Next.js", "Open-Meteo"],
     image: "weathernime.png",
     badge: "LIVE",
-    aliases: ["weather", "anime"],
+    aliases: ["weather", "forecast"],
     org: "personal",
     live: "https://weathernime.touchsimpledev.site",
     source: "https://github.com/edwinsatya/weathernime",
   },
   {
     slug: "food-analyzer",
-    no: "02",
     category: "AI",
     name: "Food Analyzer",
     blurb:
@@ -103,7 +103,6 @@ export const workCards: WorkCard[] = [
   },
   {
     slug: "happy-farm",
-    no: "03",
     category: "Agritech",
     name: "Happy Farm",
     blurb:
@@ -116,7 +115,6 @@ export const workCards: WorkCard[] = [
   },
   {
     slug: "magloft",
-    no: "04",
     category: "Publishing",
     name: "Magloft",
     blurb:
@@ -129,7 +127,6 @@ export const workCards: WorkCard[] = [
   },
   {
     slug: "mileapp",
-    no: "05",
     category: "Logistics",
     name: "MileApp",
     blurb:
@@ -143,7 +140,6 @@ export const workCards: WorkCard[] = [
   },
   {
     slug: "bountie",
-    no: "06",
     category: "Gaming",
     name: "Bountie",
     blurb:
@@ -156,7 +152,6 @@ export const workCards: WorkCard[] = [
   },
   {
     slug: "desklab",
-    no: "07",
     category: "Productivity",
     name: "DeskLab",
     blurb:
@@ -170,7 +165,6 @@ export const workCards: WorkCard[] = [
   },
   {
     slug: "tola-web",
-    no: "08",
     category: "Web",
     name: "Tola Web",
     blurb:
@@ -182,7 +176,6 @@ export const workCards: WorkCard[] = [
   },
   {
     slug: "pokedex",
-    no: "09",
     category: "Fun",
     name: "Pokedex",
     blurb:
@@ -195,8 +188,20 @@ export const workCards: WorkCard[] = [
     source: "https://github.com/edwinsatya/pokedex",
   },
   {
+    slug: "anivault",
+    category: "Media",
+    name: "Anivault",
+    blurb:
+      "An anime and manga database with the tracking on top — search it, keep a watchlist, and get told what to watch next.",
+    tags: ["Next.js", "AniList API"],
+    image: "anivault.png",
+    aliases: ["anime", "manga", "anilist"],
+    org: "personal",
+    live: "https://anivault.touchsimpledev.site",
+    source: "https://github.com/edwinsatya/AniVault",
+  },
+  {
     slug: "mini-google",
-    no: "10",
     category: "Experiment",
     name: "Mini-Google",
     blurb:
@@ -209,6 +214,20 @@ export const workCards: WorkCard[] = [
     source: "https://github.com/edwinsatya/mini-google",
   },
 ];
+
+/**
+ * The list as everything else reads it, numbered from its own order.
+ *
+ * Derived rather than written per card: the number is printed on the card, in
+ * the terminal's `/projects` listing, and in the detail page's pager, and a
+ * hand-typed one that disagreed with the order is exactly the sort of thing
+ * nobody notices until a recruiter is looking at it. Insert a project anywhere
+ * and the numbering follows.
+ */
+export const workCards: WorkCard[] = CARDS.map((card, index) => ({
+  ...card,
+  no: String(index + 1).padStart(2, "0"),
+}));
 
 export const workBySlug = (slug: string): WorkCard | undefined =>
   workCards.find((card) => card.slug === slug);
@@ -290,7 +309,7 @@ export function projectsFor(org: WorkOrg): WorkCard[] {
 /* -------------------------------------------------------------------------- */
 
 /**
- * What's actually in the ten above — the bottom strip's whole content.
+ * What's actually in the list above — the bottom strip's whole content.
  * Ordered roughly by how much of the work it carries.
  */
 export const stackInTheWild = [

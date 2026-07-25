@@ -5,6 +5,7 @@ import { projects } from "@/content/profile";
 import { useNovaMemory } from "@/hooks/useNovaMemory";
 import { goToLegacy, SWITCH_DELAY_MS } from "@/lib/legacy";
 import { novaBooted } from "@/lib/nova-bus";
+import { useBootComplete } from "@/hooks/useBootComplete";
 
 /**
  * The POST log, first visit.
@@ -100,6 +101,18 @@ const DISSOLVE_REDUCED_MS = 150;
 export function BootSequence() {
   const { visit } = useNovaMemory();
   const [done, setDone] = useState(false);
+  /*
+   * Whether the session has already booted, through the same store the rest of
+   * the site gates on.
+   *
+   * There are two of these on the site now — one in the stage layout, one in the
+   * artifact layout, so a direct link to a case study still opens through the
+   * splash. Crossing between them is a soft navigation, which mounts a fresh
+   * instance; without this it would replay the whole POST log on the way into a
+   * project and again on the way back. On a real first load the flag is false on
+   * the server and on the client, so hydration still agrees.
+   */
+  const alreadyBooted = useBootComplete();
   const [progress, setProgress] = useState(0);
   const [stage, setStage] = useState<Stage>("post");
   /** The POST log, and how much of it has printed. */
@@ -129,8 +142,10 @@ export function BootSequence() {
   const holdRef = useRef(false);
 
   useEffect(() => {
-    // Wait for memory, so a returning visitor never sees the long version first.
-    if (!visit.previous || started.current) return;
+    // Wait for memory, so a returning visitor never sees the long version
+    // first — and stand down entirely if the session has already booted, which
+    // is what the second instance of this component does (see `alreadyBooted`).
+    if (!visit.previous || started.current || alreadyBooted) return;
     started.current = true;
 
     const returning = visit.previous.visitCount > 0;
@@ -328,12 +343,12 @@ export function BootSequence() {
       clearBootAttrs();
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [visit.previous, visit.name]);
+  }, [visit.previous, visit.name, alreadyBooted]);
 
   return (
     <div
       className="nova-boot"
-      data-done={done}
+      data-done={done || alreadyBooted}
       // Purely decorative chrome over content that's already present and
       // readable underneath — announcing it would just delay the real page.
       aria-hidden="true"

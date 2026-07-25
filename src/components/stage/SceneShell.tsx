@@ -25,17 +25,29 @@ export function SceneShell({
    * Position it with `position: absolute`; the scene box is the containing block.
    */
   overlay,
+  /**
+   * How the scene behaves on a phone.
+   *
+   * `stage` is the default and the original contract: the viewport is locked and
+   * the scene scrolls inside its own box. `page` opts out of that on phones
+   * only — the document scrolls again and the whole scene reads as one native
+   * flow, which is what a long read (ABOUT) or a long list (WORK) wants. The
+   * rules live in `globals.css` beside the other `.scene` ones; this attribute
+   * is the switch.
+   */
+  flow = "stage",
 }: {
   children: React.ReactNode;
   side?: "right" | "full";
   overlay?: React.ReactNode;
+  flow?: "stage" | "page";
 }) {
   const pathname = usePathname();
 
   // Keyed by pathname: React discards the old box and mounts a fresh one in its
   // pre-transition state, so there's nothing to reset and no cascading render.
   return (
-    <SceneBox key={pathname} side={side} overlay={overlay}>
+    <SceneBox key={pathname} side={side} overlay={overlay} flow={flow}>
       {children}
     </SceneBox>
   );
@@ -45,10 +57,12 @@ function SceneBox({
   children,
   side,
   overlay,
+  flow,
 }: {
   children: React.ReactNode;
   side: "right" | "full";
   overlay?: React.ReactNode;
+  flow: "stage" | "page";
 }) {
   const [entered, setEntered] = useState(false);
 
@@ -62,7 +76,12 @@ function SceneBox({
   }, []);
 
   return (
-    <div className="scene" data-side={side} data-entered={entered}>
+    <div
+      className="scene"
+      data-side={side}
+      data-flow={flow}
+      data-entered={entered}
+    >
       <div className="scene-scroll">{children}</div>
       {overlay}
     </div>

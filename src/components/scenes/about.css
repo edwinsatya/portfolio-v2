@@ -568,68 +568,10 @@
 /* -------------------------------------------------------------------------- */
 
 @media (max-width: 639px) {
-  /*
-   * One page, one scroll.
-   *
-   * Everywhere else the stage *is* the viewport and a scene that overflows
-   * scrolls inside its own box. That's right for a scene that fits; ABOUT on a
-   * phone is a read, and a 500px window scrolling inside a locked page gives it
-   * a nested scroller, a rail down the side, and no momentum worth the name.
-   *
-   * So on this scene, at this width, the document scrolls again: the stage
-   * grows past the viewport and the whole thing — identity, breadcrumb, name,
-   * bio, numbers, manifesto, badges, trajectory — moves as one native flow.
-   * Scoped with `:has` so it lasts exactly as long as ABOUT is mounted; every
-   * other scene keeps the locked stage, and so does this one from 640px up.
-   */
-  html.stage-root:has(.stage[data-scene="about"]),
-  html.stage-root:has(.stage[data-scene="about"]) body {
-    height: auto;
-    min-height: 100%;
-    overflow: visible;
-  }
-
-  /* No rails on the page scroller either — the scene's own were dropped in
-     `globals.css`. Scrolling works, nothing draws. */
-  html.stage-root:has(.stage[data-scene="about"]) {
-    scrollbar-width: none;
-  }
-
-  html.stage-root:has(.stage[data-scene="about"])::-webkit-scrollbar {
-    display: none;
-  }
-
-  /* The stage stops being a fixed pane and becomes as tall as the read, still
-     filling the screen when the read is short. */
-  .stage[data-scene="about"] {
-    height: auto;
-    min-height: 100svh;
-  }
-
-  /* …and the column stops being a scroller, so there are no two scroll
-     containers to fight over a swipe. */
-  .stage[data-scene="about"] .scene-scroll {
-    max-height: none;
-    overflow: visible;
-  }
-
-  /* The wordmark is pinned to the middle of the *stage*, which is now the whole
-     document — it would sit halfway down the read. Fixed keeps it where it has
-     always been: a backdrop across the middle of the screen. */
-  .stage[data-scene="about"] .stage-wordmark-wrap {
-    position: fixed;
-  }
-
-  /* The read now travels under the fixed top-right cluster, so the like counter
-     needs the frosted chip the utility pill beside it already has — a bare
-     number over moving body copy reads as a collision rather than as chrome.
-     Only on the scene that scrolls; elsewhere it still floats over open page. */
-  body:has(.stage[data-scene="about"]) .like-counter {
-    background: color-mix(in oklab, var(--color-surface) 85%, transparent);
-    border: 1px solid var(--glass-edge);
-    box-shadow: 0 6px 20px -10px rgb(20 22 31 / 0.25);
-    backdrop-filter: blur(16px);
-  }
+  /* The page-scroll behaviour this scene pioneered — document scroll, no rails,
+     fixed wordmark, frosted like-counter — now lives in `globals.css` under
+     `.scene[data-flow="page"]`, which WORK opts into as well. `AboutScene`
+     passes `flow="page"` to the shell; nothing about it changed. */
 
   /* Collapse NOVA's reserved slot so the content takes the space… but never
      during boot, where she belongs dead-centre with the "RESUMING SESSION"

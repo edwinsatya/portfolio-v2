@@ -1,4 +1,5 @@
 import type { NovaMood } from "./profile";
+import { workCards } from "./work";
 
 /**
  * The stage's scenes.
@@ -44,9 +45,12 @@ export const scenes: Scene[] = [
     href: "/work",
     label: "Work",
     mood: "excited",
-    line: "ten shipped projects, the stack behind them, and where it all happened.",
+    // Counted from the list rather than typed: this line has already been wrong
+    // twice, and a robot who miscounts the projects she is introducing is the
+    // one error on this page nobody forgives.
+    line: `${workCards.length} shipped projects, the stack behind them, and where it all happened.`,
     taglines: [
-      "ten projects. i have favorites. i'm not supposed to, but i do.",
+      `${workCards.length} projects. i have favorites. i'm not supposed to, but i do.`,
       "ask me which one nearly broke him.",
     ],
     chips: ["which is his best?", "what did he build at magloft?", "show me the AI stuff"],

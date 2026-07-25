@@ -148,6 +148,9 @@ export function AboutScene() {
   return (
     <SceneShell
       side="right"
+      /* Phones read this scene as one page rather than as a window scrolling
+         inside a locked stage. See `.scene[data-flow="page"]` in globals.css. */
+      flow="page"
       overlay={
         <div className="about-overlay" aria-hidden={false}>
           {/* Lede, top-left under the identity. */}
