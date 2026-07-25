@@ -556,18 +556,27 @@
 /* -------------------------------------------------------------------------- */
 
 @media (max-width: 639px) {
-  /* Collapse NOVA's reserved slot so the content takes the space… */
-  .stage[data-scene="about"] .stage-nova {
+  /* Collapse NOVA's reserved slot so the content takes the space… but never
+     during boot, where she belongs dead-centre with the "RESUMING SESSION"
+     readout that's describing her. `data-booting` is present ("true" then
+     "out") for the whole splash-and-dissolve, so `:not([data-booting])` keeps
+     the slot alive until the boot is genuinely over. */
+  html:not([data-booting]) .stage[data-scene="about"] .stage-nova {
     display: none;
   }
 
-  /* …and hide the robot herself and her bubble. Power-aware: when the battery
-     is critical or flat she comes back (docked in the corner) so the visitor
-     can still see her go dark and plug her in — hiding a robot you then need to
-     charge would be a dead end. */
-  html:not([data-power="critical"]):not([data-power="dead"])
+  /* …and hide the robot herself and her bubble. Power-aware, boot-aware:
+     - during boot she's on screen (see the slot note above);
+     - when the battery is critical or flat she comes back (docked in the
+       corner) so the visitor can still see her go dark and plug her in — hiding
+       a robot you then need to charge would be a dead end;
+     - `data-charging` keeps her on screen for the whole charge too, not just the
+       critical/dead band it starts in: without it she vanished the instant the
+       charge crossed 5% back into `low`, leaving her power-up aura erupting from
+       an empty patch. */
+  html:not([data-booting]):not([data-power="critical"]):not([data-power="dead"]):not([data-charging="true"])
     body:has(.stage[data-scene="about"]) .nova-anchor,
-  html:not([data-power="critical"]):not([data-power="dead"])
+  html:not([data-booting]):not([data-power="critical"]):not([data-power="dead"]):not([data-charging="true"])
     body:has(.stage[data-scene="about"]) .nova-speech-anchor {
     display: none;
   }

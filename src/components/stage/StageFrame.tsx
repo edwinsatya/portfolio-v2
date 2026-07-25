@@ -6,7 +6,7 @@ import { sceneFromSegment } from "@/content/scenes";
 import { HeroChat } from "@/components/nova/HeroChat";
 import { LikeCounter } from "@/components/nova/LikeCounter";
 import { StageStatus } from "@/components/stage/StageStatus";
-import { batteryCells } from "@/lib/power";
+import { batteryCells, batteryUrgency } from "@/lib/power";
 import { usePower } from "@/hooks/usePower";
 
 /**
@@ -91,12 +91,19 @@ export function StageFrame({ children }: { children: React.ReactNode }) {
  */
 function StatusLine() {
   const power = usePower();
+  const urgency = batteryUrgency(power.level, power.charging);
 
   return (
     <p className="stage-status-line" data-power={power.state} aria-hidden>
       <i />
-      {power.charging ? "Charging " : ""}
-      {batteryCells(power.level)} {power.level}%
+      {/* The battery span keeps its literal urgency colour even as the line
+          around it dims. From ≤20% the phone readout hands off to the fixed
+          chip in `PowerVoid`, which the vignette can't reach — this corner is
+          the first thing the dark closes over. */}
+      <span className="battery-gauge" data-batt={urgency}>
+        {power.charging ? "Charging " : ""}
+        {batteryCells(power.level)} {power.level}%
+      </span>
     </p>
   );
 }

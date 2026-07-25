@@ -1,0 +1,487 @@
+/*
+ * The charging power-up — NOVA's fighting-game full-power aura.
+ *
+ * A tall pillar of energy behind her (z 39), arcs and debris in front (z 44),
+ * and a faint page vignette behind both (z 38) — the same either-side-of-NOVA
+ * split `PowerVoid` uses, so she stands inside her own glow. The wrapper is
+ * `display: contents` so it makes no stacking context and the layers really sit
+ * at those depths.
+ *
+ * The loop feeds it, per frame:
+ *   --aura-presence  0–1, how present the whole effect is
+ *   --aura-strength  presence folded with charge and the surge, floored so the
+ *                    pillar always reads once it is up
+ *   --aura-frac      raw charge, 0–1
+ *   --aura-w/-tall/-h/-scale  the pillar box and its surge scale
+ * and, on the document root, the colour tiers --aura-outer/-mid/-core/-rim
+ * (also --nova-aura/-hot, which NOVA's own glow shares).
+ *
+ * Additive over the dark stage (screen); a normal blend on the light one where
+ * screen would wash out. Photosensitivity-safe: the surges are scale changes
+ * under three a second, the finale is one soft flare, and reduced motion drops
+ * to a static coloured core with no spikes, arcs, pool, or burst.
+ */
+
+.power-aura {
+  display: contents;
+}
+
+.power-aura-vignette,
+.power-aura-back,
+.power-aura-fore {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* A wash that pulls the page down a touch so the pillar pops against it. */
+.power-aura-vignette {
+  z-index: 38;
+  opacity: calc(var(--aura-presence, 0) * 0.4);
+  background: radial-gradient(
+    130% 100% at 50% 66%,
+    transparent 38%,
+    color-mix(in oklab, #05060c 82%, var(--aura-mid, #3ad8f2)) 100%
+  );
+}
+
+html[data-theme="light"] .power-aura-vignette {
+  opacity: calc(var(--aura-presence, 0) * 0.22);
+  background: radial-gradient(
+    130% 100% at 50% 66%,
+    transparent 42%,
+    color-mix(in oklab, #0a1830 55%, var(--aura-mid, #22b8d4)) 100%
+  );
+}
+
+.power-aura-back {
+  z-index: 39;
+  mix-blend-mode: screen;
+}
+
+.power-aura-fore {
+  z-index: 44;
+  mix-blend-mode: screen;
+}
+
+html[data-theme="light"] .power-aura-back,
+html[data-theme="light"] .power-aura-fore {
+  mix-blend-mode: normal;
+}
+
+.power-aura[data-on="false"] .power-aura-vignette,
+.power-aura[data-on="false"] .power-aura-back,
+.power-aura[data-on="false"] .power-aura-fore {
+  opacity: 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* The pillar                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/* Box anchored bottom-centre at NOVA's feet; `transform` written every frame. */
+.power-aura-body {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: var(--aura-w, 260px);
+  height: var(--aura-tall, 480px);
+  will-change: transform;
+}
+
+/* Surge scale and the tremble lean, from a floor at her feet. */
+.power-aura-inner {
+  position: absolute;
+  inset: 0;
+  opacity: var(--aura-strength, 0);
+  transform: translateX(calc(var(--nova-tremble-x, 0) * 2px))
+    scale(var(--aura-scale, 1));
+  transform-origin: 50% 100%;
+  will-change: transform, opacity;
+}
+
+/* The flame silhouettes. `preserveAspectRatio: none` stretches the 100×200
+   viewBox to the pillar box; the paths are authored knowing that. */
+.power-aura-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  transform-origin: 50% 100%;
+  animation: aura-sway 4200ms ease-in-out infinite;
+}
+
+@keyframes aura-sway {
+  0%,
+  100% {
+    transform: rotate(-1.2deg) translateX(-1%);
+  }
+  50% {
+    transform: rotate(1.2deg) translateX(1%);
+  }
+}
+
+.power-aura-layer {
+  fill-rule: nonzero;
+}
+
+.power-aura-outer {
+  fill: var(--aura-outer, #7cc4ff);
+  opacity: 0.42;
+  filter: blur(5px);
+}
+
+.power-aura-mid {
+  fill: var(--aura-mid, #3ad8f2);
+  opacity: 0.66;
+  filter: blur(2.5px);
+  /* The bright electric edge. Constant width regardless of the viewBox stretch. */
+  stroke: var(--aura-rim, #cdf3ff);
+  stroke-width: 1.1;
+  vector-effect: non-scaling-stroke;
+  stroke-opacity: 0.9;
+}
+
+.power-aura-innermost {
+  fill: var(--aura-core, #eafcff);
+  opacity: 0.62;
+  filter: blur(1.5px);
+}
+
+/* The white-hot heart, hugging her silhouette in the lower-centre. */
+.power-aura-core {
+  position: absolute;
+  left: 50%;
+  top: 79%;
+  width: calc(var(--aura-h, 200px) * 1);
+  height: calc(var(--aura-h, 200px) * 1.35);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    50% 50% at 50% 50%,
+    color-mix(in oklab, var(--aura-core, #fff) 92%, transparent) 0%,
+    color-mix(in oklab, var(--aura-core, #fff) 55%, transparent) 30%,
+    color-mix(in oklab, var(--aura-mid, #3ad8f2) 35%, transparent) 56%,
+    transparent 74%
+  );
+  filter: blur(2px);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Ground shockwave pool                                                      */
+/* -------------------------------------------------------------------------- */
+
+.power-aura-pool {
+  position: absolute;
+  left: 50%;
+  top: 95%;
+  width: calc(var(--aura-h, 200px) * 1.5);
+  height: calc(var(--aura-h, 200px) * 0.34);
+  transform: translate(-50%, -50%);
+}
+
+/* A glowing base disc under the rings. */
+.power-aura-pool::before {
+  content: "";
+  position: absolute;
+  inset: 12% 8%;
+  border-radius: 50%;
+  background: radial-gradient(
+    50% 50% at 50% 50%,
+    color-mix(in oklab, var(--aura-core, #fff) 60%, transparent) 0%,
+    color-mix(in oklab, var(--aura-mid, #3ad8f2) 40%, transparent) 45%,
+    transparent 72%
+  );
+  animation: aura-pool-pulse 1400ms ease-in-out infinite;
+}
+
+@keyframes aura-pool-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.06);
+  }
+}
+
+/* Concentric ripples spreading outward, staggered. Capped at three. */
+.power-aura-pool-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid color-mix(in oklab, var(--aura-rim, #cdf3ff) 80%, transparent);
+  box-shadow: 0 0 10px color-mix(in oklab, var(--aura-mid, #3ad8f2) 55%, transparent);
+  opacity: 0;
+  animation: aura-pool-ring 1600ms linear infinite;
+  animation-delay: calc(var(--i) * -530ms);
+}
+
+@keyframes aura-pool-ring {
+  0% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  25% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.15);
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Internal energy streaks — racing base → tip                                */
+/* -------------------------------------------------------------------------- */
+
+.power-aura-streaks {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.power-aura-streak {
+  position: absolute;
+  bottom: 6%;
+  left: calc(38% + var(--i) * 8%);
+  width: 2px;
+  height: 18%;
+  border-radius: 2px;
+  background: linear-gradient(
+    to top,
+    transparent,
+    color-mix(in oklab, var(--aura-core, #fff) 85%, transparent)
+  );
+  filter: blur(1px);
+  opacity: 0;
+  animation: aura-streak 1100ms ease-in infinite;
+  animation-delay: calc(var(--i) * -300ms);
+}
+
+@keyframes aura-streak {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scaleY(0.6);
+  }
+  30% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-380%) scaleY(1.4);
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Lightning arcs and sparks (injected into the fore layer by the loop)        */
+/* -------------------------------------------------------------------------- */
+
+.power-aura-bolts {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.power-aura-bolt {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 4px currentColor);
+  animation: aura-bolt 150ms ease-out forwards;
+}
+
+@keyframes aura-bolt {
+  0% {
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.power-aura-spark {
+  filter: drop-shadow(0 0 3px currentColor);
+  animation: aura-spark 150ms ease-out forwards;
+}
+
+@keyframes aura-spark {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Floating debris                                                            */
+/* -------------------------------------------------------------------------- */
+
+.power-aura-debris {
+  position: absolute;
+  inset: 0;
+}
+
+.power-aura-pebble {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 40% 60% 55% 45%;
+  background: color-mix(in oklab, var(--aura-mid, #3ad8f2) 45%, #2a2f3d);
+  box-shadow: 0 0 6px color-mix(in oklab, var(--aura-core, #fff) 75%, transparent);
+}
+
+/* -------------------------------------------------------------------------- */
+/* The 100% finale — collapse inward, then erupt                              */
+/* -------------------------------------------------------------------------- */
+
+.power-aura-finale {
+  position: absolute;
+  inset: 0;
+}
+
+.power-aura-burst {
+  position: absolute;
+  left: var(--fx);
+  top: var(--fy);
+  width: 42vmax;
+  height: 42vmax;
+  border-radius: 50%;
+  background: radial-gradient(
+    50% 50% at 50% 50%,
+    color-mix(in oklab, var(--aura-core, #fff) 92%, transparent) 0%,
+    color-mix(in oklab, var(--aura-mid, #3ad8f2) 48%, transparent) 30%,
+    transparent 64%
+  );
+  transform: translate(-50%, -50%) scale(0.15);
+  opacity: 0;
+  animation: aura-burst 320ms ease-out forwards;
+}
+
+@keyframes aura-burst {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.15);
+  }
+  35% {
+    opacity: 0.95;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.6);
+  }
+}
+
+.power-aura-ring {
+  position: absolute;
+  left: var(--fx);
+  top: var(--fy);
+  width: 16vmax;
+  height: 16vmax;
+  border-radius: 50%;
+  border: 3px solid color-mix(in oklab, var(--aura-core, #fff) 82%, transparent);
+  box-shadow: 0 0 22px color-mix(in oklab, var(--aura-mid, #3ad8f2) 60%, transparent);
+  transform: translate(-50%, -50%) scale(0.1);
+  opacity: 0;
+  animation: aura-ring 780ms cubic-bezier(0.2, 0.7, 0.35, 1) forwards;
+  animation-delay: 150ms;
+}
+
+@keyframes aura-ring {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.1);
+    border-width: 4px;
+  }
+  20% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(3);
+    border-width: 1px;
+  }
+}
+
+.power-aura-max {
+  position: absolute;
+  left: var(--fx);
+  top: calc(var(--ftop) - 2em);
+  transform: translate(-50%, 0);
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, "SFMono-Regular", Menlo, monospace);
+  font-size: clamp(0.7rem, 2.4vw, 0.95rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: color-mix(in oklab, var(--aura-core, #fff) 88%, #ffffff);
+  text-shadow: 0 0 12px color-mix(in oklab, var(--aura-mid, #3ad8f2) 78%, transparent);
+  opacity: 0;
+  animation: aura-max 1400ms ease-out forwards;
+  animation-delay: 150ms;
+}
+
+html[data-theme="light"] .power-aura-max {
+  color: color-mix(in oklab, var(--aura-mid, #0e7490) 60%, #0b0d13);
+}
+
+@keyframes aura-max {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  22% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  76% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Reduced motion — a static coloured core, nothing that moves                 */
+/* -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  /* The loop already freezes the spikes and skips arcs, debris, and streaks;
+     hide the animated parts and keep only the steady core glow. */
+  .power-aura-svg,
+  .power-aura-streaks,
+  .power-aura-pool,
+  .power-aura-burst,
+  .power-aura-ring {
+    display: none;
+  }
+
+  .power-aura-inner {
+    transform: scale(var(--aura-scale, 1));
+  }
+
+  .power-aura-core {
+    filter: blur(6px);
+    animation: none;
+  }
+}

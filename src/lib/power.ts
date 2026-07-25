@@ -488,3 +488,41 @@ export function batteryCells(level: number): string {
   const filled = level <= 0 ? 0 : clamp(Math.max(1, Math.round(level / 20)), 0, 5);
   return `[${"▮".repeat(filled)}${"▯".repeat(5 - filled)}]`;
 }
+
+/**
+ * The band, a few percent below `LOW_AT`, where the gauge turns from amber to
+ * red-orange and starts its slow heartbeat.
+ */
+export const URGENT_AT = 10;
+
+/**
+ * How loud the battery readout should be, 0–100.
+ *
+ * Finer than `PowerState` by design. `PowerState` describes how the *page*
+ * dims, where a single `low` covers the whole 5–20 band; the gauge wants one
+ * more step inside it, so it can go amber at the battery-saver line and shift to
+ * red-orange as ten percent approaches. Kept next to the thresholds it reads so
+ * the tiers can't drift from the states they sit inside.
+ *
+ * Charging outranks every level: a plugged-in robot is recovering, and the
+ * gauge says so in green whatever the number reads.
+ */
+export type BatteryUrgency =
+  | "ok"
+  | "charging"
+  | "warn"
+  | "urgent"
+  | "critical"
+  | "dead";
+
+export function batteryUrgency(
+  level: number,
+  charging: boolean,
+): BatteryUrgency {
+  if (charging) return "charging";
+  if (level <= 0) return "dead";
+  if (level <= CRITICAL_AT) return "critical";
+  if (level <= URGENT_AT) return "urgent";
+  if (level <= LOW_AT) return "warn";
+  return "ok";
+}

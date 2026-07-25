@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { onNoPower } from "@/lib/nova-bus";
-import { LOW_AT, onPowerEvent } from "@/lib/power";
+import { batteryCells, batteryUrgency, LOW_AT, onPowerEvent } from "@/lib/power";
 import { usePower } from "@/hooks/usePower";
 import "./power.css";
 
@@ -112,6 +112,19 @@ export function PowerVoid() {
   const dead = power.state === "dead";
 
   /*
+   * The phone's low-power battery chip.
+   *
+   * On phones the in-flow readout sits top-left under the identity — the exact
+   * corner the vignette closes over first — so from the moment the page starts
+   * dimming (`state` leaves `normal`, i.e. ≤20% or dead) it hands the number to
+   * this chip. It rides this layer, above the vignette and the tab bar, which is
+   * what keeps a red "0%" full-contrast against the heaviest dark. Phones only
+   * in CSS; the desktop readout is centre-bottom and never loses the corner.
+   */
+  const chipUrgency = batteryUrgency(power.level, power.charging);
+  const showChip = power.state !== "normal";
+
+  /*
    * How far the dark has closed in, 0–1.
    *
    * A curve rather than a ramp, so the vignette is barely there through the
@@ -152,6 +165,19 @@ export function PowerVoid() {
             <li key={label}>{label}</li>
           ))}
         </ul>
+
+        <div
+          className="battery-chip"
+          data-batt={chipUrgency}
+          data-show={showChip}
+          aria-hidden
+        >
+          {power.charging && <span className="stage-status-bolt">⚡</span>}
+          {batteryCells(power.level)} {power.level}%
+          {chipUrgency === "critical" && (
+            <span className="battery-low-tag">⚠ Low power</span>
+          )}
+        </div>
       </div>
     </>
   );
