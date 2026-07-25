@@ -43,7 +43,7 @@ export function Nav() {
     <header
       data-site-nav
       className={`fixed inset-x-0 top-0 z-50 transition-colors duration-300 ${
-        scrolled ? "border-b border-line/70 bg-bg/80 backdrop-blur-xl" : ""
+        scrolled || menuOpen ? "border-b border-line/70 bg-bg/80 backdrop-blur-xl" : ""
       }`}
     >
       <nav
@@ -137,7 +137,7 @@ export function Nav() {
       <div
         id="mobile-menu"
         hidden={!menuOpen}
-        className="border-y border-line bg-bg/95 backdrop-blur-xl md:hidden"
+        className="min-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-line bg-bg/95 backdrop-blur-2xl md:hidden"
       >
         <div className="mx-auto max-w-6xl px-6 pt-4">
           <a
