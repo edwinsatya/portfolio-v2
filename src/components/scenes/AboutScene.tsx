@@ -135,6 +135,57 @@ export function AboutScene() {
     return () => window.clearTimeout(timer);
   }, [bootComplete]);
 
+  // The column is meant to fit the viewport whole, and the rhythm in `about.css`
+  // tightens on short screens so it usually does. When it can't — a short window,
+  // a bumped default font size, the offline note stacked on top — the box scrolls
+  // rather than clipping the tail off the manifesto. macOS draws no rail until
+  // you touch the wheel, so the only thing saying "there's more" is the content
+  // itself: `--about-fade` is how much is still hidden below (capped), and the
+  // stylesheet masks that much off the bottom edge. Tracking the real remainder
+  // rather than flipping a flag matters — with ten pixels left over, dimming two
+  // whole lines of a sentence that is in fact all there reads as a bug.
+  const colRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const col = colRef.current;
+    // The scroll container is the shell's, one level up.
+    const box = col?.parentElement;
+    if (!col || !box) return;
+
+    const measure = () => {
+      const left = box.scrollHeight - box.scrollTop - box.clientHeight;
+      if (left > 4) {
+        box.dataset.more = "";
+        box.style.setProperty("--about-fade", `${Math.min(left, 40)}px`);
+      } else {
+        // Off entirely at the end of the scroll, and on a window tall enough to
+        // never need it: a live mask puts the column on its own layer, and the
+        // text loses subpixel antialiasing for a gradient that isn't doing
+        // anything.
+        delete box.dataset.more;
+        box.style.removeProperty("--about-fade");
+      }
+    };
+
+    measure();
+    // The stagger reveal holds each block 10px low on the way in, which counts as
+    // overflow until it lands. Measure again once it has.
+    const settled = window.setTimeout(measure, 900);
+    box.addEventListener("scroll", measure, { passive: true });
+    // Catches the resize, the font swap, and the offline note appearing.
+    const observer = new ResizeObserver(measure);
+    observer.observe(box);
+    observer.observe(col);
+
+    return () => {
+      window.clearTimeout(settled);
+      box.removeEventListener("scroll", measure);
+      observer.disconnect();
+      // The box belongs to the shell, not to this scene — hand it back clean.
+      delete box.dataset.more;
+      box.style.removeProperty("--about-fade");
+    };
+  }, []);
+
   // A presenting gesture on arrival — but only when navigating *in*. On a direct
   // load the boot sequence's own greeting wave already covers it, and two waves
   // in a row would read as a tic. `celebrate` is a no-op if she's tired or cross,
@@ -176,7 +227,7 @@ export function AboutScene() {
         </div>
       }
     >
-      <div className="about-col" data-dead={dead || undefined}>
+      <div className="about-col" ref={colRef} data-dead={dead || undefined}>
         {/* Reserve power. When the battery is flat NOVA goes dark — this is the
             one line that stays lit (its own colour, not a collapsing token), so
             the scene reads as "she's napping" rather than "the page broke". */}

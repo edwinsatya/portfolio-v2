@@ -41,11 +41,38 @@
 
   .scene[data-side="right"]:has(.about-col) .scene-scroll {
     max-width: 29rem;
-    /* The whole point of the scene is that it fits the viewport — the trajectory
-       lives in the fixed bottom strip precisely so the content never has to
-       scroll. Clip rather than scroll so no bar appears; the rhythm below is
-       tuned to fit the column down to short laptops. */
-    overflow: hidden;
+  }
+}
+
+/*
+ * The bottom edge fades out while there's still content below it.
+ *
+ * The whole point of the scene is that it fits the viewport — the trajectory
+ * lives in the fixed bottom strip precisely so the content never has to scroll,
+ * and the short-viewport rhythm further down keeps that true on all but the
+ * shortest windows. The desktop column used to say `overflow: hidden` to
+ * guarantee no scrollbar ever appeared, which guaranteed something worse: below
+ * roughly 800px of viewport the manifesto — last block in the column — was cut
+ * off mid-sentence with no way to reach the rest.
+ *
+ * The scroll inherited from the base `.scene-scroll` is the backstop now, and
+ * it only engages when the content genuinely can't fit (a short window, a
+ * bumped default font size, the offline note stacked on top). `AboutScene`
+ * marks the box while anything is left below and writes the remainder to
+ * `--about-fade`, so the fade is exactly as deep as what's hidden and vanishes
+ * as you reach the end — a rail alone says nothing on a Mac, where it isn't
+ * drawn until you touch the wheel. Masking the content rather than laying a
+ * gradient over it keeps the wordmark backdrop showing through.
+ *
+ * Phones don't need it: there the scene is a page and the document scrolls.
+ */
+@media (min-width: 640px) {
+  .scene-scroll[data-more]:has(.about-col) {
+    mask-image: linear-gradient(
+      to bottom,
+      #000 calc(100% - var(--about-fade, 2.5rem)),
+      transparent 100%
+    );
   }
 }
 
@@ -207,6 +234,105 @@
   font-size: 0.86rem;
   line-height: 1.55;
   color: var(--color-muted);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Short desktop viewports                                                    */
+/*                                                                            */
+/* The scene only gets what's left of the height after the identity row and    */
+/* the foot (NOVA's line, her chips, the hints) — roughly 370–410px on a       */
+/* 1366×768 laptop and 320–370px at 1280×720, against the 483px the full-size  */
+/* rhythm above wants. (Roughly, because NOVA's line wraps to two or three     */
+/* and the foot moves with it.) The manifesto sits last in the column, so it   */
+/* was the block that fell off the end.                                       */
+/*                                                                            */
+/* Two bands, tightening the existing rhythm rather than dropping anything:    */
+/* the scene still reads whole, just held closer together, and it fits again   */
+/* down to about a 700px viewport. Below that the height simply isn't there —  */
+/* the scroll and the fade above carry it. Keyed on height alone; the column's */
+/* width doesn't move across these. They have to live *after* the rules they   */
+/* tighten: a media query adds no specificity, so at the top of the file the   */
+/* base values would simply win.                                              */
+/* -------------------------------------------------------------------------- */
+
+@media (min-width: 1024px) and (max-height: 900px) {
+  .about-bio {
+    margin-top: 0.75rem;
+    line-height: 1.5;
+  }
+
+  .about-numbers {
+    margin-top: 0.9rem;
+  }
+
+  .about-stats {
+    margin-top: 0.55rem;
+  }
+
+  .about-stat {
+    padding: 0.6rem 0.65rem 0.65rem;
+  }
+
+  .about-stat-value {
+    font-size: 1.5rem;
+  }
+
+  .about-stat-label {
+    margin-top: 0.4rem;
+  }
+
+  .about-manifesto {
+    margin-top: 0.85rem;
+    padding: 0.7rem 0.85rem 0.8rem;
+  }
+
+  .about-manifesto-body {
+    margin-top: 0.4rem;
+    line-height: 1.5;
+  }
+}
+
+@media (min-width: 1024px) and (max-height: 800px) {
+  .about-name {
+    font-size: clamp(1.7rem, 4.4vw, 2.15rem);
+  }
+
+  .about-role {
+    margin-top: 0.6rem;
+  }
+
+  .about-bio {
+    margin-top: 0.6rem;
+    font-size: 0.88rem;
+    line-height: 1.45;
+  }
+
+  .about-numbers {
+    margin-top: 0.7rem;
+  }
+
+  .about-stat {
+    padding: 0.5rem 0.6rem 0.55rem;
+  }
+
+  .about-stat-value {
+    font-size: 1.35rem;
+  }
+
+  .about-stat-label {
+    margin-top: 0.3rem;
+  }
+
+  .about-manifesto {
+    margin-top: 0.7rem;
+    padding: 0.6rem 0.8rem 0.7rem;
+  }
+
+  .about-manifesto-body {
+    margin-top: 0.35rem;
+    font-size: 0.83rem;
+    line-height: 1.45;
+  }
 }
 
 /* -------------------------------------------------------------------------- */
