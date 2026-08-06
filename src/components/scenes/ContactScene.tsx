@@ -133,7 +133,7 @@ export function ContactScene() {
             <div className="contact-who-head">
               <Image
                 className="contact-photo"
-                src="/profiles/edwin.jpg"
+                src="/profiles/edwin.webp"
                 alt=""
                 width={96}
                 height={96}

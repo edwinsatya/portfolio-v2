@@ -259,7 +259,7 @@ export type Project = {
 export const projects: Project[] = [
   {
     slug: "weathernime",
-    image: "weathernime.png",
+    image: "weathernime.webp",
     name: "Weathernime",
     blurb:
       "Weather forecast web app wrapped in an anime concept — built end to end through vibe coding.",
@@ -270,7 +270,7 @@ export const projects: Project[] = [
   },
   {
     slug: "food-analyzer",
-    image: "food-analyzer.png",
+    image: "food-analyzer.webp",
     name: "Food Analyzer",
     blurb:
       "Upload a meal and get an instant nutrition breakdown back, powered by an AI vision model.",
@@ -281,7 +281,7 @@ export const projects: Project[] = [
   },
   {
     slug: "happy-farm",
-    image: "happy-farm.png",
+    image: "happy-farm.webp",
     name: "Happy Farm",
     blurb:
       "Farm operations platform for Tola Solution — tracking cycles, stock, and daily field activity.",
@@ -290,7 +290,7 @@ export const projects: Project[] = [
   },
   {
     slug: "magloft",
-    image: "magloft.png",
+    image: "magloft.webp",
     name: "Magloft",
     blurb:
       "Digital publishing platform that turns magazines and long-form content into apps and web readers.",
@@ -300,7 +300,7 @@ export const projects: Project[] = [
   },
   {
     slug: "mileapp",
-    image: "mile-app.png",
+    image: "mile-app.webp",
     name: "MileApp",
     blurb:
       "Field operations SaaS for logistics teams — task assignment, routing, and proof of delivery.",
@@ -311,7 +311,7 @@ export const projects: Project[] = [
   },
   {
     slug: "bountie",
-    image: "bountie-hunter.png",
+    image: "bountie-hunter.webp",
     name: "Bountie",
     blurb:
       "Competitive gaming platform where players earn rewards for the matches they play.",
@@ -321,7 +321,7 @@ export const projects: Project[] = [
   },
   {
     slug: "desklab",
-    image: "desklab.png",
+    image: "desklab.webp",
     name: "DeskLab",
     blurb: "A workspace tool built to take the repetitive parts out of the day.",
     stack: ["Next.js", "Tailwind CSS", "Open Router AI", "Zustand"],
@@ -331,7 +331,7 @@ export const projects: Project[] = [
   },
   {
     slug: "tola-web",
-    image: "tola.png",
+    image: "tola.webp",
     name: "Tola Web",
     blurb:
       "Company site for Tola Solution — the studio behind the Happy Farm platform.",
@@ -341,7 +341,7 @@ export const projects: Project[] = [
   },
   {
     slug: "pokedex",
-    image: "pokedex.png",
+    image: "pokedex.webp",
     name: "Pokedex",
     blurb:
       "A fast, searchable Pokédex built on the PokéAPI, with type filters and detail views.",
@@ -353,7 +353,7 @@ export const projects: Project[] = [
   },
   {
     slug: "mini-google",
-    image: "mini-google.png",
+    image: "mini-google.webp",
     name: "Mini-Google",
     blurb:
       "A search engine in miniature — crawling, indexing, and ranking behind a deliberately plain UI.",
@@ -364,7 +364,7 @@ export const projects: Project[] = [
   },
   {
     slug: "anivault",
-    image: "anivault.png",
+    image: "anivault.webp",
     name: "Anivault",
     blurb: "Anime / Manga database and tracker with search, watchlist, and recommendations.",
     stack: ["Next.js", "Tailwind.css", "anilist api"],
