@@ -80,7 +80,7 @@ const CARDS: Omit<WorkCard, "no">[] = [
     blurb:
       "An anime-styled weather app, built end to end with vibe coding — forecast, mood, and art direction in one.",
     tags: ["Next.js", "Open-Meteo"],
-    image: "weathernime.png",
+    image: "weathernime.webp",
     badge: "LIVE",
     aliases: ["weather", "forecast"],
     org: "personal",
@@ -94,7 +94,7 @@ const CARDS: Omit<WorkCard, "no">[] = [
     blurb:
       "Snap a meal and get the nutrition back instantly — an AI vision model doing the reading, not a lookup table.",
     tags: ["Next.js", "AI Vision"],
-    image: "food-analyzer.png",
+    image: "food-analyzer.webp",
     badge: "NOVA'S PICK",
     aliases: ["nutrition", "calories"],
     org: "personal",
@@ -108,7 +108,7 @@ const CARDS: Omit<WorkCard, "no">[] = [
     blurb:
       "A farm operations platform: growing cycles, stock, and what actually happened in the field that day.",
     tags: ["Next.js", "PostgreSQL"],
-    image: "happy-farm.png",
+    image: "happy-farm.webp",
     badge: "NOVA'S PICK",
     aliases: ["farm", "agritech"],
     org: "tola",
@@ -120,7 +120,7 @@ const CARDS: Omit<WorkCard, "no">[] = [
     blurb:
       "Digital publishing at scale — turning magazines and long-form issues into apps and web readers.",
     tags: ["Next.js", "GraphQL"],
-    image: "magloft.png",
+    image: "magloft.webp",
     aliases: ["publishing", "magazine"],
     org: "magloft",
     live: "https://www.magloft.com",
@@ -132,7 +132,7 @@ const CARDS: Omit<WorkCard, "no">[] = [
     blurb:
       "Field operations SaaS for delivery teams — task assignment, routing, and proof of delivery from a phone.",
     tags: ["Vue.js", "MongoDB"],
-    image: "mile-app.png",
+    image: "mile-app.webp",
     aliases: ["logistics", "delivery"],
     org: "personal",
     live: "https://mileapp-tasks.touchsimpledev.site",
@@ -145,7 +145,7 @@ const CARDS: Omit<WorkCard, "no">[] = [
     blurb:
       "A competitive gaming platform where the matches players already play pay out in real rewards.",
     tags: ["React", "PostgreSQL"],
-    image: "bountie-hunter.png",
+    image: "bountie-hunter.webp",
     aliases: ["gaming", "esports"],
     org: "bountie",
     live: "https://bountiehunter.io",
@@ -157,7 +157,7 @@ const CARDS: Omit<WorkCard, "no">[] = [
     blurb:
       "A workspace tool built to take the repetitive parts out of the day, so the work left is the work worth doing.",
     tags: ["React", "Node.js"],
-    image: "desklab.png",
+    image: "desklab.webp",
     aliases: ["workspace", "productivity"],
     org: "personal",
     live: "https://desklab.touchsimpledev.site",
@@ -170,7 +170,7 @@ const CARDS: Omit<WorkCard, "no">[] = [
     blurb:
       "The company site for the studio behind Happy Farm — the front door for the platform he was building inside.",
     tags: ["Next.js", "Tailwind"],
-    image: "tola.png",
+    image: "tola.webp",
     org: "tola",
     live: "https://www.tola.solutions",
   },
@@ -181,7 +181,7 @@ const CARDS: Omit<WorkCard, "no">[] = [
     blurb:
       "A fast, searchable Pokédex on the PokéAPI — type filters, detail views, and no waiting around.",
     tags: ["React", "REST"],
-    image: "pokedex.png",
+    image: "pokedex.webp",
     aliases: ["pokemon"],
     org: "personal",
     live: "https://pokedex.touchsimpledev.site",
@@ -194,7 +194,7 @@ const CARDS: Omit<WorkCard, "no">[] = [
     blurb:
       "An anime and manga database with the tracking on top — search it, keep a watchlist, and get told what to watch next.",
     tags: ["Next.js", "AniList API"],
-    image: "anivault.png",
+    image: "anivault.webp",
     aliases: ["anime", "manga", "anilist"],
     org: "personal",
     live: "https://anivault.touchsimpledev.site",
@@ -207,7 +207,7 @@ const CARDS: Omit<WorkCard, "no">[] = [
     blurb:
       "A search engine in miniature — crawl, index, rank — behind a deliberately plain page.",
     tags: ["Node.js", "Express"],
-    image: "mini-google.png",
+    image: "mini-google.webp",
     aliases: ["search engine", "crawler"],
     org: "personal",
     live: "https://mini-google.touchsimpledev.site",
