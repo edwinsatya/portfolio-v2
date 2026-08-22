@@ -3,12 +3,15 @@
  * the stack marquee along the bottom.
  *
  * Kept apart from `profile.ts` on purpose. That file is the *classic* build's
- * source of truth and carries a longer, differently-shaped project list (it
- * includes Anivault, and its stacks were inferred rather than given); this one
- * is the stage's WORK scene as Edwin specified it — a fixed list, in a fixed
- * order, each with the card copy, the category, and the badge it should show.
- * Where the two disagree about a stack, this file wins here, because these are
- * the lines Edwin wrote.
+ * source of truth; this one is the stage's WORK scene as Edwin specified it — a
+ * fixed list, in a fixed order, each with the card copy, the category, and the
+ * badge it should show.
+ *
+ * On stacks, though, `profile.ts` wins. Edwin has confirmed the chips in the
+ * classic build, so `tags` here is always a two-item *shortening* of the stack
+ * over there — the two most informative entries, never a different technology.
+ * If you edit one, edit the other; an inferred tag on this side is what put
+ * PostgreSQL on a Web3 project and a Node backend on a client-only app.
  *
  * NOTE FOR EDWIN — two things to confirm:
  *  1. `org` is what the career column filters on. I've put MileApp under
@@ -160,7 +163,7 @@ const CARDS: Omit<WorkCard, "no">[] = [
     name: "Magloft",
     blurb:
       "Digital publishing at scale — turning magazines and long-form issues into apps and web readers.",
-    tags: ["Next.js", "GraphQL"],
+    tags: ["Next.js", "Contentful"],
     image: "magloft.webp",
     aliases: ["publishing", "magazine"],
     org: "magloft",
@@ -187,7 +190,7 @@ const CARDS: Omit<WorkCard, "no">[] = [
     name: "Bountie",
     blurb:
       "A competitive gaming platform where the matches players already play pay out in real rewards.",
-    tags: ["React", "PostgreSQL"],
+    tags: ["Next.js", "Web3"],
     image: "bountie-hunter.webp",
     aliases: ["gaming", "esports"],
     org: "bountie",
@@ -199,7 +202,7 @@ const CARDS: Omit<WorkCard, "no">[] = [
     name: "DeskLab",
     blurb:
       "A workspace tool built to take the repetitive parts out of the day, so the work left is the work worth doing.",
-    tags: ["React", "Node.js"],
+    tags: ["Next.js", "OpenRouter"],
     image: "desklab.webp",
     aliases: ["workspace", "productivity"],
     org: "personal",
@@ -222,8 +225,8 @@ const CARDS: Omit<WorkCard, "no">[] = [
     category: "Fun",
     name: "Pokedex",
     blurb:
-      "A fast, searchable Pokédex on the PokéAPI — type filters, detail views, and no waiting around.",
-    tags: ["React", "REST"],
+      "All 1,025 of them — search, type filters, evolutions and stats, plus a catch list, a quiz, and live TCG card prices.",
+    tags: ["Next.js", "PokéAPI"],
     image: "pokedex.webp",
     aliases: ["pokemon"],
     org: "personal",
@@ -248,8 +251,8 @@ const CARDS: Omit<WorkCard, "no">[] = [
     category: "Experiment",
     name: "Mini-Google",
     blurb:
-      "A search engine in miniature — crawl, index, rank — behind a deliberately plain page.",
-    tags: ["Node.js", "Express"],
+      "A Google-style search client on the Serper API — debounced autocomplete, keyboard navigation, and a home-to-results transition that carries the query with it.",
+    tags: ["React", "Serper API"],
     image: "mini-google.webp",
     aliases: ["search engine", "crawler"],
     org: "personal",
@@ -360,9 +363,9 @@ export const stackInTheWild = [
   "React",
   "Vue",
   "Node",
+  "Express",
   "GraphQL",
   "PostgreSQL",
-  "MongoDB",
   "Tailwind",
   "AWS",
   "Docker",

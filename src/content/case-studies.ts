@@ -140,7 +140,7 @@ export const caseStudies: Record<string, CaseStudy> = {
     slug: "weathernime",
     role: SOLO,
     glance: { label: "Status", value: "LIVE" },
-    stack: ["Next.js", "Open-Meteo API", "Tailwind CSS", "Claude", "Vercel"],
+    stack: ["Next.js", "Open-Meteo API", "Tailwind CSS", "Claude"],
     lede: "A weather app that looks like an anime still — built end to end with vibe coding, where the whole thing was described, steered, and shipped rather than hand-typed line by line.",
     sections: {
       context:
@@ -281,7 +281,7 @@ export const caseStudies: Record<string, CaseStudy> = {
     role: "Full Stack Developer",
     timeline: "2023 — 2025",
     glance: { label: "Built at", value: "Magloft" },
-    stack: ["Next.js", "Angular", "Node.js", "Express", "GraphQL", "Tailwind CSS"],
+    stack: ["Next.js", "Node.js", "Contentful CMS", "Tailwind CSS"],
     confidential: true,
     lede: "Digital publishing at scale — the platform that turns magazines and long-form issues into apps and web readers — worked on across the stack for nearly two years.",
     sections: {
@@ -290,11 +290,11 @@ export const caseStudies: Record<string, CaseStudy> = {
       problem:
         "Publishers have layouts, deadlines and audiences. What they don't have is an engineer on hand for every issue — so the platform has to take content someone else owns, in a shape someone else chose, and get it onto a phone reliably enough that nobody has to call for help at 2am before a release.",
       contribution:
-        "Two years across the stack — Vue on the front, Node behind it, GraphQL between the two — on a product that already had customers when he arrived.",
+        "Two years across the stack — Next.js on the front, Node behind it, Contentful holding the content — on a product that already had customers when he arrived.",
       build:
-        "Vue front ends over a GraphQL API on Node. GraphQL earns its place here: a reader app, a web reader and the publisher's own tooling all want different slices of the same issue, and one endpoint that answers all three beats three endpoints that drift apart.",
+        "Next.js front ends over a Node service, with Contentful as the content layer. The CMS is the load-bearing choice: a reader app, a web reader and the publisher's own tooling all want different slices of the same issue, and one modelled home for that content beats three copies of it that drift apart.",
       decisions: [
-        "GraphQL as the contract between one body of content and several very different readers of it.",
+        "A headless CMS as the single home for an issue, so every surface rendering it — the app, the web reader, the publisher's tooling — reads the same content instead of keeping its own copy.",
         "Platform tooling over bespoke per-customer work — either it gets better for every publisher, or the company quietly becomes an agency.",
         "Ship into a product with live customers: changes stay additive and reversible, because somebody's issue goes out tonight either way.",
       ],
@@ -307,14 +307,14 @@ export const caseStudies: Record<string, CaseStudy> = {
         "The platform is live and public at magloft.com. For Edwin it's the two years that turned him from someone who could build a feature into someone who could work inside a product other people already depended on — a different skill, and the one most of the rest of this list rests on.",
     },
     ask: {
-      did: "Nearly two years as a full-stack developer on the platform — Vue on the front, Node and GraphQL behind it — on a product that already had paying publishers.",
+      did: "Nearly two years as a full-stack developer on the platform — Next.js on the front, Node and Contentful behind it — on a product that already had paying publishers.",
       hardest:
         "Shipping into something people were already using. There's no clean slate on a live publishing platform: every change has to be additive and reversible, because somebody's issue goes out tonight.",
-      stack: "Vue.js on the front, Node.js behind it, GraphQL between them.",
+      stack: "Next.js and Tailwind on the front, Node.js behind it, and Contentful holding the publishers' content.",
     },
     review: [
       "Which surfaces you actually worked on — the reader apps, the web reader, the publisher tooling, or all three.",
-      "STACK CONFLICT: `profile.ts` lists Next.js and Contentful for Magloft; your career entry and the WORK card both say Vue/Node/GraphQL, so I used those. One of the two files is wrong — fix whichever it is.",
+      "RESOLVED — you confirmed the classic build's chips, so this page is now Next.js / Node / Contentful throughout. If the career entry still reads Vue/Node/GraphQL anywhere, that's the copy left to fix.",
       "Whether 'nearly two years' is right. I read it off Jun 2023 – Feb 2025.",
     ],
   },
@@ -372,7 +372,7 @@ export const caseStudies: Record<string, CaseStudy> = {
     role: "Software Engineer",
     timeline: "2022 — 2023",
     glance: { label: "Built at", value: "Bountie" },
-    stack: ["React", "Node.js", "PostgreSQL", "Web3"],
+    stack: ["Next.js", "Tailwind CSS", "Web3", "Metamask"],
     confidential: true,
     lede: "A competitive gaming platform where the matches players are already playing pay out in real rewards — a year on the product as a software engineer.",
     sections: {
@@ -381,11 +381,11 @@ export const caseStudies: Record<string, CaseStudy> = {
       problem:
         "The moment a leaderboard pays out, all of it becomes a trust problem. A result stops being a number on a page and becomes a claim about money — and it has to survive people who are motivated to argue with it, game it, or manufacture it outright.",
       contribution:
-        "A year as a software engineer on the platform, in React on the front with Node and PostgreSQL behind it.",
+        "A year as a software engineer on the platform, in Next.js on the front, with the Web3 wallet side of the rewards.",
       build:
-        "React on the front over a Node API, with PostgreSQL holding anything payout-shaped. Rewards are what stop the database being a convenience and make it a ledger: what was earned, by whom, for which match, and whether it has been paid.",
+        "Next.js on the front, with Metamask connecting the player's own wallet on the reward side. That connection is what makes a reward real rather than a number in an account: what was earned, by whom, for which match, and where it lands when it pays.",
       decisions: [
-        "PostgreSQL for everything a payout depends on. Money-shaped records want transactions and constraints, not eventual consistency.",
+        "Pay into a wallet the player already owns rather than a balance the platform holds for them. A reward you can check yourself asks for no trust in the scoreboard that produced it.",
         "Treat results as claims to be verified rather than as facts to be displayed.",
         "Keep the reward mechanics legible to players — a system that pays you but can't explain why loses that argument every single time.",
       ],
@@ -398,15 +398,15 @@ export const caseStudies: Record<string, CaseStudy> = {
         "The platform is public at bountiehunter.io. What the year gave Edwin is experience of building where a bug isn't cosmetic: on a product that pays out, correctness is the feature and everything else is decoration on top of it.",
     },
     ask: {
-      did: "About a year as a software engineer on the platform — React on the front, Node and PostgreSQL behind it.",
+      did: "About a year as a software engineer on the platform — Next.js on the front, and the Web3 wallet side of the rewards.",
       hardest:
         "Anything attached to a payout. Once a leaderboard is worth money, results stop being numbers and become claims people will argue with — so correctness stops being a quality bar and becomes the product.",
       stack:
-        "React on the front, Node.js and PostgreSQL behind it, with Web3 wallet connection on the reward side.",
+        "Next.js and Tailwind on the front, with Metamask and Web3 wallet connection on the reward side.",
     },
     review: [
       "How much of the reward and payout side you personally touched — I've written around it rather than claiming it.",
-      "STACK CONFLICT: `profile.ts` lists Next.js, Metamask and Web3; your career entry says React, Node, PostgreSQL. I used the career entry and kept Web3 as a chip. Confirm which is right.",
+      "RESOLVED — you confirmed the classic build's chips, so this page is Next.js with Metamask/Web3 on the rewards, and the invented PostgreSQL ledger is gone. What the back end actually was is still yours to add if you want it named.",
       "Whether 'about a year' is right (May 2022 – Jun 2023), and whether the platform is still live.",
     ],
   },
@@ -505,40 +505,42 @@ export const caseStudies: Record<string, CaseStudy> = {
     slug: "pokedex",
     role: SOLO,
     glance: { label: "Status", value: "LIVE" },
-    stack: ["Next.js", "Tailwind CSS", "PokéAPI", "REST"],
-    lede: "A fast, searchable Pokédex on the PokéAPI — type filters, detail views, and no waiting around between them.",
+    stack: ["Next.js", "TypeScript", "Tailwind CSS", "Zustand", "PokéAPI", "PokéWallet"],
+    lede: "All 1,025 of them, and then some — search and type filters, stats and evolutions, a catch list with real catch rates, a quiz, and live trading-card prices.",
     sections: {
       context:
-        "The PokéAPI is the standard playground for anyone learning to consume a REST API, which makes a Pokédex the most-built app on the internet. That's exactly what makes it a useful thing to build *well*: everyone has already seen a slow one.",
+        "The PokéAPI is the standard playground for anyone learning to consume a REST API, which makes a Pokédex the most-built app on the internet. That is exactly what makes it a useful thing to build well: everyone has already seen a slow one, and almost nobody has seen one that keeps going after the list renders.",
       problem:
-        "The API hands you a list of names and then makes you fetch every creature separately for anything worth showing. Done naively that's hundreds of requests and a page that fills in one card at a time — so the whole exercise is really about request strategy and caching, dressed up as a toy.",
+        "The API hands you a list of names and then makes you fetch every creature separately for anything worth showing. Done naively that's hundreds of requests and a page that fills in one card at a time — so the exercise is really about request strategy and caching, dressed up as a toy. The card prices bring the same problem from the other end: that data is live, it comes from someone else's service, and the free plan allows a hundred requests an hour.",
       contribution:
-        "Solo — the fetching strategy, the filtering, the detail views, and the interface around them.",
+        "Solo — the fetching strategy, the filtering, the detail and evolution pages, the catch and collection state, the quiz, and the card market.",
       build:
-        "A Next.js front end over the PokéAPI, with search and type filters that stay responsive because the work is done up front rather than per keystroke. The detail view is a separate read, so the list stays cheap.",
+        "A Next.js app on the App Router in TypeScript, with Zustand holding everything the visitor accumulates — the catch list, the collection, the quiz streak. Two services feed it: the PokéAPI for the creatures, stats and evolutions, and PokéWallet for live TCG prices out of TCGplayer and Cardmarket. Price lookups are cached on the server, because a marketplace page can spend an hourly quota in a minute.",
       decisions: [
         "Fetch strategy first, interface second. The felt speed of this app is entirely a data-loading decision.",
         "Filter and search over what's already loaded, so typing never waits on the network.",
         "Keep the detail view a separate read — the list shouldn't pay for information only one card needs.",
+        "Cache the price lookups server-side. A hundred requests an hour is a real ceiling, and the honest way to live inside it is to stop asking the same question twice.",
+        "Go past the exercise. The catch list, the collection tracker and the quiz are what turn a well-known API demo into something with a reason to come back to it.",
       ],
       constraints: [
-        "A public API that returns one creature at a time",
-        "No key, no budget, no server of his own",
-        "A category of app everyone has already seen done badly",
+        "A team of one",
+        "An API that returns one creature per request",
+        "A hundred price requests an hour, free tier",
       ],
       outcome:
-        "It's live and open. It's on this list as the small honest one: a well-known exercise done properly, which says more about how someone works than an ambitious thing left half-finished.",
+        "It's live and open. It started as the most-built app on the internet and didn't stay there — the fetch strategy is the craft, and the catch list, the quiz and the card market are the reason anyone is still on it after the first page.",
     },
     ask: {
-      did: "All of it, solo — the data loading, the filtering, the detail views and the interface.",
+      did: "All of it, solo — the data loading, the filtering, the detail and evolution pages, the catch and collection state, the quiz and the card market.",
       hardest:
-        "Making it feel instant. The PokéAPI gives you a list of names and one creature per request, so everything pleasant about this app is a decision about what to fetch, when, and what to keep.",
+        "Making it feel instant on an API that gives you one creature per request, then doing it again for live card prices on a hundred-requests-an-hour quota. Everything pleasant about this app is a decision about what to fetch, when, and what to keep.",
       stack:
-        "Next.js and Tailwind on the front, the public PokéAPI over REST for the data.",
+        "Next.js and TypeScript with Tailwind and Zustand, the PokéAPI for the creatures, and PokéWallet for live TCG prices — cached server-side to stay inside the free tier.",
     },
     review: [
-      "STACK CONFLICT: the WORK card says React/REST; `profile.ts` says Next.js/Tailwind/PokéAPI/PokeWallet. I used the latter and dropped 'PokeWallet' because I don't know what it is — tell me and it goes back in.",
-      "Whether the search really is client-side over preloaded data. That's my inference from how it behaves, and it's the main technical claim here.",
+      "RESOLVED — PokéWallet is back in the stack now that I know what it is (live TCG card pricing from TCGplayer and Cardmarket), and the WORK card no longer says React/REST.",
+      "The feature list, the 1,025 count and the hundred-an-hour quota are read off the README. The client-side filtering claim is still my inference from how it behaves — that's the one technical line here worth checking.",
     ],
   },
 
@@ -592,40 +594,42 @@ export const caseStudies: Record<string, CaseStudy> = {
     slug: "mini-google",
     role: SOLO,
     glance: { label: "Status", value: "LIVE" },
-    stack: ["React", "Node.js", "Express", "Context API"],
-    lede: "A search engine in miniature behind a deliberately plain page — the whole point being how much of the experience is the part nobody looks at.",
+    stack: ["React", "Tailwind CSS", "Serper.dev", "Context + useReducer"],
+    lede: "A Google-style search client on the Serper API, where the whole craft is in the tenth of a second between typing and seeing something.",
     sections: {
       context:
-        "Search is the interface everyone uses and nobody examines. Edwin built a small one to take it apart: a query goes in, results come back, and everything interesting happens in between.",
+        "Search is the interface everyone uses and nobody examines. Edwin built one to take the front of it apart — the results come from Serper.dev, so none of this is about crawling the web; all of it is about what happens between a keystroke and a rendered result.",
       problem:
-        "A search page is judged almost entirely on things that are invisible — how fast the first result appears, whether the ranking matches what you meant, and what happens when there's nothing to show. None of that is design work, which is why a plain interface is the honest way to present it: there's nowhere for the page to hide.",
+        "A search page is judged on things that never show up in a screenshot. Whether autocomplete keeps up with typing without firing a request per character. Whether the keyboard can drive the whole thing. Whether moving from the home page to the results feels like one page or two. And what you get when there is nothing to show. Get those wrong and it feels cheap no matter how good the results are.",
       contribution:
-        "Solo — the query pipeline, the results handling, and the interface.",
+        "Solo — the Serper integration, the autocomplete and query pipeline, the results handling, and the interface around them.",
       build:
-        "A React front end with the query pipeline behind it and Context holding the search state, so a query, its results and its loading state are one thing the whole page can read rather than props threaded down through every level.",
+        "A React front end in Tailwind, calling Serper.dev for web, image and news results behind three routes. The query, its results, its loading state and its errors live in one useContext plus useReducer store rather than being threaded through props, so the whole page reads one thing. Autocomplete is debounced, recent searches are kept, and the move from home to results animates — the query travels up the page instead of the page being swapped underneath it.",
       decisions: [
-        "A deliberately plain page. Any visual interest would be answering a question nobody asked about a search engine.",
-        "Search state in one place — the query, the results and the in-between are a single piece of state, not three.",
-        "Treat the empty result and the error as first-class screens. They're most of what a search engine actually shows you.",
+        "Borrow the index. Serper answers the queries, which is what makes it possible to spend the entire budget of a side project on the part that is actually interesting — the interface.",
+        "Debounce the autocomplete. The naive version fires a request per keystroke: quick to write, expensive to run, and worse to use than the version that waits.",
+        "One reducer for the search. Query, results, loading and error are a single piece of state, not four that can quietly disagree with each other.",
+        "Keyboard first. A search box you have to reach for the mouse to finish using has missed the point of being a search box.",
+        "The empty result and the error are designed screens rather than fallbacks — between them they are a good share of what a search interface actually shows people.",
       ],
       constraints: [
         "A team of one",
-        "An experiment, not a product",
-        "Nowhere for the interface to hide",
+        "Somebody else's results, on somebody else's quota",
+        "A blank page that has to feel fast before it can be judged at all",
       ],
       outcome:
-        "It's live and open. It's the smallest and most curious thing on the list — the one built to understand something rather than to ship something — which is why it closes the set.",
+        "It's live, it's open, and it carries a Jest and React Testing Library suite — unusual for something this size. It's the smallest thing on this list and the one most about feel: three routes, one API, and a pile of small decisions that add up to whether it seems quick.",
     },
     ask: {
-      did: "All of it, solo — the query pipeline, the results handling and the interface.",
+      did: "All of it, solo — the Serper integration, the autocomplete and query pipeline, the results handling and the interface.",
       hardest:
-        "Everything worth judging in a search engine is invisible: speed to the first result, whether the ranking matches what you meant, and what the page does when there's nothing to show.",
+        "Making typing feel instant without hammering the API. Debounce too little and every keystroke is a request; too much and autocomplete feels broken — and the right answer is a feel rather than a number you can look up.",
       stack:
-        "React with the Context API holding the search state, and Node and Express behind it.",
+        "React with Tailwind, Serper.dev for the web, image and news results, and useContext plus useReducer holding the search state.",
     },
     review: [
-      "IMPORTANT — the biggest thing to check on any of these pages: your card blurb says 'crawl, index, rank', but `profile.ts` lists serper.dev, which is a search API. Those are very different projects. I've written this to describe a query pipeline and have deliberately not claimed a crawler or an index anywhere, because claiming one you don't have is exactly what unravels in an interview. If it really does crawl and index, tell me — that's a much better story and I'll write it.",
-      "STACK CONFLICT: the WORK card says Node/Express; `profile.ts` says React/serper.dev/Context API. I've listed both sides.",
+      "RESOLVED — the old 'crawl, index, rank' framing is gone. The repository describes a Serper.dev client, you confirmed the classic build's chips, and nothing on this page claims a crawler or an index any more. The WORK card blurb was rewritten to match.",
+      "The interface details — debounced autocomplete, search history, keyboard navigation, the home-to-results transition — are read off the README rather than told to me. Cut anything that has since changed.",
     ],
   },
 };
