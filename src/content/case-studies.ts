@@ -281,46 +281,106 @@ export const caseStudies: Record<string, CaseStudy> = {
     role: "Full Stack Developer",
     timeline: "2023 — 2025",
     glance: { label: "Built at", value: "Magloft" },
-    stack: ["Next.js", "Node.js", "Contentful CMS", "Tailwind CSS"],
+    stack: [
+      "Next.js",
+      "Node.js",
+      "Express",
+      "GraphQL",
+      "PostgreSQL",
+      "OpenAI",
+      "Angular",
+    ],
     confidential: true,
-    lede: "Digital publishing at scale — the platform that turns magazines and long-form issues into apps and web readers — worked on across the stack for nearly two years.",
+    lede: "One publishing platform, many magazines. Each publisher gets their own domain, their own content and their own look — all of it served by one codebase and set from one admin — worked on across the stack for nearly two years.",
     sections: {
       context:
-        "Magloft is a publishing platform: publishers bring their issues, and the platform turns them into apps and web readers their audience can actually read. Edwin spent close to two years on it as a full-stack developer, the longest single stretch on this list.",
+        "Magloft is a publishing platform: publishers bring their issues, and the platform turns them into apps and web readers their audience can actually read. The magazine in the screenshot is one of them, on its own domain, with its own branding — there are others, and they all run on the same software. Edwin spent close to two years on it as a full-stack developer, the longest single stretch on this list.",
       problem:
-        "Publishers have layouts, deadlines and audiences. What they don't have is an engineer on hand for every issue — so the platform has to take content someone else owns, in a shape someone else chose, and get it onto a phone reliably enough that nobody has to call for help at 2am before a release.",
+        "Every publisher wants their own product: their content, their brand, their address on the internet. The fast answer is to fork the app per client, and it works right up until there are a dozen of them, at which point a platform company has quietly become an agency maintaining a dozen codebases. The platform answer is one codebase that can be told what to be — and the difficulty is that it has to be told by the publisher, not by an engineer.",
       contribution:
-        "Two years across the stack — Next.js on the front, Node behind it, Contentful holding the content — on a product that already had customers when he arrived.",
+        "Two years across the stack — the Next.js publisher-facing sites, the GraphQL API on Node and Express behind them, the PostgreSQL underneath, and the Angular admin the publishers use themselves.",
       build:
-        "Next.js front ends over a Node service, with Contentful as the content layer. The CMS is the load-bearing choice: a reader app, a web reader and the publisher's own tooling all want different slices of the same issue, and one modelled home for that content beats three copies of it that drift apart.",
+        "One Next.js application serving many magazines. A publisher signs into an Angular admin and sets both halves of their product there: the content of an issue, and the styling of the web around it — so the same deployment renders one publisher's coastal lifestyle magazine and the next publisher's something else entirely, each on its own domain, each looking nothing like the other. Behind that sits a GraphQL API on Node and Express over PostgreSQL, carrying issues, subscriptions and who is entitled to read what. OpenAI powers the assistant in the corner of a publisher's site, answering the questions a reader actually arrives with — what a subscription costs, whether there's a free issue, who to talk to about advertising.",
       decisions: [
-        "A headless CMS as the single home for an issue, so every surface rendering it — the app, the web reader, the publisher's tooling — reads the same content instead of keeping its own copy.",
-        "Platform tooling over bespoke per-customer work — either it gets better for every publisher, or the company quietly becomes an agency.",
-        "Ship into a product with live customers: changes stay additive and reversible, because somebody's issue goes out tonight either way.",
+        "One codebase, many tenants. A build per client is the quickest way to ship the second magazine and the surest way to stop being a platform company.",
+        "Styling as data rather than as a fork. The publisher changes their own look from the admin, so a new brand is a configuration change and not a deploy.",
+        "GraphQL as the contract. A reader app, a web reader and the admin all want different slices of the same issue; one schema serves all three without three endpoints drifting apart.",
+        "PostgreSQL under the whole thing. Issues, subscriptions and entitlements are relational, and who is allowed to read what is not a question you want answered eventually.",
+        "The reader assistant is scoped to the magazine it sits on, so it's support for that publication rather than one generic bot bolted onto every site.",
+        "The publisher's domain, not the platform's. A reader should never learn what Magloft is — it's the thing underneath, not the brand on the page.",
       ],
       constraints: [
-        "Real publishers on real deadlines",
-        "Content the platform doesn't own",
-        "An existing product with existing customers",
+        "A live platform with paying publishers",
+        "One codebase that has to be several products at once",
+        "Content and branding owned by the customer, not the team",
+        "Two front ends and an admin to keep in step",
       ],
       outcome:
-        "The platform is live and public at magloft.com. For Edwin it's the two years that turned him from someone who could build a feature into someone who could work inside a product other people already depended on — a different skill, and the one most of the rest of this list rests on.",
+        "The platform is live and public at magloft.com, and the magazines running on it sit on their own domains — the shot on this page is one of them. For Edwin it's the two years that turned him from someone who could build a feature into someone who could work inside a product other people already depended on — a different skill, and the one most of the rest of this list rests on.",
     },
     ask: {
-      did: "Nearly two years as a full-stack developer on the platform — Next.js on the front, Node and Contentful behind it — on a product that already had paying publishers.",
+      did: "Nearly two years as a full-stack developer on the platform — the Next.js publisher sites, the GraphQL API on Node and Express, PostgreSQL underneath, and the Angular admin publishers use to run their own magazine.",
       hardest:
-        "Shipping into something people were already using. There's no clean slate on a live publishing platform: every change has to be additive and reversible, because somebody's issue goes out tonight.",
-      stack: "Next.js and Tailwind on the front, Node.js behind it, and Contentful holding the publishers' content.",
+        "Multi-tenancy. One codebase has to be a different product for every publisher — their content, their styling, their domain — without collapsing into a pile of per-client special cases, and while somebody's issue goes out on it tonight.",
+      stack:
+        "Next.js on the publisher-facing side, Angular for the admin, a GraphQL API on Node and Express, PostgreSQL underneath, and OpenAI behind the reader assistant.",
     },
     review: [
-      "Which surfaces you actually worked on — the reader apps, the web reader, the publisher tooling, or all three.",
-      "RESOLVED — you confirmed the classic build's chips, so this page is now Next.js / Node / Contentful throughout. If the career entry still reads Vue/Node/GraphQL anywhere, that's the copy left to fix.",
+      "Which surfaces you actually worked on — the publisher sites, the API, the admin, or all three. I've said all three; narrow it if that's generous.",
+      "Contentful and Tailwind went to the Magloft Web card, which is where they belong now that the marketing site is its own project. If any of that is also in the platform, add it back here.",
+      "The assistant being scoped to each publisher's own magazine is my reading of the screenshot's suggested questions, not something you told me.",
       "Whether 'nearly two years' is right. I read it off Jun 2023 – Feb 2025.",
     ],
   },
 
   /* ------------------------------------------------------------------ */
-  /* 06 · MileApp                                                        */
+  /* 06 · Magloft Web                                                    */
+  /* ------------------------------------------------------------------ */
+  "magloft-web": {
+    slug: "magloft-web",
+    role: "Full Stack Developer",
+    timeline: "2023 — 2025",
+    glance: { label: "Built at", value: "Magloft" },
+    stack: ["Next.js", "Tailwind CSS", "Contentful CMS", "Node.js"],
+    lede: "The public front door for the publishing platform — everything a publisher reads before they ever sign in.",
+    sections: {
+      context:
+        "The platform has to sell itself to publishers, and magloft.com is where that happens: what the product does, who already runs on it, what it costs, and a free way in. Edwin built it alongside the platform itself.",
+      problem:
+        "A marketing site belongs to the people who change it most, and those people are not engineers. If every price change, customer story and blog post needs a developer and a deploy, the site goes stale — not because anyone decided to neglect it, but because updating it costs more than the update is worth.",
+      contribution:
+        "Built and kept running by Edwin alongside the platform work.",
+      build:
+        "Next.js and Tailwind on the front, with Contentful holding everything that has words in it — the pages, the pricing copy, the customer stories, the blog. Marketing edits in the CMS and the site follows; publishing a post involves no developer at all.",
+      decisions: [
+        "A CMS for all of the copy, not just the blog. The test for a marketing site is whether the person who wants a change can make it without asking anyone.",
+        "Next.js for pages that render fast and land properly in search — this is a site whose entire job is being found by publishers who haven't heard of it.",
+        "Kept separate from the platform. The thing that sells the product and the product itself have different audiences, different release rhythms, and no reason to share a deploy.",
+      ],
+      constraints: [
+        "A non-technical team owning the content",
+        "Search traffic as the point, not a bonus",
+        "Built beside the real product, never instead of it",
+      ],
+      outcome:
+        "It's live at magloft.com. It's the smaller half of the same job: the platform had to be built, and it also had to be explained to the publishers paying for it — and explaining it well is what fills the platform.",
+    },
+    ask: {
+      did: "He built the platform's own marketing site alongside the platform — Next.js and Tailwind, with Contentful behind the content.",
+      hardest:
+        "Handing it over. The useful version of a marketing site is one the marketing team can change without a developer, which means the engineering decision is mostly about what to give away.",
+      stack:
+        "Next.js and Tailwind CSS on the front, Node.js behind it, and Contentful holding the copy.",
+    },
+    review: [
+      "Whether you built it alone or alongside a marketing team.",
+      "Whether Contentful runs the whole site or only the blog — I've said everything with words in it.",
+      "Whether it ran the full two years or arrived partway through.",
+    ],
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* 07 · MileApp                                                        */
   /* ------------------------------------------------------------------ */
   mileapp: {
     slug: "mileapp",
@@ -365,7 +425,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 07 · Bountie                                                        */
+  /* 08 · Bountie                                                        */
   /* ------------------------------------------------------------------ */
   bountie: {
     slug: "bountie",
@@ -412,7 +472,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 08 · DeskLab                                                        */
+  /* 09 · DeskLab                                                        */
   /* ------------------------------------------------------------------ */
   desklab: {
     slug: "desklab",
@@ -456,7 +516,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 09 · Tola Web                                                       */
+  /* 10 · Tola Web                                                       */
   /* ------------------------------------------------------------------ */
   "tola-web": {
     slug: "tola-web",
@@ -499,7 +559,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 10 · Pokedex                                                        */
+  /* 11 · Pokedex                                                        */
   /* ------------------------------------------------------------------ */
   pokedex: {
     slug: "pokedex",
@@ -545,7 +605,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 11 · Anivault                                                       */
+  /* 12 · Anivault                                                       */
   /* ------------------------------------------------------------------ */
   anivault: {
     slug: "anivault",
@@ -588,7 +648,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 12 · Mini-Google                                                    */
+  /* 13 · Mini-Google                                                    */
   /* ------------------------------------------------------------------ */
   "mini-google": {
     slug: "mini-google",
