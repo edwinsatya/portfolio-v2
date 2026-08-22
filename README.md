@@ -106,6 +106,22 @@ area, so a bubble can never render off screen or under the nav, and the tail
 keeps tracking NOVA even when the body has been clamped away from her. Tune
 `EDGE_PAD`, `BUBBLE_GAP`, and `TAIL_INSET` in `useNovaStage.ts`.
 
+## Full-stack projects
+
+Three projects were built front to back — Dryrun, MileApp and Happy Farm — and
+the card model says so in three fields on `Project` in `profile.ts`:
+
+| Field | What it does |
+| --- | --- |
+| `fullstack` | Shows the FULL-STACK chip beside the project name. Set even where the code is private. |
+| `sourceApi` | The back-end repository. When it's present the two links read **Front-end** and **API** instead of both saying "Source". |
+| `sourceNote` | Why there's no repository to link. Happy Farm is client-owned, and saying so beats a card that looks like it forgot its repo. |
+
+`source` stays the single/front-end repo, so every project that had one link
+still has exactly that link — only the labelling changes when `sourceApi`
+appears beside it. The same three fields carry the same meanings in the flagship
+build, so the two stay in sync.
+
 ## Project screenshots
 
 Screenshots live in `public/projects/` and are wired up per project via the
@@ -119,10 +135,14 @@ derived path would 404 on those silently.
 matter what the source images do. A project with no `image` gets a gradient
 placeholder with its initial instead — same box, no ragged layout.
 
-Nothing here is `priority`: the grid never sits above the fold, so all eleven
-stay lazy. The `sizes` attribute mirrors the grid's breakpoints; if you change
-the column counts in `Projects.tsx`, change `sizes` to match or the optimizer
-will ship files at the wrong width.
+Nothing here is `priority`: the grid never sits above the fold, so all twelve
+stay lazy.
+
+The files are WebP at 1898×865 — the whole folder is under 500KB, down from
+5.9MB as PNG — and `next.config.ts` sets `images.unoptimized`, so they're served
+straight from `/public` rather than through Vercel's optimizer, which bills per
+source image. That means the shot you commit is the shot that ships: export at
+1898×865 and let `object-cover` handle the rest.
 
 ## Memory
 

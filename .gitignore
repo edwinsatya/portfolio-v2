@@ -2,6 +2,9 @@
 
 # dependencies
 /node_modules
+# yarn.lock is the lockfile of record. A stray package-lock.json alongside it
+# makes `next build` pick one and delete the other, which it will do to yours.
+package-lock.json
 /.pnp
 .pnp.*
 .yarn/*

@@ -203,7 +203,14 @@ export type Project = {
   blurb: string;
   stack: string[];
   live?: string;
+  /** The repository — the front end where the project has two. */
   source?: string;
+  /** The back-end repository, on the full-stack builds that ship both. */
+  sourceApi?: string;
+  /** Built front to back. Shows the FULL-STACK chip on the card. */
+  fullstack?: boolean;
+  /** Why there's no repo to link, where there deliberately isn't one. */
+  sourceNote?: string;
   /**
    * Screenshot filename inside `public/projects/`. Stated per project rather
    * than derived from the slug, because several files don't match their slug
@@ -219,8 +226,21 @@ export type Project = {
 
 export const projects: Project[] = [
   {
+    slug: "dryrun",
+    image: "dryrun.webp",
+    name: "Dryrun",
+    blurb:
+      "AI mock interviews that read your code first — it profiles your public GitHub repos, then asks eight questions about what's actually in them.",
+    stack: ["Next.js", "Express", "Groq", "Upstash Redis"],
+    live: "https://dryrun.touchsimpledev.site",
+    source: "https://github.com/edwinsatya/dryrun",
+    sourceApi: "https://github.com/edwinsatya/dryrun-api",
+    fullstack: true,
+    featured: true,
+  },
+  {
     slug: "weathernime",
-    image: "weathernime.png",
+    image: "weathernime.webp",
     name: "Weathernime",
     blurb:
       "Weather forecast web app wrapped in an anime concept — built end to end through vibe coding.",
@@ -231,7 +251,7 @@ export const projects: Project[] = [
   },
   {
     slug: "food-analyzer",
-    image: "food-analyzer.png",
+    image: "food-analyzer.webp",
     name: "Food Analyzer",
     blurb:
       "Upload a meal and get an instant nutrition breakdown back, powered by an AI vision model.",
@@ -242,16 +262,18 @@ export const projects: Project[] = [
   },
   {
     slug: "happy-farm",
-    image: "happy-farm.png",
+    image: "happy-farm.webp",
     name: "Happy Farm",
     blurb:
       "Farm operations platform for Tola Solution — tracking cycles, stock, and daily field activity.",
     stack: ["Next.js", "Node.js", "PostgreSQL", "Tailwind CSS", "Prisma"],
+    fullstack: true,
+    sourceNote: "Client-owned — both repositories are private",
     needsReview: true,
   },
   {
     slug: "magloft",
-    image: "magloft.png",
+    image: "magloft.webp",
     name: "Magloft",
     blurb:
       "Digital publishing platform that turns magazines and long-form content into apps and web readers.",
@@ -261,18 +283,20 @@ export const projects: Project[] = [
   },
   {
     slug: "mileapp",
-    image: "mile-app.png",
+    image: "mile-app.webp",
     name: "MileApp",
     blurb:
       "Field operations SaaS for logistics teams — task assignment, routing, and proof of delivery.",
-    stack: ["Vue.js", "Node.js", "Express", "Mockapi"],
+    stack: ["Vue.js", "Node.js", "Express", "JWT"],
     live: "https://mileapp-tasks.touchsimpledev.site",
     source: "https://github.com/edwinsatya/mileapp-client",
+    sourceApi: "https://github.com/edwinsatya/mileapp-server",
+    fullstack: true,
     needsReview: true,
   },
   {
     slug: "bountie",
-    image: "bountie-hunter.png",
+    image: "bountie-hunter.webp",
     name: "Bountie",
     blurb:
       "Competitive gaming platform where players earn rewards for the matches they play.",
@@ -282,7 +306,7 @@ export const projects: Project[] = [
   },
   {
     slug: "desklab",
-    image: "desklab.png",
+    image: "desklab.webp",
     name: "DeskLab",
     blurb: "A workspace tool built to take the repetitive parts out of the day.",
     stack: ["Next.js", "Tailwind CSS", "Open Router AI", "Zustand"],
@@ -292,7 +316,7 @@ export const projects: Project[] = [
   },
   {
     slug: "tola-web",
-    image: "tola.png",
+    image: "tola.webp",
     name: "Tola Web",
     blurb:
       "Company site for Tola Solution — the studio behind the Happy Farm platform.",
@@ -302,19 +326,18 @@ export const projects: Project[] = [
   },
   {
     slug: "pokedex",
-    image: "pokedex.png",
+    image: "pokedex.webp",
     name: "Pokedex",
     blurb:
       "A fast, searchable Pokédex built on the PokéAPI, with type filters and detail views.",
     stack: ["Next.js", "Tailwind CSS", "PokéAPI", "PokeWallet"],
     live: "https://pokedex.touchsimpledev.site",
     source: "https://github.com/edwinsatya/pokedex",
-    featured: true,
     needsReview: true,
   },
   {
     slug: "mini-google",
-    image: "mini-google.png",
+    image: "mini-google.webp",
     name: "Mini-Google",
     blurb:
       "A search engine in miniature — crawling, indexing, and ranking behind a deliberately plain UI.",
@@ -325,7 +348,7 @@ export const projects: Project[] = [
   },
   {
     slug: "anivault",
-    image: "anivault.png",
+    image: "anivault.webp",
     name: "Anivault",
     blurb: "Anime / Manga database and tracker with search, watchlist, and recommendations.",
     stack: ["Next.js", "Tailwind.css", "anilist api"],
