@@ -273,10 +273,30 @@ export const projects: Project[] = [
   },
   {
     slug: "magloft",
-    image: "magloft.webp",
+    image: "magloft-app.webp",
     name: "Magloft",
     blurb:
-      "Digital publishing platform that turns magazines and long-form content into apps and web readers.",
+      "One publishing platform behind many magazines — each publisher on their own domain, with their own content, styling and apps.",
+    stack: [
+      "Next.js",
+      "Node.js",
+      "Express",
+      "GraphQL",
+      "PostgreSQL",
+      "OpenAI",
+      "Angular",
+    ],
+    live: "https://www.magloft.com",
+    fullstack: true,
+    sourceNote: "Company-owned — the platform's repositories are private",
+    needsReview: true,
+  },
+  {
+    slug: "magloft-web",
+    image: "magloft.webp",
+    name: "Magloft Web",
+    blurb:
+      "The platform's own site — solutions, pricing and the blog, run out of a CMS so marketing can change it without a deploy.",
     stack: ["Next.js", "Tailwind CSS", "Contentful CMS", "Node.js"],
     live: "https://www.magloft.com",
     needsReview: true,

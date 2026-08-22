@@ -72,6 +72,14 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${display.variable} ${body.variable} h-full antialiased`}
+      // `globals.css` sets `scroll-behavior: smooth` on <html> for the nav's
+      // section links. Next 16 no longer suppresses that during route
+      // transitions unless asked, and warns when it finds smooth scrolling it
+      // isn't managing. This is a one-page site, so there's little for the
+      // override to do — but it's what the framework asks for, and it keeps a
+      // route change (or a return from /not-found) starting at the top rather
+      // than gliding there.
+      data-scroll-behavior="smooth"
     >
       <body className="min-h-full">
         {/* Reveal-on-scroll starts hidden and is unhidden by JS. With scripting
