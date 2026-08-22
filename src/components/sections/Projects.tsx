@@ -71,7 +71,7 @@ function ProjectCard({
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-sm text-ink transition-colors hover:text-accent-ink"
             >
-              Live site
+              {project.liveLabel ?? "Live site"}
               <ArrowUpRight className="size-3.5" />
             </a>
           )}

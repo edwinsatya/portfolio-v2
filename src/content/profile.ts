@@ -242,6 +242,8 @@ export type Project = {
   blurb: string;
   stack: string[];
   live?: string;
+  /** Overrides the "Live site" link label — a package lives on a registry. */
+  liveLabel?: string;
   /** The repository — the front end where the project has two. */
   source?: string;
   /** The back-end repository, on the full-stack builds that ship both. */
@@ -276,6 +278,17 @@ export const projects: Project[] = [
     sourceApi: "https://github.com/edwinsatya/dryrun-api",
     fullstack: true,
     featured: true,
+  },
+  {
+    slug: "llm-output-guard",
+    image: "llm-output-guard.webp",
+    name: "llm-output-guard",
+    blurb:
+      "An npm package for the model failures that arrive as 200 OK — loops, empty answers, truncation, wrong language. Zero dependencies, sub-millisecond, MIT.",
+    stack: ["TypeScript", "Node.js", "Zero dependencies", "npm"],
+    live: "https://www.npmjs.com/package/llm-output-guard",
+    liveLabel: "View on npm",
+    source: "https://github.com/edwinsatya/llm-output-guard",
   },
   {
     slug: "weathernime",

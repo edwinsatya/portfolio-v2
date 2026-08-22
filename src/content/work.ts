@@ -52,6 +52,12 @@ export type WorkCard = {
   org: WorkOrg;
   live?: string;
   /**
+   * Overrides the "Visit live" button on the detail page. Set where the live
+   * thing isn't a site — a published package's home is its registry page, and
+   * "Visit live" would be the wrong promise about what the click does.
+   */
+  liveLabel?: string;
+  /**
    * The repository. On a full-stack build this is the front end, and
    * `sourceApi` carries the other half — the sidebar labels them "Front-end"
    * and "API" rather than printing "Source" twice with no way to tell which
@@ -114,6 +120,23 @@ const CARDS: Omit<WorkCard, "no">[] = [
     live: "https://dryrun.touchsimpledev.site",
     source: "https://github.com/edwinsatya/dryrun",
     sourceApi: "https://github.com/edwinsatya/dryrun-api",
+  },
+  {
+    slug: "llm-output-guard",
+    category: "Open source",
+    name: "llm-output-guard",
+    blurb:
+      "An npm package for the model failures that arrive as 200 OK — loops, empty answers, truncation, wrong language — scored in under a millisecond, with zero dependencies.",
+    tags: ["TypeScript", "Zero deps"],
+    image: "llm-output-guard.webp",
+    badge: "ON NPM",
+    /* Not "llm": it's a word people use to ask what he works with, and an alias
+       that broad would answer a general question with a single package. */
+    aliases: ["npm package", "guardrails"],
+    org: "personal",
+    live: "https://www.npmjs.com/package/llm-output-guard",
+    liveLabel: "View on npm",
+    source: "https://github.com/edwinsatya/llm-output-guard",
   },
   {
     slug: "weathernime",
@@ -376,6 +399,7 @@ export const stackInTheWild = [
   "React",
   "Vue",
   "Angular",
+  "TypeScript",
   "Node",
   "Express",
   "GraphQL",

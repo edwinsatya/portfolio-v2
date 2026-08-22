@@ -134,7 +134,62 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 02 · Weathernime                                                    */
+  /* 02 · llm-output-guard                                               */
+  /* ------------------------------------------------------------------ */
+  "llm-output-guard": {
+    slug: "llm-output-guard",
+    role: SOLO,
+    glance: { label: "Published", value: "npm · MIT" },
+    stack: [
+      "TypeScript",
+      "Node 18+",
+      "Zero dependencies",
+      "Standard Schema",
+      "CLI",
+    ],
+    lede: "A retry layer watches for 429s, 5xx and timeouts. It cannot see a model that looped until max_tokens, returned an empty object, stopped mid-sentence or answered in the wrong language — because every one of those arrives as a successful request. This is the signal that layer is missing.",
+    sections: {
+      context:
+        "Anything built on a language model inherits two kinds of failure. The transport kind — rate limits, server errors, timeouts — is solved: every SDK retries, every team has a fallback. The other kind arrives with a 200 OK and a body that is technically a response and practically useless, and almost nothing in the stack is looking for it.",
+      problem:
+        "The obvious way to catch a bad answer is to ask a model whether it's bad, which doubles your cost and your latency to check work you already paid for. The cheap way is to look at the shape of what came back — but shape checks are where false positives live, and a guard that flags good answers gets switched off inside a week. So the real problem isn't detection; it's being trustworthy enough to stay switched on.",
+      contribution:
+        "Solo, and published — the detectors, the scoring, the adapters, the CLI, the benchmarks, the docs and the release discipline.",
+      build:
+        "Nine detectors that measure shape rather than truth: empty and punctuation-only replies, output too short to be useful, looping n-grams, a tail that gets stuck after a good beginning, character-level entropy collapse, truncation from unbalanced fences or a missing stop token, invalid JSON or a schema mismatch, and two opt-in language checks for the wrong alphabet and the wrong language. Each returns a score between 0 and 1 rather than a verdict. It is synchronous and pure — no network, no clock, no randomness — so it can sit on a hot path: roughly 0.4 ms on 500 bytes and 1 ms on 32 KB. Four presets ship with it (chat, strictJson, longForm, lenient), along with adapters for the OpenAI, Anthropic and Vercel AI SDKs and a CLI that scores your existing logs.",
+      decisions: [
+        "Scores, not booleans. A detector that announces \"this is degenerate\" has made the caller's decision for them; one that reports 0.94 lets them decide what their own tolerance is.",
+        "Shape, not truth. It cannot tell you the model was wrong — that's a different and far harder product — and the README says so out loud rather than letting someone discover it in production.",
+        "Zero runtime dependencies, enforced in CI. A reliability library that drags a supply chain in behind it is arguing against itself; that's why the compression check is a hand-rolled LZ77 rather than a call into zlib.",
+        "Synchronous and pure, so it's safe to run on every response. A check that has to be awaited is a check that gets skipped on the path that matters.",
+        "Calibration as a shipped tool, not advice. Thresholds tuned on someone else's traffic are a guess, so the CLI scores your logs and sets them against a false-positive budget you pick.",
+        "Strict semver from 1.0.0 with the rule written down: threshold changes are major, new opt-in options are minor. Anything a user can build an alert on is part of the contract.",
+      ],
+      constraints: [
+        "Zero dependencies, enforced in CI",
+        "Sub-millisecond on a hot path",
+        "False positives cost more than misses",
+        "Someone else's production traffic on the other end",
+      ],
+      outcome:
+        "It's on npm under MIT with TypeScript types, and it's the least screen-shaped thing on this list: a small, sharp tool aimed at a problem he hit himself while building the AI work above it. The part worth reading is the limitations section — repetition detection is off for CJK, the language check is unreliable under 25 words, and echo detection can't tell a legitimate rewrite from a degenerate one. Publishing the edges of your own tool is a better signal about how someone builds than any feature list.",
+    },
+    ask: {
+      did: "All of it, solo — the detectors, the scoring model, the SDK adapters, the calibration CLI, the benchmarks and the release discipline. It's published under his name on npm.",
+      hardest:
+        "False positives. A guard that flags good answers gets turned off within a week, so the entire design pushes the threshold decision to the caller and ships a tool to calibrate it — rather than shipping confident defaults and hoping they fit somebody else's traffic.",
+      stack:
+        "TypeScript, Node 18 and up, zero runtime dependencies, Standard Schema for the JSON validation so it works with Zod, Valibot or ArkType, and a CLI for scoring and calibration.",
+    },
+    review: [
+      "Everything here is read off the README and the npm registry rather than told to me — the nine detectors, the presets, the benchmark timings, the semver rule. Correct anything that has moved.",
+      "I've deliberately kept version numbers and download counts out of the copy: they age badly on a page that's built once. The screenshot shows 1.4.1 while the registry is on 1.7.0 — grab a fresh shot when you next want it updated.",
+      "Whether this came out of the Dryrun work or stands on its own — I've said he hit the problem himself, which is an assumption.",
+    ],
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* 03 · Weathernime                                                    */
   /* ------------------------------------------------------------------ */
   weathernime: {
     slug: "weathernime",
@@ -180,7 +235,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 03 · Food Analyzer                                                  */
+  /* 04 · Food Analyzer                                                  */
   /* ------------------------------------------------------------------ */
   "food-analyzer": {
     slug: "food-analyzer",
@@ -226,7 +281,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 04 · Happy Farm                                                     */
+  /* 05 · Happy Farm                                                     */
   /* ------------------------------------------------------------------ */
   "happy-farm": {
     slug: "happy-farm",
@@ -274,7 +329,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 05 · Magloft                                                        */
+  /* 06 · Magloft                                                        */
   /* ------------------------------------------------------------------ */
   magloft: {
     slug: "magloft",
@@ -334,7 +389,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 06 · Magloft Web                                                    */
+  /* 07 · Magloft Web                                                    */
   /* ------------------------------------------------------------------ */
   "magloft-web": {
     slug: "magloft-web",
@@ -380,7 +435,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 07 · MileApp                                                        */
+  /* 08 · MileApp                                                        */
   /* ------------------------------------------------------------------ */
   mileapp: {
     slug: "mileapp",
@@ -425,7 +480,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 08 · Bountie                                                        */
+  /* 09 · Bountie                                                        */
   /* ------------------------------------------------------------------ */
   bountie: {
     slug: "bountie",
@@ -472,7 +527,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 09 · DeskLab                                                        */
+  /* 10 · DeskLab                                                        */
   /* ------------------------------------------------------------------ */
   desklab: {
     slug: "desklab",
@@ -516,7 +571,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 10 · Tola Web                                                       */
+  /* 11 · Tola Web                                                       */
   /* ------------------------------------------------------------------ */
   "tola-web": {
     slug: "tola-web",
@@ -559,7 +614,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 11 · Pokedex                                                        */
+  /* 12 · Pokedex                                                        */
   /* ------------------------------------------------------------------ */
   pokedex: {
     slug: "pokedex",
@@ -605,7 +660,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 12 · Anivault                                                       */
+  /* 13 · Anivault                                                       */
   /* ------------------------------------------------------------------ */
   anivault: {
     slug: "anivault",
@@ -648,7 +703,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 13 · Mini-Google                                                    */
+  /* 14 · Mini-Google                                                    */
   /* ------------------------------------------------------------------ */
   "mini-google": {
     slug: "mini-google",

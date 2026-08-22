@@ -327,7 +327,7 @@ export function ArtifactView({
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Visit live <span aria-hidden>↗</span>
+                    {card.liveLabel ?? "Visit live"} <span aria-hidden>↗</span>
                   </a>
                 )}
                 {card.source && (
