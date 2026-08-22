@@ -86,6 +86,13 @@ export default function RootLayout({
       // strict CSP blocks inline scripts, and a themeless page would fall back
       // to unstyled colours rather than to light.
       data-theme="light"
+      // `globals.css` sets `scroll-behavior: smooth` on <html> for in-page
+      // jumps (the nav's section links, with `scroll-padding-top` clearing the
+      // sticky bar). Next 16 stopped overriding that during route transitions,
+      // which left a route change gliding the whole page to the top instead of
+      // starting there. This attribute opts back into the override: instant on
+      // navigation, smooth for anchors.
+      data-scroll-behavior="smooth"
       // The script rewrites that attribute before React hydrates, so the
       // server's markup and the DOM disagree by construction. This is the one
       // attribute that is *meant* to differ.
