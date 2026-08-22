@@ -329,7 +329,7 @@ export const projects: Project[] = [
     image: "pokedex.webp",
     name: "Pokedex",
     blurb:
-      "A fast, searchable Pokédex built on the PokéAPI, with type filters and detail views.",
+      "All 1,025 of them — search and type filters, stats and evolutions, a catch list, a quiz, and live TCG card prices.",
     stack: ["Next.js", "Tailwind CSS", "PokéAPI", "PokeWallet"],
     live: "https://pokedex.touchsimpledev.site",
     source: "https://github.com/edwinsatya/pokedex",
@@ -340,7 +340,7 @@ export const projects: Project[] = [
     image: "mini-google.webp",
     name: "Mini-Google",
     blurb:
-      "A search engine in miniature — crawling, indexing, and ranking behind a deliberately plain UI.",
+      "A Google-style search client on the Serper API — debounced autocomplete, search history, keyboard navigation, and an animated home-to-results transition.",
     stack: ["React.js", "serper.dev", "context api"],
     live: "https://mini-google.touchsimpledev.site",
     source: "https://github.com/edwinsatya/mini-google",
