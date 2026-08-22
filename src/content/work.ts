@@ -1,5 +1,5 @@
 /**
- * The WORK scene's content — the career column, the ten selected projects, and
+ * The WORK scene's content — the career column, the selected projects, and
  * the stack marquee along the bottom.
  *
  * Kept apart from `profile.ts` on purpose. That file is the *classic* build's
@@ -12,9 +12,9 @@
  *
  * NOTE FOR EDWIN — two things to confirm:
  *  1. `org` is what the career column filters on. I've put MileApp under
- *     `personal`: its stack (Mockapi) and its public client repo read like a
- *     build of your own rather than something shipped inside a company. Move it
- *     if that's wrong.
+ *     `personal`: a public client *and* server repo, with a mocked data layer,
+ *     read like a build of your own rather than something shipped inside a
+ *     company. Move it if that's wrong.
  *  2. BRI, homecare24.id and Telkom have no public projects attached, so
  *     selecting one says so rather than emptying the list. If any of them
  *     produced something shippable, give a card that `org` and it lights up.
@@ -48,7 +48,26 @@ export type WorkCard = {
   badge?: string;
   org: WorkOrg;
   live?: string;
+  /**
+   * The repository. On a full-stack build this is the front end, and
+   * `sourceApi` carries the other half — the sidebar labels them "Front-end"
+   * and "API" rather than printing "Source" twice with no way to tell which
+   * is which.
+   */
   source?: string;
+  /** The back-end repository. Only ever set alongside `source`. */
+  sourceApi?: string;
+  /**
+   * Built front to back by Edwin. Drives the FULL-STACK chip on the card and
+   * the repo labels on the detail page. Set it even where the repos are
+   * private — Happy Farm is full-stack work whether or not you can read it.
+   */
+  fullstack?: boolean;
+  /**
+   * Why there is no repository, where there deliberately isn't one. Printed
+   * under the links, so client work reads as owned rather than as missing.
+   */
+  sourceNote?: string;
   /**
    * Extra words the terminal's search should accept for this project.
    *
@@ -73,6 +92,26 @@ export type WorkCard = {
  * Written without `no` — see `workCards` below, which numbers them.
  */
 const CARDS: Omit<WorkCard, "no">[] = [
+  {
+    slug: "dryrun",
+    category: "AI",
+    name: "Dryrun",
+    blurb:
+      "A mock technical interview that reads your code first — it profiles your public repos, then asks about what's in them, and what isn't.",
+    tags: ["Next.js", "Groq"],
+    image: "dryrun.webp",
+    badge: "LIVE",
+    /* Deliberately not "interview": it's an ordinary word in the questions
+       people actually ask NOVA ("is he open to an interview?"), and an alias
+       that common hijacks the answer — the same way "work" once cost the
+       CONTACT flow. The slug already matches "dryrun". */
+    aliases: ["dry run"],
+    org: "personal",
+    fullstack: true,
+    live: "https://dryrun.touchsimpledev.site",
+    source: "https://github.com/edwinsatya/dryrun",
+    sourceApi: "https://github.com/edwinsatya/dryrun-api",
+  },
   {
     slug: "weathernime",
     category: "Side project",
@@ -112,6 +151,8 @@ const CARDS: Omit<WorkCard, "no">[] = [
     badge: "NOVA'S PICK",
     aliases: ["farm", "agritech"],
     org: "tola",
+    fullstack: true,
+    sourceNote: "Client-owned — both repositories are private",
   },
   {
     slug: "magloft",
@@ -131,12 +172,14 @@ const CARDS: Omit<WorkCard, "no">[] = [
     name: "MileApp",
     blurb:
       "Field operations SaaS for delivery teams — task assignment, routing, and proof of delivery from a phone.",
-    tags: ["Vue.js", "MongoDB"],
+    tags: ["Vue.js", "Express"],
     image: "mile-app.webp",
     aliases: ["logistics", "delivery"],
     org: "personal",
     live: "https://mileapp-tasks.touchsimpledev.site",
+    fullstack: true,
     source: "https://github.com/edwinsatya/mileapp-client",
+    sourceApi: "https://github.com/edwinsatya/mileapp-server",
   },
   {
     slug: "bountie",

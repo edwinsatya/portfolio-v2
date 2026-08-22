@@ -86,7 +86,55 @@ const SOLO = "Solo build · design + code";
 
 export const caseStudies: Record<string, CaseStudy> = {
   /* ------------------------------------------------------------------ */
-  /* 01 · Weathernime                                                    */
+  /* 01 · Dryrun                                                         */
+  /* ------------------------------------------------------------------ */
+  dryrun: {
+    slug: "dryrun",
+    role: SOLO,
+    glance: { label: "Status", value: "LIVE" },
+    stack: ["Next.js", "Express", "TypeScript", "Groq", "Gemini", "Upstash Redis"],
+    lede: "A mock technical interview that reads your code before it asks you anything. Dryrun pulls a candidate's public repositories, builds a technical profile out of what is actually in them, and interviews against that — including the parts it could not find.",
+    sections: {
+      context:
+        "Interview prep is a library of question banks: the same hundred questions, asked of everyone, answerable by anyone who has read the same hundred questions. None of it is about the code the candidate has actually written — which is the one thing an interviewer will open the moment the call starts.",
+      problem:
+        "Turning a stranger's GitHub into an interview is harder than it sounds. Public repositories are uneven — some are finished products, most are half-finished experiments, and the interesting questions live in the gaps rather than in the README. So the profile has to be built from evidence and the questions have to hold when the evidence runs out, without the model filling the silence with something it invented.",
+      contribution:
+        "Solo, both halves. The GitHub analysis, the profile model, the interview and scoring, the API, the front end, and both deploys.",
+      build:
+        "Two codebases talking over HTTP. A Next.js front end is the view layer only; an Express and TypeScript API does the reading — it calls GitHub, builds a CandidateProfile, and makes every LLM call, so no provider key is ever in the browser. The interview is eight questions derived from that profile, scored at the end with study recommendations attached. Groq answers first with Gemini behind it as a fallback, Upstash Redis holds the caching, the rate limits and the token budget, and Cloudinary carries the attachments an answer can bring with it.",
+      decisions: [
+        "Two repositories rather than one. The front end is a view layer and nothing else — every key, every model call and every piece of GitHub reading sits behind the API, which is the difference between a demo and something you can put a URL to.",
+        "Two model providers with automatic failover behind a circuit breaker. A free-tier LLM will rate-limit you eventually, and an interview that dies at question five is worse than one that never started.",
+        "Rate limits and a token budget in Redis, from the beginning. A public AI toy with no ceiling is a bill waiting to happen — cost control here is a feature of the build, not something bolted on after the first invoice.",
+        "The profile comes first, the questions second. Nothing is asked that isn't grounded in something the analysis actually found — and where it found nothing, that absence is the question.",
+        "Interview parameters — temperature, top-p, persona, difficulty — live in the URL query string, so a run can be reproduced and handed to someone else exactly as it was.",
+      ],
+      constraints: [
+        "A team of one",
+        "Free-tier quotas on every model in the chain",
+        "Only what GitHub makes public",
+        "Serverless request limits on both halves",
+      ],
+      outcome:
+        "It's live, both repositories are public, and it will interview anyone with a GitHub username — try it on your own. It's the strongest piece on this list for one reason: it's an AI product with the unglamorous parts attached. Failover, rate limiting, budgets and a server that keeps the keys are what separate a thing that works in a demo from a thing that works when strangers use it.",
+    },
+    ask: {
+      did: "All of it, solo — the GitHub analysis, the interview and scoring, the Express API, the Next.js front end, and both deployments.",
+      hardest:
+        "Keeping it honest. A model handed a half-finished repository will happily invent what it thinks should be there, so the questions are grounded in what the analysis actually found — and the gaps are asked about as gaps rather than papered over.",
+      stack:
+        "Next.js and TypeScript on the front, an Express API behind it, Groq for the model calls with Gemini as the fallback, Upstash Redis for caching and rate limits, and Cloudinary for attachments.",
+    },
+    review: [
+      "The framing of the eight-question interview and the scoring — I read that off the repositories rather than being told it. Correct it if the shape has moved since.",
+      "I've called Groq the primary and Gemini the fallback. If that order has flipped, this page and the WORK card tags both need it.",
+      "Whether you want the specific model names on the page. I've left them off on purpose — they churn faster than the portfolio does.",
+    ],
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* 02 · Weathernime                                                    */
   /* ------------------------------------------------------------------ */
   weathernime: {
     slug: "weathernime",
@@ -132,7 +180,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 02 · Food Analyzer                                                  */
+  /* 03 · Food Analyzer                                                  */
   /* ------------------------------------------------------------------ */
   "food-analyzer": {
     slug: "food-analyzer",
@@ -178,7 +226,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 03 · Happy Farm                                                     */
+  /* 04 · Happy Farm                                                     */
   /* ------------------------------------------------------------------ */
   "happy-farm": {
     slug: "happy-farm",
@@ -226,7 +274,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 04 · Magloft                                                        */
+  /* 05 · Magloft                                                        */
   /* ------------------------------------------------------------------ */
   magloft: {
     slug: "magloft",
@@ -272,13 +320,13 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 05 · MileApp                                                        */
+  /* 06 · MileApp                                                        */
   /* ------------------------------------------------------------------ */
   mileapp: {
     slug: "mileapp",
     role: SOLO,
     glance: { label: "Status", value: "LIVE" },
-    stack: ["Vue.js", "Node.js", "Express", "MongoDB"],
+    stack: ["Vue.js", "Node.js", "Express", "JWT"],
     lede: "Field operations for delivery teams — assigning the work, routing it, and proving it arrived — built front to back in the shape of a real logistics product.",
     sections: {
       context:
@@ -288,7 +336,7 @@ export const caseStudies: Record<string, CaseStudy> = {
       contribution:
         "Solo, front to back — the task model, the API, the dispatcher view and the driver flow.",
       build:
-        "A Vue front end over a Node and Express API. Tasks carry state through assignment, transit and completion, and proof of delivery is what closes one: the record ends with evidence rather than with a checkbox.",
+        "A Vue front end over a Node and Express API, in two repositories. The API owns accounts and tasks — registration and login on JWTs held in http-only cookies, bcrypt on the passwords, Zod validating what comes in, and middleware making sure a user only ever reaches their own work. Tasks carry state through assignment, transit and completion, and the data layer underneath is mocked on purpose: the point of the build was the model and the two interfaces over it, not the storage.",
       decisions: [
         "Two interfaces off one task model, rather than one interface trying to serve a dispatcher and a driver at the same time.",
         "State on the task itself, so a delivery's history reads off the record instead of being reconstructed from logs.",
@@ -307,17 +355,17 @@ export const caseStudies: Record<string, CaseStudy> = {
       hardest:
         "Serving a dispatcher and a driver from one model. One wants everything on screen at once; the other wants a single large button while holding a parcel — and the moment you optimise for either, you've hurt the other.",
       stack:
-        "Vue.js on the front, Node and Express behind it, with MongoDB holding the task records.",
+        "Vue.js on the front, Node and Express behind it — JWT auth in http-only cookies, bcrypt, and Zod on the way in. The store itself is mocked, deliberately.",
     },
     review: [
       "IMPORTANT: I've filed this as a personal build (`org: personal` in `work.ts`). If it was work you shipped inside a company, change that and this page should be rewritten as company work.",
-      "STACK CONFLICT: the WORK card says MongoDB, `profile.ts` says Mockapi. If it's Mockapi the data-layer line above has to go — that's a mocked backend, not a database, and it's the kind of thing an interviewer will ask about.",
+      "RESOLVED — the old conflict here (card said MongoDB, `profile.ts` said Mockapi) is settled the way `mileapp-server` describes itself: a mock API, no database. Every page now says that. If you have since put a real database behind it, this is the paragraph to change.",
       "Whether proof of delivery is really in it, or whether I've promoted a feature you only planned.",
     ],
   },
 
   /* ------------------------------------------------------------------ */
-  /* 06 · Bountie                                                        */
+  /* 07 · Bountie                                                        */
   /* ------------------------------------------------------------------ */
   bountie: {
     slug: "bountie",
@@ -364,7 +412,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 07 · DeskLab                                                        */
+  /* 08 · DeskLab                                                        */
   /* ------------------------------------------------------------------ */
   desklab: {
     slug: "desklab",
@@ -408,7 +456,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 08 · Tola Web                                                       */
+  /* 09 · Tola Web                                                       */
   /* ------------------------------------------------------------------ */
   "tola-web": {
     slug: "tola-web",
@@ -451,7 +499,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 09 · Pokedex                                                        */
+  /* 10 · Pokedex                                                        */
   /* ------------------------------------------------------------------ */
   pokedex: {
     slug: "pokedex",
@@ -495,7 +543,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 10 · Anivault                                                       */
+  /* 11 · Anivault                                                       */
   /* ------------------------------------------------------------------ */
   anivault: {
     slug: "anivault",
@@ -538,7 +586,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 11 · Mini-Google                                                    */
+  /* 12 · Mini-Google                                                    */
   /* ------------------------------------------------------------------ */
   "mini-google": {
     slug: "mini-google",

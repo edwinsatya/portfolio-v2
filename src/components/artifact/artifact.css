@@ -565,6 +565,23 @@
   }
 }
 
+/* Why a project has no repository to link. Sits under the buttons, quiet, so
+   it reads as a fact about the work rather than as a broken link. */
+.artifact-links-note {
+  margin-top: 0.6rem;
+  font-size: 0.62rem;
+  line-height: 1.5;
+  color: var(--color-faint);
+  text-transform: none;
+  letter-spacing: 0.04em;
+}
+
+/* Where there are no link buttons at all — client work — the note is standing
+   in for them, so it takes their spacing rather than crowding the glance list. */
+.artifact-glance + .artifact-links-note {
+  margin-top: 1rem;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Ask NOVA                                                                    */
 /* -------------------------------------------------------------------------- */
@@ -1046,6 +1063,13 @@
   .artifact-links {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  /* A full-stack project has three links, which would leave the grid ragged.
+     The live site takes the whole first row — it's the loudest one anyway —
+     and the two repositories pair off underneath it. */
+  .artifact-links:has(> :nth-child(3)) .artifact-link-primary {
+    grid-column: 1 / -1;
   }
 
   .artifact-link {

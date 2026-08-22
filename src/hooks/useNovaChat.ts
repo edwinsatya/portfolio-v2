@@ -98,7 +98,7 @@ export type Command = (typeof COMMANDS)[number];
  */
 const COMMAND_HELP: Record<Command, string> = {
   "/work": "jump to the work scene",
-  "/projects": "list all ten projects (⌘k searches them)",
+  "/projects": `list all ${workCards.length} projects (⌘k searches them)`,
   "/about": "jump to the about scene",
   "/contact": "jump to the contact scene",
   "/cv": "open edwin's resume in a new tab",
@@ -475,7 +475,7 @@ export function useNovaChat({
 
         case "/projects":
           // The list is the answer; the rows are the buttons. One line rather
-          // than ten, so `/clear` and the scroll-back treat it as one thing.
+          // than one per project, so `/clear` and the scroll-back treat it as one thing.
           push({
             kind: "reply",
             text: `${workCards.length} shipped projects. pick one, or just type a name:`,

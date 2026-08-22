@@ -56,7 +56,7 @@ function greet(name: string | null, withName: string, withoutName: string) {
 /*
  * Both read from `work.ts`, not from `profile.ts`.
  *
- * The stage's WORK scene is the ten in `work.ts`, and the two cards badged
+ * The stage's WORK scene is the list in `work.ts`, and the cards badged
  * NOVA'S PICK are the ones a visitor can actually see her choosing. Deriving her
  * spoken answer from `profile.ts`'s longer `featured` list meant she named a
  * project that isn't on the scene at all (Anivault) and skipped both of the
@@ -363,7 +363,7 @@ export const HERO_LINE = `i'm nova — ${profile.firstName.toLowerCase()}'s ai. 
  */
 export const ROTATING_LINES = [
   "he ships full-stack — i just take the credit.",
-  "ten projects in. ask me which one's the best.",
+  `${projectCount} projects in. ask me which one's the best.`,
   "psst — he's open to new work right now.",
   // Funny before you've seen the light-switch gag, funnier after — and it works
   // either way round, which is why it's in the rotation rather than gated on it.

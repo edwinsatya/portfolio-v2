@@ -242,7 +242,14 @@ export type Project = {
   blurb: string;
   stack: string[];
   live?: string;
+  /** The repository — the front end where the project has two. */
   source?: string;
+  /** The back-end repository, on the full-stack builds that ship both. */
+  sourceApi?: string;
+  /** Built front to back. Shows the FULL-STACK chip on the card. */
+  fullstack?: boolean;
+  /** Why there's no repo to link, where there deliberately isn't one. */
+  sourceNote?: string;
   /**
    * Screenshot filename inside `public/projects/`. Stated per project rather
    * than derived from the slug, because several files don't match their slug
@@ -257,6 +264,19 @@ export type Project = {
 };
 
 export const projects: Project[] = [
+  {
+    slug: "dryrun",
+    image: "dryrun.webp",
+    name: "Dryrun",
+    blurb:
+      "AI mock interviews that read your code first — it profiles your public GitHub repos, then asks eight questions about what's actually in them.",
+    stack: ["Next.js", "Express", "Groq", "Upstash Redis"],
+    live: "https://dryrun.touchsimpledev.site",
+    source: "https://github.com/edwinsatya/dryrun",
+    sourceApi: "https://github.com/edwinsatya/dryrun-api",
+    fullstack: true,
+    featured: true,
+  },
   {
     slug: "weathernime",
     image: "weathernime.webp",
@@ -286,6 +306,8 @@ export const projects: Project[] = [
     blurb:
       "Farm operations platform for Tola Solution — tracking cycles, stock, and daily field activity.",
     stack: ["Next.js", "Node.js", "PostgreSQL", "Tailwind CSS", "Prisma"],
+    fullstack: true,
+    sourceNote: "Client-owned — both repositories are private",
     needsReview: true,
   },
   {
@@ -304,9 +326,11 @@ export const projects: Project[] = [
     name: "MileApp",
     blurb:
       "Field operations SaaS for logistics teams — task assignment, routing, and proof of delivery.",
-    stack: ["Vue.js", "Node.js", "Express", "Mockapi"],
+    stack: ["Vue.js", "Node.js", "Express", "JWT"],
     live: "https://mileapp-tasks.touchsimpledev.site",
     source: "https://github.com/edwinsatya/mileapp-client",
+    sourceApi: "https://github.com/edwinsatya/mileapp-server",
+    fullstack: true,
     needsReview: true,
   },
   {
@@ -348,7 +372,6 @@ export const projects: Project[] = [
     stack: ["Next.js", "Tailwind CSS", "PokéAPI", "PokeWallet"],
     live: "https://pokedex.touchsimpledev.site",
     source: "https://github.com/edwinsatya/pokedex",
-    featured: true,
     needsReview: true,
   },
   {

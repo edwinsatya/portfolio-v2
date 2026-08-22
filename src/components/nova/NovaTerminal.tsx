@@ -358,7 +358,7 @@ export function NovaTerminal({
       return true;
     }
 
-    // Not a command: the ten project names are the other completable pool, and
+    // Not a command: the project names are the other completable pool, and
     // they come before the suggestion chips because someone half-typing
     // "weath" is naming a thing, not starting a sentence.
     const typed = draft.toLowerCase();

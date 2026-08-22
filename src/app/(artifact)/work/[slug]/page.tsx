@@ -44,7 +44,7 @@ export default async function ProjectPage({
 }) {
   const { slug } = await params;
   const card = workBySlug(slug);
-  // A slug that isn't one of the ten is a 404, not an empty page.
+  // A slug that isn't on the list is a 404, not an empty page.
   if (!card) notFound();
 
   return <ArtifactView slug={slug} hasStudy={Boolean(caseStudyFor(slug))} />;

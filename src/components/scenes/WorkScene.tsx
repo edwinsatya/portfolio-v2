@@ -274,6 +274,14 @@ function WorkCardLink({
         <span className="work-card-blurb">{card.blurb}</span>
 
         <span className="work-card-tags" aria-hidden>
+          {/* First, and tinted, because it's the differentiator: the list is
+              mostly front-end work, and these three are the ones he took all
+              the way to the database. */}
+          {card.fullstack && (
+            <span className="work-card-tag work-card-tag-fs mono-label">
+              Full-stack
+            </span>
+          )}
           {card.tags.map((tag) => (
             <span className="work-card-tag mono-label" key={tag}>
               {tag}
