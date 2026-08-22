@@ -6,7 +6,7 @@ import { stackInTheWild } from "@/content/work";
 import "./ticker.css";
 
 /**
- * WORK's bottom strip — what the ten projects are actually built out of.
+ * WORK's bottom strip — what the projects are actually built out of.
  *
  * Same strip as ABOUT's trajectory, same reasons for living out here in the
  * layout rather than inside the scene (a scene box carries a `transform` for its

@@ -1,20 +1,23 @@
 /**
- * The WORK scene's content — the career column, the ten selected projects, and
+ * The WORK scene's content — the career column, the selected projects, and
  * the stack marquee along the bottom.
  *
  * Kept apart from `profile.ts` on purpose. That file is the *classic* build's
- * source of truth and carries a longer, differently-shaped project list (it
- * includes Anivault, and its stacks were inferred rather than given); this one
- * is the stage's WORK scene as Edwin specified it — a fixed list, in a fixed
- * order, each with the card copy, the category, and the badge it should show.
- * Where the two disagree about a stack, this file wins here, because these are
- * the lines Edwin wrote.
+ * source of truth; this one is the stage's WORK scene as Edwin specified it — a
+ * fixed list, in a fixed order, each with the card copy, the category, and the
+ * badge it should show.
+ *
+ * On stacks, though, `profile.ts` wins. Edwin has confirmed the chips in the
+ * classic build, so `tags` here is always a two-item *shortening* of the stack
+ * over there — the two most informative entries, never a different technology.
+ * If you edit one, edit the other; an inferred tag on this side is what put
+ * PostgreSQL on a Web3 project and a Node backend on a client-only app.
  *
  * NOTE FOR EDWIN — two things to confirm:
  *  1. `org` is what the career column filters on. I've put MileApp under
- *     `personal`: its stack (Mockapi) and its public client repo read like a
- *     build of your own rather than something shipped inside a company. Move it
- *     if that's wrong.
+ *     `personal`: a public client *and* server repo, with a mocked data layer,
+ *     read like a build of your own rather than something shipped inside a
+ *     company. Move it if that's wrong.
  *  2. BRI, homecare24.id and Telkom have no public projects attached, so
  *     selecting one says so rather than emptying the list. If any of them
  *     produced something shippable, give a card that `org` and it lights up.
@@ -48,7 +51,32 @@ export type WorkCard = {
   badge?: string;
   org: WorkOrg;
   live?: string;
+  /**
+   * Overrides the "Visit live" button on the detail page. Set where the live
+   * thing isn't a site — a published package's home is its registry page, and
+   * "Visit live" would be the wrong promise about what the click does.
+   */
+  liveLabel?: string;
+  /**
+   * The repository. On a full-stack build this is the front end, and
+   * `sourceApi` carries the other half — the sidebar labels them "Front-end"
+   * and "API" rather than printing "Source" twice with no way to tell which
+   * is which.
+   */
   source?: string;
+  /** The back-end repository. Only ever set alongside `source`. */
+  sourceApi?: string;
+  /**
+   * Built front to back by Edwin. Drives the FULL-STACK chip on the card and
+   * the repo labels on the detail page. Set it even where the repos are
+   * private — Happy Farm is full-stack work whether or not you can read it.
+   */
+  fullstack?: boolean;
+  /**
+   * Why there is no repository, where there deliberately isn't one. Printed
+   * under the links, so client work reads as owned rather than as missing.
+   */
+  sourceNote?: string;
   /**
    * Extra words the terminal's search should accept for this project.
    *
@@ -73,6 +101,43 @@ export type WorkCard = {
  * Written without `no` — see `workCards` below, which numbers them.
  */
 const CARDS: Omit<WorkCard, "no">[] = [
+  {
+    slug: "dryrun",
+    category: "AI",
+    name: "Dryrun",
+    blurb:
+      "A mock technical interview that reads your code first — it profiles your public repos, then asks about what's in them, and what isn't.",
+    tags: ["Next.js", "Groq"],
+    image: "dryrun.webp",
+    badge: "LIVE",
+    /* Deliberately not "interview": it's an ordinary word in the questions
+       people actually ask NOVA ("is he open to an interview?"), and an alias
+       that common hijacks the answer — the same way "work" once cost the
+       CONTACT flow. The slug already matches "dryrun". */
+    aliases: ["dry run"],
+    org: "personal",
+    fullstack: true,
+    live: "https://dryrun.touchsimpledev.site",
+    source: "https://github.com/edwinsatya/dryrun",
+    sourceApi: "https://github.com/edwinsatya/dryrun-api",
+  },
+  {
+    slug: "llm-output-guard",
+    category: "Open source",
+    name: "llm-output-guard",
+    blurb:
+      "An npm package for the model failures that arrive as 200 OK — loops, empty answers, truncation, wrong language — scored in under a millisecond, with zero dependencies.",
+    tags: ["TypeScript", "Zero deps"],
+    image: "llm-output-guard.webp",
+    badge: "ON NPM",
+    /* Not "llm": it's a word people use to ask what he works with, and an alias
+       that broad would answer a general question with a single package. */
+    aliases: ["npm package", "guardrails"],
+    org: "personal",
+    live: "https://www.npmjs.com/package/llm-output-guard",
+    liveLabel: "View on npm",
+    source: "https://github.com/edwinsatya/llm-output-guard",
+  },
   {
     slug: "weathernime",
     category: "Side project",
@@ -112,16 +177,31 @@ const CARDS: Omit<WorkCard, "no">[] = [
     badge: "NOVA'S PICK",
     aliases: ["farm", "agritech"],
     org: "tola",
+    fullstack: true,
+    sourceNote: "Client-owned — both repositories are private",
   },
   {
     slug: "magloft",
     category: "Publishing",
     name: "Magloft",
     blurb:
-      "Digital publishing at scale — turning magazines and long-form issues into apps and web readers.",
+      "One platform behind many magazines — each publisher on their own domain, with their own content, styling and apps, run from one admin.",
     tags: ["Next.js", "GraphQL"],
-    image: "magloft.webp",
+    image: "magloft-app.webp",
     aliases: ["publishing", "magazine"],
+    org: "magloft",
+    fullstack: true,
+    live: "https://www.magloft.com",
+    sourceNote: "Company-owned — the platform's repositories are private",
+  },
+  {
+    slug: "magloft-web",
+    category: "Web",
+    name: "Magloft Web",
+    blurb:
+      "The platform's front door — solutions, pricing and the blog, with a CMS behind them so marketing can change the words without shipping code.",
+    tags: ["Next.js", "Contentful"],
+    image: "magloft.webp",
     org: "magloft",
     live: "https://www.magloft.com",
   },
@@ -131,12 +211,14 @@ const CARDS: Omit<WorkCard, "no">[] = [
     name: "MileApp",
     blurb:
       "Field operations SaaS for delivery teams — task assignment, routing, and proof of delivery from a phone.",
-    tags: ["Vue.js", "MongoDB"],
+    tags: ["Vue.js", "Express"],
     image: "mile-app.webp",
     aliases: ["logistics", "delivery"],
     org: "personal",
     live: "https://mileapp-tasks.touchsimpledev.site",
+    fullstack: true,
     source: "https://github.com/edwinsatya/mileapp-client",
+    sourceApi: "https://github.com/edwinsatya/mileapp-server",
   },
   {
     slug: "bountie",
@@ -144,7 +226,7 @@ const CARDS: Omit<WorkCard, "no">[] = [
     name: "Bountie",
     blurb:
       "A competitive gaming platform where the matches players already play pay out in real rewards.",
-    tags: ["React", "PostgreSQL"],
+    tags: ["Next.js", "Web3"],
     image: "bountie-hunter.webp",
     aliases: ["gaming", "esports"],
     org: "bountie",
@@ -156,7 +238,7 @@ const CARDS: Omit<WorkCard, "no">[] = [
     name: "DeskLab",
     blurb:
       "A workspace tool built to take the repetitive parts out of the day, so the work left is the work worth doing.",
-    tags: ["React", "Node.js"],
+    tags: ["Next.js", "OpenRouter"],
     image: "desklab.webp",
     aliases: ["workspace", "productivity"],
     org: "personal",
@@ -179,8 +261,8 @@ const CARDS: Omit<WorkCard, "no">[] = [
     category: "Fun",
     name: "Pokedex",
     blurb:
-      "A fast, searchable Pokédex on the PokéAPI — type filters, detail views, and no waiting around.",
-    tags: ["React", "REST"],
+      "All 1,025 of them — search, type filters, evolutions and stats, plus a catch list, a quiz, and live TCG card prices.",
+    tags: ["Next.js", "PokéAPI"],
     image: "pokedex.webp",
     aliases: ["pokemon"],
     org: "personal",
@@ -205,8 +287,8 @@ const CARDS: Omit<WorkCard, "no">[] = [
     category: "Experiment",
     name: "Mini-Google",
     blurb:
-      "A search engine in miniature — crawl, index, rank — behind a deliberately plain page.",
-    tags: ["Node.js", "Express"],
+      "A Google-style search client on the Serper API — debounced autocomplete, keyboard navigation, and a home-to-results transition that carries the query with it.",
+    tags: ["React", "Serper API"],
     image: "mini-google.webp",
     aliases: ["search engine", "crawler"],
     org: "personal",
@@ -316,10 +398,12 @@ export const stackInTheWild = [
   "Next.js",
   "React",
   "Vue",
+  "Angular",
+  "TypeScript",
   "Node",
+  "Express",
   "GraphQL",
   "PostgreSQL",
-  "MongoDB",
   "Tailwind",
   "AWS",
   "Docker",

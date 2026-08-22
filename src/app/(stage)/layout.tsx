@@ -1,7 +1,6 @@
 import { Nav } from "@/components/layout/Nav";
 import { NovaStage } from "@/components/nova/NovaStage";
 import { BootSequence } from "@/components/nova/BootSequence";
-import { MusicWidget } from "@/components/nova/MusicWidget";
 import { PowerAuraVignette } from "@/components/nova/PowerAura";
 import { PowerVoid } from "@/components/nova/PowerVoid";
 import { SearchPill } from "@/components/nova/SearchPill";
@@ -17,6 +16,11 @@ import { TrajectoryTicker } from "@/components/scenes/TrajectoryTicker";
  * preserve state and don't re-render on navigation, which is what keeps NOVA
  * mid-blink and mid-conversation while the scene around her swaps. Only
  * `children` is replaced.
+ *
+ * It does *not* survive the crossing to `(artifact)`, which is a sibling branch
+ * of the tree: everything below is torn down and rebuilt. That's the intent for
+ * NOVA and the tickers, and it's why the music widget is mounted from the root
+ * layout instead — an iframe that unmounts is a song that stops.
  */
 export default function StageLayout({
   children,
@@ -33,8 +37,6 @@ export default function StageLayout({
       <TrajectoryTicker />
       <StackTicker />
       <ClassicRibbon />
-      {/* Sibling of the stage, not inside it — see the note in `music.css`. */}
-      <MusicWidget />
       {/* The command palette's front door, in the corner rail beside the music
           card. Desktop only; it opens the terminal over the bus. */}
       <SearchPill />

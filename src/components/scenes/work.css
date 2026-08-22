@@ -426,6 +426,14 @@
   white-space: nowrap;
 }
 
+/* The full-stack marker. Tinted rather than outlined so it reads as a claim
+   about the work and not as another item of stack. */
+.work-card-tag-fs {
+  border-color: color-mix(in oklab, var(--color-accent) 35%, transparent);
+  background: color-mix(in oklab, var(--color-accent) 10%, transparent);
+  color: var(--color-accent-ink);
+}
+
 /* Appears on hover, in the corner the eye leaves the card from. */
 .work-card-arrow {
   position: absolute;

@@ -162,6 +162,21 @@ area, so a bubble can never render off screen or under the nav, and the tail
 keeps tracking NOVA even when the body has been clamped away from her. Tune
 `EDGE_PAD`, `BUBBLE_GAP`, and `TAIL_INSET` in `useNovaStage.ts`.
 
+## Full-stack projects
+
+Three projects were built front to back — Dryrun, MileApp and Happy Farm — and
+the card model says so in three fields, in both `work.ts` and `profile.ts`:
+
+| Field | What it does |
+| --- | --- |
+| `fullstack` | Shows the FULL-STACK chip on the card, and the `Build` row on the detail page. Set even where the code is private. |
+| `sourceApi` | The back-end repository. When it's present the two link buttons read **Front-end** and **API** instead of both saying "Source". |
+| `sourceNote` | Why there's no repository to link. Happy Farm is client-owned, and saying so beats a card that looks like it forgot its repo. |
+
+`source` stays the single/front-end repo, so every project that had one link
+still has exactly that link — only the labelling changes when `sourceApi`
+appears beside it.
+
 ## Project screenshots
 
 Screenshots live in `public/projects/` and are wired up per project via the
@@ -175,7 +190,7 @@ derived path would 404 on those silently.
 matter what the source images do. A project with no `image` gets a gradient
 placeholder with its initial instead — same box, no ragged layout.
 
-Nothing here is `priority`: the grid never sits above the fold, so all eleven
+Nothing here is `priority`: the grid never sits above the fold, so all twelve
 stay lazy. The `sizes` attribute mirrors the grid's breakpoints; if you change
 the column counts in `Projects.tsx`, change `sizes` to match or the optimizer
 will ship files at the wrong width.

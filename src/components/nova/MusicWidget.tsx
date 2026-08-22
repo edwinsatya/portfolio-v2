@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { jamThumbnail, jams } from "@/content/profile";
 import { Play, X } from "@/components/ui/Icons";
@@ -22,6 +23,13 @@ import "./music.css";
  * Rendered as a sibling of `NovaStage` rather than inside it, deliberately: that
  * layer is lifted to z-index 90 while a window is open, and the card riding up
  * with it would float over the terminal's scrim.
+ *
+ * Mounted from the *root* layout rather than the stage's, because the stage is
+ * torn down when a case study opens — `(stage)` and `(artifact)` are separate
+ * branches — and an unmounted iframe stops playing. The consequence is that this
+ * card can now appear on a case study, which is a page that deliberately carries
+ * none of NOVA's furniture, so on those routes it shows itself only while
+ * something is actually playing.
  */
 export function MusicWidget() {
   const {
@@ -36,9 +44,19 @@ export function MusicWidget() {
     selectTrack,
   } = useMusicWidget();
   const cardRef = useRef<HTMLButtonElement>(null);
+  const pathname = usePathname();
 
   const current = jams[track];
   const isPlaying = mode !== "closed";
+
+  /*
+   * `/work` is the stage's list and keeps the card; `/work/<slug>` is a case
+   * study in the other route group, where an idle card would be the one piece
+   * of stage furniture on an otherwise clean page. Playing beats tidy, though:
+   * music with no visible way to stop it is worse than a card.
+   */
+  const onArtifact = /^\/work\/[^/]+/.test(pathname);
+  const shown = visible && (!onArtifact || isPlaying);
 
   // Escape collapses the player. It isn't modal — it doesn't trap focus or take
   // the page — so this is a convenience, not the only way out.
@@ -61,10 +79,10 @@ export function MusicWidget() {
   return (
     <div
       className="music"
-      data-shown={visible}
+      data-shown={shown}
       data-mode={mode}
       data-disabled={disabled}
-      inert={!visible}
+      inert={!shown}
     >
       {/* Resting card. Hidden rather than unmounted while the panel is up, so
           the entrance transition doesn't replay on every close. */}

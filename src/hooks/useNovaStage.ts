@@ -9,6 +9,7 @@ import {
   onNovaBooted,
   onNovaGlance,
   onPeekRibbon,
+  getNovaVibing,
   onVibeChange,
   setNovaPort,
   type Celebration,
@@ -1546,6 +1547,17 @@ export function useNovaStage({
     const offCelebrate = onCelebrate(runCelebration);
     const offPower = onPowerEvent(runPowerEvent);
     const offVibe = onVibeChange(runVibe);
+    /*
+     * Seeded, not just subscribed.
+     *
+     * The music widget is mounted from the root layout so a case study doesn't
+     * unmount its iframe and cut the song. That means the player can outlive
+     * this stage: come back from `/work/<slug>` with something still playing and
+     * she remounts into a world where `vibing` has been true for a while, with
+     * no change event left to tell her. Reading the current value on mount is
+     * what puts the headphones back on.
+     */
+    if (getNovaVibing()) runVibe(true);
     const offTemper = onTemperChange(runTemper);
     const offLights = onLightsBeat(runLightsBeat);
     const offPeek = onPeekRibbon(leanPeek);

@@ -87,6 +87,7 @@
   letter-spacing: 0.28em;
   text-transform: uppercase;
   color: var(--color-accent-ink);
+  white-space: nowrap;
 }
 
 /* The breadcrumb inside the column is the phone stand-in for the overlay lede. */
@@ -384,20 +385,33 @@
   }
 }
 
-/* Lede, tucked into the top-left under the stage identity. */
+/* Lede, tucked into the top-left under the stage identity.
+ *
+ * Crumb and intro share a baseline, the same as WORK's `.work-lede` and
+ * CONTACT's `.contact-lede` — three scenes, one header. This one carries no
+ * `min-width` query because the whole overlay is already desktop-only (see
+ * `.about-overlay` above); the other two need one because their header also
+ * has to stack on a phone.
+ *
+ * Wide enough for the row: the crumb doesn't wrap, the gap is fixed, and the
+ * intro takes what's left up to its own max-width. It still stops well short
+ * of NOVA at centre stage.
+ */
 .about-lede {
   position: absolute;
   top: 0.5rem;
   left: 0;
-  width: min(24rem, 30%);
+  width: min(44rem, 55%);
+  display: flex;
+  align-items: baseline;
+  gap: 3.5rem;
 }
 
 .about-intro {
-  margin-top: 0.7rem;
-  font-size: 1.02rem;
+  max-width: 30rem;
+  font-size: 0.95rem;
   line-height: 1.5;
-  letter-spacing: -0.01em;
-  color: var(--color-ink);
+  color: var(--color-muted);
   text-wrap: balance;
 }
 

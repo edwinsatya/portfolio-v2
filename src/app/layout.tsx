@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import { profile } from "@/content/profile";
 import { siteUrl } from "@/lib/site";
+import { MusicWidget } from "@/components/nova/MusicWidget";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
@@ -86,6 +87,13 @@ export default function RootLayout({
       // strict CSP blocks inline scripts, and a themeless page would fall back
       // to unstyled colours rather than to light.
       data-theme="light"
+      // `globals.css` sets `scroll-behavior: smooth` on <html> for in-page
+      // jumps (the nav's section links, with `scroll-padding-top` clearing the
+      // sticky bar). Next 16 stopped overriding that during route transitions,
+      // which left a route change gliding the whole page to the top instead of
+      // starting there. This attribute opts back into the override: instant on
+      // navigation, smooth for anchors.
+      data-scroll-behavior="smooth"
       // The script rewrites that attribute before React hydrates, so the
       // server's markup and the DOM disagree by construction. This is the one
       // attribute that is *meant* to differ.
@@ -113,6 +121,17 @@ export default function RootLayout({
           Skip to content
         </a>
         {children}
+        {/*
+          Mounted here, above both route groups, rather than inside the stage
+          layout with the rest of NOVA's furniture. `(stage)` and `(artifact)`
+          are separate branches of the tree, so crossing between /work and
+          /work/<slug> unmounts one and mounts the other — and an unmounted
+          YouTube iframe is a song that stops mid-bar. The root layout is the
+          only place that survives that crossing. The widget hides itself on a
+          case study unless it is actually playing, so the page still arrives
+          with no stage furniture on it.
+        */}
+        <MusicWidget />
       </body>
     </html>
   );

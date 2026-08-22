@@ -242,7 +242,16 @@ export type Project = {
   blurb: string;
   stack: string[];
   live?: string;
+  /** Overrides the "Live site" link label — a package lives on a registry. */
+  liveLabel?: string;
+  /** The repository — the front end where the project has two. */
   source?: string;
+  /** The back-end repository, on the full-stack builds that ship both. */
+  sourceApi?: string;
+  /** Built front to back. Shows the FULL-STACK chip on the card. */
+  fullstack?: boolean;
+  /** Why there's no repo to link, where there deliberately isn't one. */
+  sourceNote?: string;
   /**
    * Screenshot filename inside `public/projects/`. Stated per project rather
    * than derived from the slug, because several files don't match their slug
@@ -257,6 +266,30 @@ export type Project = {
 };
 
 export const projects: Project[] = [
+  {
+    slug: "dryrun",
+    image: "dryrun.webp",
+    name: "Dryrun",
+    blurb:
+      "AI mock interviews that read your code first — it profiles your public GitHub repos, then asks eight questions about what's actually in them.",
+    stack: ["Next.js", "Express", "Groq", "Upstash Redis"],
+    live: "https://dryrun.touchsimpledev.site",
+    source: "https://github.com/edwinsatya/dryrun",
+    sourceApi: "https://github.com/edwinsatya/dryrun-api",
+    fullstack: true,
+    featured: true,
+  },
+  {
+    slug: "llm-output-guard",
+    image: "llm-output-guard.webp",
+    name: "llm-output-guard",
+    blurb:
+      "An npm package for the model failures that arrive as 200 OK — loops, empty answers, truncation, wrong language. Zero dependencies, sub-millisecond, MIT.",
+    stack: ["TypeScript", "Node.js", "Zero dependencies", "npm"],
+    live: "https://www.npmjs.com/package/llm-output-guard",
+    liveLabel: "View on npm",
+    source: "https://github.com/edwinsatya/llm-output-guard",
+  },
   {
     slug: "weathernime",
     image: "weathernime.webp",
@@ -286,14 +319,36 @@ export const projects: Project[] = [
     blurb:
       "Farm operations platform for Tola Solution — tracking cycles, stock, and daily field activity.",
     stack: ["Next.js", "Node.js", "PostgreSQL", "Tailwind CSS", "Prisma"],
+    fullstack: true,
+    sourceNote: "Client-owned — both repositories are private",
     needsReview: true,
   },
   {
     slug: "magloft",
-    image: "magloft.webp",
+    image: "magloft-app.webp",
     name: "Magloft",
     blurb:
-      "Digital publishing platform that turns magazines and long-form content into apps and web readers.",
+      "One publishing platform behind many magazines — each publisher on their own domain, with their own content, styling and apps.",
+    stack: [
+      "Next.js",
+      "Node.js",
+      "Express",
+      "GraphQL",
+      "PostgreSQL",
+      "OpenAI",
+      "Angular",
+    ],
+    live: "https://www.magloft.com",
+    fullstack: true,
+    sourceNote: "Company-owned — the platform's repositories are private",
+    needsReview: true,
+  },
+  {
+    slug: "magloft-web",
+    image: "magloft.webp",
+    name: "Magloft Web",
+    blurb:
+      "The platform's own site — solutions, pricing and the blog, run out of a CMS so marketing can change it without a deploy.",
     stack: ["Next.js", "Tailwind CSS", "Contentful CMS", "Node.js"],
     live: "https://www.magloft.com",
     needsReview: true,
@@ -304,9 +359,11 @@ export const projects: Project[] = [
     name: "MileApp",
     blurb:
       "Field operations SaaS for logistics teams — task assignment, routing, and proof of delivery.",
-    stack: ["Vue.js", "Node.js", "Express", "Mockapi"],
+    stack: ["Vue.js", "Node.js", "Express", "JWT"],
     live: "https://mileapp-tasks.touchsimpledev.site",
     source: "https://github.com/edwinsatya/mileapp-client",
+    sourceApi: "https://github.com/edwinsatya/mileapp-server",
+    fullstack: true,
     needsReview: true,
   },
   {
@@ -344,11 +401,10 @@ export const projects: Project[] = [
     image: "pokedex.webp",
     name: "Pokedex",
     blurb:
-      "A fast, searchable Pokédex built on the PokéAPI, with type filters and detail views.",
+      "All 1,025 of them — search and type filters, stats and evolutions, a catch list, a quiz, and live TCG card prices.",
     stack: ["Next.js", "Tailwind CSS", "PokéAPI", "PokeWallet"],
     live: "https://pokedex.touchsimpledev.site",
     source: "https://github.com/edwinsatya/pokedex",
-    featured: true,
     needsReview: true,
   },
   {
@@ -356,7 +412,7 @@ export const projects: Project[] = [
     image: "mini-google.webp",
     name: "Mini-Google",
     blurb:
-      "A search engine in miniature — crawling, indexing, and ranking behind a deliberately plain UI.",
+      "A Google-style search client on the Serper API — debounced autocomplete, search history, keyboard navigation, and an animated home-to-results transition.",
     stack: ["React.js", "serper.dev", "context api"],
     live: "https://mini-google.touchsimpledev.site",
     source: "https://github.com/edwinsatya/mini-google",

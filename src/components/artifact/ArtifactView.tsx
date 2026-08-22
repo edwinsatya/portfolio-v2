@@ -270,7 +270,7 @@ export function ArtifactView({
               </Section>
             </div>
           ) : (
-            /* The nine that haven't been written yet. Honest about it rather
+            /* The ones that haven't been written yet. Honest about it rather
                than padded out with filler — every other part of the page (the
                hero, the glance, the stack, ASK NOVA, the pager) still works. */
             <p className="artifact-pending mono-label" data-reveal style={cssIndex(5)}>
@@ -306,9 +306,18 @@ export function ArtifactView({
                   <dd className="artifact-glance-strong">{card.badge}</dd>
                 </div>
               )}
+              {card.fullstack && (
+                <div>
+                  <dt>Build</dt>
+                  <dd>Full-stack — front end and API</dd>
+                </div>
+              )}
             </dl>
 
-            {/* The two links that matter, where a live project has them. */}
+            {/* The links that matter, where a live project has them. A
+                full-stack build ships two repositories, so they're named for
+                the half they hold rather than both saying "Source" and leaving
+                the visitor to hover and guess. */}
             {(card.live || card.source) && (
               <div className="artifact-links">
                 {card.live && (
@@ -318,7 +327,7 @@ export function ArtifactView({
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Visit live <span aria-hidden>↗</span>
+                    {card.liveLabel ?? "Visit live"} <span aria-hidden>↗</span>
                   </a>
                 )}
                 {card.source && (
@@ -328,10 +337,27 @@ export function ArtifactView({
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Source <span aria-hidden>↗</span>
+                    {card.sourceApi ? "Front-end" : "Source"}{" "}
+                    <span aria-hidden>↗</span>
+                  </a>
+                )}
+                {card.sourceApi && (
+                  <a
+                    className="artifact-link"
+                    href={card.sourceApi}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    API <span aria-hidden>↗</span>
                   </a>
                 )}
               </div>
+            )}
+
+            {/* Work whose code can't be shown says so here. Without it, a
+                client project just looks like one that forgot its repo. */}
+            {card.sourceNote && (
+              <p className="artifact-links-note mono-label">{card.sourceNote}</p>
             )}
           </section>
 

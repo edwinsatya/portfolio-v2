@@ -19,7 +19,7 @@ const subscribeNever = () => () => {};
  * never pressed `/` on a website still finds the one control that searches the
  * work.
  *
- * WORK only, and desktop only. WORK because that is the scene with ten things
+ * WORK only, and desktop only. WORK because that is the scene with a dozen things
  * to search — offering a search box on a page with one paragraph on it is an
  * invitation to a dead end — and because it sits in the corner of that scene's
  * bottom strip, which is the only scene that flies one. ⌘K still works

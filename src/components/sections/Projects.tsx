@@ -28,12 +28,19 @@ function ProjectCard({
           {project.name}
         </h3>
 
-        {project.featured && (
-          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-accent/25 bg-accent/10 px-2.5 py-1 text-[0.68rem] text-accent-ink">
-            <Sparkle className="size-3" />
-            NOVA’s pick
-          </span>
-        )}
+        <span className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+          {project.fullstack && (
+            <span className="inline-flex shrink-0 items-center rounded-full border border-line bg-bg-soft/70 px-2.5 py-1 text-[0.62rem] uppercase tracking-[0.08em] text-faint">
+              Full-stack
+            </span>
+          )}
+          {project.featured && (
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-accent/25 bg-accent/10 px-2.5 py-1 text-[0.68rem] text-accent-ink">
+              <Sparkle className="size-3" />
+              NOVA’s pick
+            </span>
+          )}
+        </span>
       </div>
 
       <p
@@ -55,8 +62,8 @@ function ProjectCard({
         ))}
       </ul>
 
-      {(project.live || project.source) && (
-        <div className="mt-6 mx-1 flex flex-wrap items-center gap-4 border-t border-line pt-5">
+      {(project.live || project.source || project.sourceNote) && (
+        <div className="mt-6 mx-1 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line pt-5">
           {project.live && (
             <a
               href={project.live}
@@ -64,10 +71,12 @@ function ProjectCard({
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-sm text-ink transition-colors hover:text-accent-ink"
             >
-              Live site
+              {project.liveLabel ?? "Live site"}
               <ArrowUpRight className="size-3.5" />
             </a>
           )}
+          {/* A full-stack build ships two repositories, so each link says which
+              half it opens rather than both reading "Source". */}
           {project.source && (
             <a
               href={project.source}
@@ -76,8 +85,22 @@ function ProjectCard({
               className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-accent-ink"
             >
               <Github className="size-3.5" />
-              Source
+              {project.sourceApi ? "Front-end" : "Source"}
             </a>
+          )}
+          {project.sourceApi && (
+            <a
+              href={project.sourceApi}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-accent-ink"
+            >
+              <Github className="size-3.5" />
+              API
+            </a>
+          )}
+          {project.sourceNote && (
+            <span className="text-xs text-faint">{project.sourceNote}</span>
           )}
         </div>
       )}
