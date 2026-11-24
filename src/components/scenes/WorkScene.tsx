@@ -251,13 +251,21 @@ function WorkCardLink({
       onMouseEnter={() => novaGlance("right")}
     >
       <span className="work-card-shot">
-        <Image
-          src={`/projects/${card.image}`}
-          alt=""
-          fill
-          sizes="(min-width: 1024px) 9rem, (min-width: 640px) 12rem, 6rem"
-          className="work-card-img"
-        />
+        {card.image ? (
+          <Image
+            src={`/projects/${card.image}`}
+            alt=""
+            fill
+            sizes="(min-width: 1024px) 9rem, (min-width: 640px) 12rem, 6rem"
+            className="work-card-img"
+          />
+        ) : (
+          /* No interface to show (contracts only): an initial on a tint, the
+             same fallback the classic build's cards use. */
+          <span className="work-card-placeholder" aria-hidden>
+            {card.name.charAt(0)}
+          </span>
+        )}
       </span>
 
       <span className="work-card-body">

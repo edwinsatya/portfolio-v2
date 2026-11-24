@@ -189,7 +189,271 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 03 · Weathernime                                                    */
+  /* 03 · Iron Arena                                                     */
+  /* ------------------------------------------------------------------ */
+  "iron-arena": {
+    slug: "iron-arena",
+    role: SOLO,
+    glance: { label: "Status", value: "LIVE" },
+    stack: [
+      "Next.js",
+      "TypeScript",
+      "WebRTC",
+      "Rollback netcode",
+      "Cloudflare Workers",
+      "Durable Objects",
+      "Canvas 2D",
+      "Playwright",
+    ],
+    lede: "A 1v1 fantasy brawler that runs in a browser tab. Pick a hero, send a friend the link, and fight on a walled stage — over GGPO-style rollback netcode, so two players in different cities get a match that feels like they're sharing a couch.",
+    sections: {
+      context:
+        "Fighting games live and die on input latency. The genre's answer is rollback: each side simulates the fight locally, predicts the other player's input, and quietly rewinds and replays when a real input arrives that disagrees. It's the standard on consoles. It's rare in a browser, because it only works if two different machines compute exactly the same fight from the same inputs — every frame, forever.",
+      problem:
+        "Determinism is the whole problem. One floating-point difference between two browsers, one piece of state that isn't rolled back, one random number drawn in a different order, and the two screens drift apart while both players think they're winning. On top of that sits the network: home and mobile connections that can't reach each other directly, packets that arrive late or out of order, and a room that has to be found before any of it starts.",
+      contribution:
+        "Solo — the game design, the deterministic simulation, the rollback netcode, the lobby, the renderer and HUD, the test tooling and both deploys. The pixel-art heroes come from free packs by elie automata, credited in the game; the names, skills, stages, effects and code are his.",
+      build:
+        "A pnpm monorepo split along the lines that matter. The simulation is its own package — pure TypeScript, integer math, a fixed 60 Hz step and zero dependencies — so it can run identically in two browsers and in a test harness. The netcode package owns the rollback session, a compact binary packet format and three transports. Only inputs travel, around sixty tiny packets a second, over a WebRTC data channel peer to peer, falling back to Cloudflare TURN and then to a WebSocket relay when a network won't allow a direct connection. A lobby on Cloudflare Workers with one Durable Object per room handles room codes, character select, signaling and TURN credentials, and refuses to pair two tabs running different builds. The fight itself is drawn on Canvas 2D with painted parallax backdrops; Next.js carries the menus and the HUD. There are 27 heroes, each with a combo, dash, air and charged attacks, three skills and an ultimate, plus versus CPU, local versus and a training mode.",
+      decisions: [
+        "Netcode before art. Rollback is notoriously hard to bolt onto a finished game, so capsules were fighting online before any hero had a face. It paid off twice: the game changed shape from a 3D fighter to a 3D arena brawler to a 2D side-view brawler, and the simulation, netcode and lobby came through every change untouched.",
+        "Integer math and no physics engine. Floating point is the classic way two machines disagree about the same fight; a simulation built on integers can't.",
+        "No game logic on a server. The lobby introduces two players and steps aside — the fight runs peer to peer, which keeps latency down and the hosting bill on a free tier.",
+        "Three transports, tried in order. Direct WebRTC first, TURN second, a plain WebSocket relay last — a friend behind a strict network still gets a match instead of an error.",
+        "Desyncs are hunted by tools, not by playtesting. A synctest runs every hero pair for 10,000 frames with an eight-frame rollback on every frame; a soak test throws 300 simulated bad networks at it; Playwright drives two real browsers through a whole online match over both WebRTC and the relay.",
+      ],
+      constraints: [
+        "A team of one",
+        "Two browsers that must agree on every frame",
+        "Networks that can't always reach each other",
+        "Free hosting tiers only",
+      ],
+      outcome:
+        "It's live and open — create a room and send the link. The soak test compares 1,718,067 frames across its 300 simulated networks with zero mismatches, and the end-to-end tests fight matches frame for frame over both transports. It's the most technically demanding thing on this list, and the reason is in the order it was built: the invisible part first, so that the visible part could be thrown away twice without breaking anything.",
+    },
+    ask: {
+      did: "All of it, solo — the game design, the deterministic simulation, the rollback netcode, the Cloudflare lobby, the renderer and the test tooling. The hero sprites are free pixel-art packs, credited in the game; everything else is his.",
+      hardest:
+        "Determinism. Rollback only works if two browsers compute exactly the same fight from the same inputs, so the simulation runs on integer math with no physics engine, and every change is checked by a synctest and a soak test that hunt for a single frame of disagreement.",
+      stack:
+        "A pnpm monorepo in TypeScript: a zero-dependency deterministic simulation, a rollback netcode package over WebRTC with TURN and WebSocket fallbacks, a lobby on Cloudflare Workers and Durable Objects, and a Next.js app that draws the fight on Canvas 2D. Vitest and Playwright test it.",
+    },
+    review: [
+      "The 3D-fighter → 3D-arena → 2D-brawler history is read off docs/PLAN.md and docs/GAME.md. If you'd rather not tell that story publicly, cut the first decision.",
+      "The hero count (27) and the soak figure (1,718,067 frames) are from the README — both will drift as you add heroes and rerun the tools.",
+      "I've marked it full-stack because the lobby is a real server you wrote, even though it lives in the same repository as the game. Unset `fullstack` if you only count builds with two repos.",
+    ],
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* 04 · Space Explorer 3D                                              */
+  /* ------------------------------------------------------------------ */
+  "3d-spaceship": {
+    slug: "3d-spaceship",
+    role: SOLO,
+    glance: { label: "Status", value: "LIVE" },
+    stack: [
+      "Next.js",
+      "Three.js",
+      "React Three Fiber",
+      "Zustand",
+      "Supabase",
+      "Howler.js",
+      "Vitest",
+      "PWA",
+    ],
+    lede: "A 3D space game that runs straight in the browser, on a desktop or a phone, with nothing to install. Fly your own ship around the solar system, warp between planets, land on the Moon and Mars, race timed missions — and pick up real facts about where you are along the way.",
+    sections: {
+      context:
+        "Most browser games are small on purpose: a 2D canvas, one screen, one mechanic. A real-time 3D world with a flight model, a scene per planet, a hangar and accounts is the kind of thing people reach for a game engine and an app store to ship. The interesting question was how much of that a web page could carry without anyone having to install anything.",
+      problem:
+        "The solar system doesn't fit. Real distances are too large to fly and real sizes too small to see, and positions far from the origin start to jitter in 32-bit floats. Then it has to stay smooth on a mid-range phone, steer well with a mouse, a touch stick, a gamepad and a tilted handset, and keep a leaderboard honest when the timer runs in a browser the player controls.",
+      contribution:
+        "Solo — the game design, the flight model, every scene, the audio, the UI, the Supabase schema and functions, and the tests. The planet textures are Solar System Scope's under CC BY 4.0; the ships, terrain, sky and sound are generated in code.",
+      build:
+        "Next.js with React Three Fiber on three.js, built in four phases. The core loop is a flight model, a ring-race mission around Earth and procedural audio. Then a solar-system map with a warp tunnel to every planet, orbiting with an info card, an encyclopedia, landings on the Moon and Mars as their own small scenes behind a fade, and a hangar of four ships with paint, decals and engine trails. Then seven missions on five routes, a photo mode with a local gallery, star-based unlocks and eleven badges, optional Supabase accounts that merge guest progress on first sign-in, and best-time leaderboards. Last, the settings: separate volumes, graphics presets with sun shadows, key remapping, gamepad and tilt steering, reduced motion, a colour-blind palette, English and Indonesian, and an installable PWA that plays offline.",
+      decisions: [
+        "Artistic scale with a floating origin. Earth is 200 units across and real numbers only appear as text; the world is rebased around the ship when it travels far, so nothing shakes at the edge of the map.",
+        "One loop per frame, and nothing allocated in it. Input, flight, collisions, missions, camera and HUD run in a single useFrame, and the HUD writes straight to the DOM rather than setting React state sixty times a second.",
+        "Leaderboard times are checked on the server. A run asks for a ticket when it starts and hands it back at the finish; Postgres functions refuse a time faster than the mission's plausible minimum, longer than its own clock allows, or on a reused ticket.",
+        "Balance is tested by an autopilot. It flies every mission with every ship through the real flight model, and the tests fail if a clean pilot stops earning two stars — or if three stars stop needing the boost.",
+        "Procedural first, files second. Ships, terrain, sky and sound are generated in code, so the game starts without waiting on downloads, and every asset has a slot ready for a real file later.",
+      ],
+      constraints: [
+        "A team of one",
+        "A browser tab and a mid-range phone",
+        "WebGL2 and a 60 fps frame budget",
+        "A timer the player's own machine is running",
+      ],
+      outcome:
+        "It's live and open, and all four phases of its spec are done. It's the widest thing on this list — real-time 3D, input across four kinds of device, server-checked scores, accounts, offline play and two languages — and the tests are what hold it together: the flight and scoring logic, the progress merge, and an autopilot that keeps the missions fair.",
+    },
+    ask: {
+      did: "All of it, solo — the game design, the flight model and scenes, the procedural audio, the UI, the Supabase accounts and leaderboards, and the tests. The planet textures are licensed from Solar System Scope; the rest is generated in code.",
+      hardest:
+        "Making the solar system fit a browser. That meant an artistic scale with a floating origin so nothing jitters far from home, and a frame loop that allocates nothing and never sets React state, so it still runs smoothly on a phone.",
+      stack:
+        "Next.js with React Three Fiber and three.js, Zustand for game state, Howler for the audio mix, Supabase for accounts and server-checked leaderboards, Vitest for the game logic, and a service worker for offline play.",
+    },
+    review: [
+      "I've used the English title, Space Explorer 3D, as the name and kept the repository's 3d-spaceship as the slug and URL.",
+      "The feature list is read off the README and the PRD; the ship, terrain and sound being procedural comes from ASSETS.md. Correct anything that has changed since.",
+      "Supabase is optional in the code — I've assumed the live build has accounts and leaderboards switched on.",
+    ],
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* 05 · SushiFlush dApp                                                */
+  /* ------------------------------------------------------------------ */
+  "sushiflush-dapp": {
+    slug: "sushiflush-dapp",
+    role: SOLO,
+    glance: { label: "Network", value: "Sepolia testnet" },
+    stack: ["Astro", "viem", "TypeScript", "Tailwind CSS", "EIP-6963", "Vercel"],
+    lede: "The staking interface for the SushiFlush token: connect a wallet on Sepolia, stake SFLUSH, watch rewards accrue, claim them, and read your history back off the chain. One screen of numbers and four buttons, built without React or wagmi.",
+    sections: {
+      context:
+        "The other half of the SushiFlush Token project — a personal project for learning Solidity and the EVM. The contracts were written and tested first; this is what a holder actually touches. It runs on the Sepolia testnet, and the page says plainly that the token has no value.",
+      problem:
+        "A staking UI looks simple and isn't. Rewards accrue every second but can only be read every few seconds. Every write can revert, and a wallet popup that says \"transaction failed\" tells nobody why. Event history has to come from a public RPC that refuses wide log queries. And because this is a page that asks for a wallet signature, it has to be careful about what it asks to sign and where it can be embedded.",
+      contribution:
+        "Solo — the interface, the wallet connection, the chain reads and writes, the activity history, the first-visit guide and the deploy. The contracts it talks to are his too.",
+      build:
+        "Astro renders one static HTML page; a single vanilla TypeScript module boots in the browser and drives it. viem handles everything on-chain: reads are batched through Multicall3, so one tick's eight calls become one round trip, and every write is simulated before the wallet opens. Wallets are discovered through EIP-6963 with a window.ethereum fallback, and a reload reconnects without a popup. The activity list walks the logs backwards in thousand-block chunks from the chain head to the staking contract's deploy block, matching the connected account client-side, with a \"load earlier\" that resumes the walk.",
+      decisions: [
+        "No UI framework. wagmi is React-bound and Astro gives each island its own React root, so sharing wallet state means one giant island or a store outside React anyway. For one screen of numbers, the framework was carrying no weight — five runtime dependencies in total.",
+        "Simulate every write first. A revert then surfaces as the contract's own error name, InsufficientStake or ZeroAmount, instead of an opaque wallet failure.",
+        "Approve the exact amount. Staking asks for precisely what is being staked, so no standing allowance survives the transaction.",
+        "Project the rewards, then reconcile. The claimable figure ticks every second from the account's share of the reward rate, stops at the period's end, and is corrected by each five-second poll.",
+        "Owner functions are deliberately missing. A reward-funding form on the same page stakers use is how owner keys get phished, so funding runs from a script in the contracts repository instead — and frame-ancestors 'none' keeps the page out of other people's iframes.",
+      ],
+      constraints: [
+        "A team of one",
+        "A public RPC that caps log queries at 1,000 blocks",
+        "Injected wallets only",
+        "One chain, Sepolia",
+      ],
+      outcome:
+        "It's live on Sepolia and open. Read it next to the contracts it drives: together they're a whole dApp from Solidity to the screen, and this half is a good example of choosing less — no framework, no wallet library, and a security header that matters more than any feature.",
+    },
+    ask: {
+      did: "All of it, solo — the interface, the wallet connection, the reads and writes, the on-chain activity history and the deploy. He wrote the contracts it talks to as well.",
+      hardest:
+        "Making on-chain numbers feel live and failures readable. Rewards are extrapolated every second and reconciled on every poll, and every write is simulated first, so a revert shows the contract's own error instead of a wallet's.",
+      stack:
+        "Astro for a single static page, viem for the chain, TypeScript throughout, Tailwind CSS 4 for the styling, and EIP-6963 for finding the wallet. No React and no wagmi. Deployed on Vercel.",
+    },
+    review: [
+      "Everything here is read off the README. The five-second poll and the thousand-block chunks are the numbers it gives — correct them if they've moved.",
+      "I've written it as the front end of one project with SushiFlush Token rather than marking both full-stack, because they're separate entries on the list. Merge them into one card with `source` and `sourceApi` if you'd rather show it as one build.",
+    ],
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* 06 · SushiFlush Token                                               */
+  /* ------------------------------------------------------------------ */
+  "sushiflush-token": {
+    slug: "sushiflush-token",
+    role: SOLO,
+    glance: { label: "Network", value: "Sepolia · verified" },
+    stack: ["Solidity", "Hardhat 3", "OpenZeppelin", "viem", "TypeScript", "forge-std"],
+    lede: "A fixed-supply ERC-20 and a staking contract that pays its rewards in the same token, written in Solidity, fuzz-tested, deployed and verified on the Sepolia testnet. A learning project, labelled as one: nothing here is audited, and the token has no value.",
+    sections: {
+      context:
+        "A personal project for learning Solidity and the EVM properly — not just deploying a token from a tutorial, but writing the contract that holds other people's tokens, testing it until it can be trusted, and shipping it to a public testnet with verified source. The SushiFlush dApp is the front end for it.",
+      problem:
+        "Paying out staking rewards sounds like a loop over the stakers, and on-chain that loop is a time bomb: as stakers grow it eventually exceeds the block gas limit and the contract stops working for everyone. There's a subtler trap when the stake and the reward are the same token — the contract's balance mixes principal and rewards, so careless accounting can pay one staker's rewards out of another staker's deposit.",
+      contribution:
+        "Solo — both contracts, the Solidity and TypeScript test suites, the deployment modules, the verification, the setup script and the CI.",
+      build:
+        "SushiFlush is the simplest possible token: OpenZeppelin's ERC-20, a million SFLUSH minted to the deployer in the constructor, no mint function and no owner, so the supply is fixed for good. SushiFlushStaking implements the Synthetix StakingRewards accumulator: one global reward-per-token counter, and each account remembers its value at its last interaction, so what anyone has earned is a subtraction and every operation is O(1) however many stakers there are. The owner funds a period and rewards stream linearly across it, split by share of the pool. Both are deployed with Hardhat Ignition and verified on Etherscan, Blockscout and Sourcify.",
+      decisions: [
+        "No loops, ever. The accumulator makes rewards a constant-time calculation, so the contract can't be bricked by its own success.",
+        "Principal is ring-fenced. totalStaked is tracked separately from the balance, so rewards can only come from tokens the owner deposited as rewards — never from another staker's deposit.",
+        "Trust what arrived, not what was asked for. Deposits measure the balance change, effects come before interactions, and every state-changing function is nonReentrant.",
+        "Test the maths in Solidity. Time-dependent rewards are tested in-EVM, where vm.warp can jump through a reward period; a fuzzed invariant checks the contract never owes more than it holds. The TypeScript suite covers the viem path the front end uses.",
+        "The setup script is safe to rerun. It checks ownership and balance first, skips what's already done, checks every receipt's status — a reverted transaction is still mined and still costs gas — and pads gas estimates by 30%.",
+      ],
+      constraints: [
+        "Testnet only, unaudited, by design",
+        "Gas on every operation",
+        "Immutable once deployed",
+        "Stake and reward in the same token",
+      ],
+      outcome:
+        "Both contracts are live and verified on Sepolia, with 33 tests, 100% line coverage on the token and 98.25% on the staking contract — the one uncovered line is a defensive guard the README explains. It's labelled honestly as a learning project, and the README reads like one worth learning from: why the accumulator, why the ring-fence, and why verification fails without the production build profile.",
+    },
+    ask: {
+      did: "All of it, solo — the token, the staking contract, the Solidity and TypeScript tests, the deployment and verification on Sepolia, and the setup script. The dApp in front of it is his too.",
+      hardest:
+        "Paying rewards without a loop, and without touching anyone's principal. The Synthetix accumulator makes every operation constant-time, and tracking total staked apart from the balance means rewards can only come from the reward pool.",
+      stack:
+        "Solidity 0.8 on OpenZeppelin Contracts 5, Hardhat 3 with Ignition for deployment, Solidity tests with forge-std including fuzzing, and a TypeScript suite on viem. Verified on Etherscan, Blockscout and Sourcify.",
+    },
+    review: [
+      "The test count and coverage figures are the README's. They'll drift if you add tests.",
+      "No screenshot on purpose — there's no interface to show, so the page draws a placeholder. \"View on Etherscan\" goes to the token contract's verified source.",
+    ],
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* 07 · Crypto Galaxy                                                  */
+  /* ------------------------------------------------------------------ */
+  "crypto-galaxy": {
+    slug: "crypto-galaxy",
+    role: SOLO,
+    glance: { label: "Status", value: "LIVE" },
+    stack: [
+      "Astro",
+      "TypeScript",
+      "Web Components",
+      "Canvas 2D",
+      "CoinGecko API",
+      "GeckoTerminal",
+      "Tailwind CSS",
+      "Vercel",
+    ],
+    lede: "A live star map of the crypto markets. Every coin is a star — its orbit set by market-cap rank, its size by market cap, its colour by momentum — and behind the picture is a full implementation of every endpoint CoinGecko offers on its free plan.",
+    sections: {
+      context:
+        "Crypto dashboards all look the same: a table sorted by market cap, a sparkline per row, and a lot of red and green. CoinGecko's free plan exposes far more than that table — exchanges, derivatives, NFTs, company treasuries, on-chain pools — and almost nothing shows it.",
+      problem:
+        "The free plan is generous with endpoints and stingy with calls: about 30 a minute, 10,000 a month, and only the last year of history. Ten thousand calls is roughly 330 a day, for a site with dozens of pages that each want several of them — so caching isn't an optimisation here, it's what keeps the site up. And the API key has to stay on the server while all of it is still interactive in the browser.",
+      contribution:
+        "Solo — the CoinGecko client, the caching layers, the server routes, the galaxy visual, the charts, the client-side tools and the deploy.",
+      build:
+        "Astro rendering on demand on Vercel, with vanilla Web Components for the interactive parts, so no UI framework runtime reaches the browser. All 61 free-plan endpoints are wrapped and reachable from the UI, from the coin pages and the time machine to the on-chain explorer. Browser code never talks to CoinGecko: custom elements call the site's own API routes, which go through a cached client that is the only place the key is read. The galaxy is hand-written Canvas 2D — around 8 kB with no dependencies — that pans, zooms, culls off-screen stars and pauses when the tab is hidden. Portfolio, watchlist, compare and converter all run in localStorage, with no accounts and nothing leaving the device.",
+      decisions: [
+        "Four layers of caching, in order: single-flight de-duplication of concurrent requests, a stale-while-revalidate cache that serves instantly and refreshes behind, CDN headers so many visitors in one window cost one upstream call, and graceful fallback to stale data on a 429 or a 5xx. Measured locally, 155 page reads cost 53 upstream calls.",
+        "The key is a server-only secret. It's declared through astro:env and read in one file, and the build is grepped to prove it never reaches the client.",
+        "Rebuild what the plan doesn't include. Top gainers and losers, a market pulse gauge and near-all-time-high rankings are derived from free market data — and the pulse is labelled as a heuristic, not a signal.",
+        "Let the plan shape the interface. Charts stop at one year and the time machine is clamped to the last 365 days, because a \"Max\" button that can only ever fail shouldn't be there.",
+        "A visual encoding, not decoration. Orbit radius is rank, size is market cap on a log scale, colour is 24-hour change and twinkle is volume — and under reduced motion the orbits freeze but the map stays fully usable.",
+      ],
+      constraints: [
+        "A team of one",
+        "About 330 API calls a day",
+        "A year of history, at most",
+        "A secret key behind an interactive front end",
+      ],
+      outcome:
+        "It's live and open. It's the most data-heavy thing on this list and the one where the constraint did the designing: a rate limit turned into a caching architecture, a missing endpoint turned into a derived metric, and a capped history turned into an interface that only offers what it can deliver.",
+    },
+    ask: {
+      did: "All of it, solo — the CoinGecko client and its caching, the server routes, the galaxy, the charts and tools, and the Vercel deploy.",
+      hardest:
+        "Running a site this size on 10,000 API calls a month. Four layers of caching — de-duplication, stale-while-revalidate, CDN headers and stale fallback on errors — are what let many visitors share one upstream call.",
+      stack:
+        "Astro with server rendering on Vercel, vanilla Web Components instead of a UI framework, hand-written Canvas 2D for the galaxy, lightweight-charts for price charts, Tailwind CSS 4, and CoinGecko and GeckoTerminal for the data.",
+    },
+    review: [
+      "The endpoint count, the cache measurements and the plan limits are read off the README — CoinGecko changes its free plan from time to time, so check the numbers before you lean on them.",
+      "\"Crypto\" as the category is my choice; \"Data viz\" would fit too.",
+    ],
+  },
+
+  /* ------------------------------------------------------------------ */
+  /* 08 · Weathernime                                                    */
   /* ------------------------------------------------------------------ */
   weathernime: {
     slug: "weathernime",
@@ -235,7 +499,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 04 · Food Analyzer                                                  */
+  /* 09 · Food Analyzer                                                  */
   /* ------------------------------------------------------------------ */
   "food-analyzer": {
     slug: "food-analyzer",
@@ -281,7 +545,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 05 · Happy Farm                                                     */
+  /* 10 · Happy Farm                                                     */
   /* ------------------------------------------------------------------ */
   "happy-farm": {
     slug: "happy-farm",
@@ -329,7 +593,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 06 · Magloft                                                        */
+  /* 11 · Magloft                                                        */
   /* ------------------------------------------------------------------ */
   magloft: {
     slug: "magloft",
@@ -389,7 +653,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 07 · Magloft Web                                                    */
+  /* 12 · Magloft Web                                                    */
   /* ------------------------------------------------------------------ */
   "magloft-web": {
     slug: "magloft-web",
@@ -435,7 +699,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 08 · MileApp                                                        */
+  /* 13 · MileApp                                                        */
   /* ------------------------------------------------------------------ */
   mileapp: {
     slug: "mileapp",
@@ -480,7 +744,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 09 · Bountie                                                        */
+  /* 14 · Bountie                                                        */
   /* ------------------------------------------------------------------ */
   bountie: {
     slug: "bountie",
@@ -527,7 +791,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 10 · DeskLab                                                        */
+  /* 15 · DeskLab                                                        */
   /* ------------------------------------------------------------------ */
   desklab: {
     slug: "desklab",
@@ -571,7 +835,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 11 · Tola Web                                                       */
+  /* 16 · Tola Web                                                       */
   /* ------------------------------------------------------------------ */
   "tola-web": {
     slug: "tola-web",
@@ -614,7 +878,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 12 · Pokedex                                                        */
+  /* 17 · Pokedex                                                        */
   /* ------------------------------------------------------------------ */
   pokedex: {
     slug: "pokedex",
@@ -660,7 +924,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 13 · Anivault                                                       */
+  /* 18 · Anivault                                                       */
   /* ------------------------------------------------------------------ */
   anivault: {
     slug: "anivault",
@@ -703,7 +967,7 @@ export const caseStudies: Record<string, CaseStudy> = {
   },
 
   /* ------------------------------------------------------------------ */
-  /* 14 · Mini-Google                                                    */
+  /* 19 · Mini-Google                                                    */
   /* ------------------------------------------------------------------ */
   "mini-google": {
     slug: "mini-google",

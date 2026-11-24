@@ -166,6 +166,7 @@ export function ArtifactView({
                 button is a fixed-ratio box with `overflow: hidden`, so a caption
                 inside it can only ever sit *over* the image — and on a phone it
                 belongs underneath. Out here it can do both. */}
+            {card.image ? (
             <span className="artifact-shot-wrap">
             <button
               type="button"
@@ -199,6 +200,15 @@ export function ArtifactView({
               <span className="artifact-expand-hold">Hold image to x-ray</span>
             </span>
             </span>
+            ) : (
+              /* Nothing to expand where there's no interface to show — the
+                 same box, holding the initial instead of a screenshot. */
+              <span className="artifact-shot artifact-shot-empty" aria-hidden>
+                <span className="artifact-shot-initial">
+                  {card.name.charAt(0)}
+                </span>
+              </span>
+            )}
 
             {study?.confidential && (
               <figcaption className="artifact-locked">
@@ -389,7 +399,7 @@ export function ArtifactView({
         </aside>
       </div>
 
-      {zoomed && (
+      {zoomed && card.image && (
         <Lightbox
           src={`/projects/${card.image}`}
           name={card.name}
