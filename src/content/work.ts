@@ -45,8 +45,13 @@ export type WorkCard = {
   blurb: string;
   /** Exactly two, so the chip row never wraps in the column. */
   tags: [string, string];
-  /** Filename in `public/projects/`. */
-  image: string;
+  /**
+   * Filename in `public/projects/`. Omitted where there is no interface to
+   * show — a smart-contract project has no screen, and a screenshot of a block
+   * explorer would be someone else's UI — so the card and the detail page draw
+   * a placeholder instead.
+   */
+  image?: string;
   /** Top-right of the card. Only where there's something true to say. */
   badge?: string;
   org: WorkOrg;
@@ -192,7 +197,6 @@ const CARDS: Omit<WorkCard, "no">[] = [
     blurb:
       "A fixed-supply ERC-20 and the staking contract that pays out in it — written in Solidity, fuzz-tested, and verified on the Sepolia testnet.",
     tags: ["Solidity", "Hardhat"],
-    image: "sushiflush-token.webp",
     badge: "ON SEPOLIA",
     /* Not "smart contract": "contract" is one typo from "contact", and that
        word belongs to the CONTACT flow. Not "solidity" either — "solid" is a

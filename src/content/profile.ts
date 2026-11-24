@@ -330,7 +330,6 @@ export const projects: Project[] = [
   },
   {
     slug: "sushiflush-token",
-    image: "sushiflush-token.webp",
     name: "SushiFlush Token",
     blurb:
       "A fixed-supply ERC-20 plus a Synthetix-style staking contract, fuzz-tested in Solidity and verified on Sepolia. A testnet learning project.",

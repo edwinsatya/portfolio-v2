@@ -32,7 +32,12 @@ export async function generateMetadata({
     openGraph: {
       title: `${card.name} — Edwin Satya Yudistira`,
       description: card.blurb,
-      images: [{ url: `/projects/${card.image}` }],
+      // Without a screenshot, point at the site's own card. Setting
+      // `openGraph` here replaces the root one wholesale, so leaving `images`
+      // out would ship no og:image at all rather than the default.
+      images: [
+        { url: card.image ? `/projects/${card.image}` : "/opengraph-image" },
+      ],
     },
   };
 }

@@ -392,7 +392,7 @@ export const caseStudies: Record<string, CaseStudy> = {
     },
     review: [
       "The test count and coverage figures are the README's. They'll drift if you add tests.",
-      "\"View on Etherscan\" links the token contract, while the screenshot shows the staking contract's verified source — it's the more interesting of the two. Swap either if you'd rather they matched.",
+      "No screenshot on purpose — there's no interface to show, so the page draws a placeholder. \"View on Etherscan\" goes to the token contract's verified source.",
     ],
   },
 

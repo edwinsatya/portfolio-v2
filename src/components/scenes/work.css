@@ -350,6 +350,26 @@
   transition: scale 500ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* No screenshot (contracts only): an initial on a tint, as in the classic
+   build's cards. Fills the same box, so the row keeps its rhythm. */
+.work-card-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--color-accent) 18%, var(--color-bg-soft)),
+    var(--color-surface) 50%,
+    color-mix(in oklab, var(--color-violet) 18%, var(--color-bg-soft))
+  );
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  color: color-mix(in oklab, var(--color-accent) 45%, transparent);
+}
+
 .work-card-body {
   display: flex;
   flex-direction: column;
