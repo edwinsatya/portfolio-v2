@@ -111,6 +111,18 @@ const NAME_MIN = 4;
 /** Below this, the guess isn't confident enough to answer with. */
 const PROJECT_MIN_SCORE = 55;
 
+/**
+ * Words inside a project name that are ordinary English on their own.
+ *
+ * They still count as part of the whole name, or of an alias phrase like
+ * "space explorer", but never by themselves — on either side: they are not
+ * matched as a name's word, and not used as a question's token. "does he have
+ * space for new work?" is about his calendar, not a prefix of "spaceship";
+ * "explore his projects" would otherwise prefix-match "explorer"; and "tokens"
+ * — or a typo away, "taken" — isn't a search for SushiFlush Token.
+ */
+const GENERIC_NAME_WORDS = new Set(["space", "explorer", "token"]);
+
 /** Distance between two short strings, capped — this is only ever typo-sized. */
 function editDistance(a: string, b: string): number {
   if (Math.abs(a.length - b.length) > 2) return 9;
@@ -146,8 +158,12 @@ export function matchProject(question: string): WorkCard | null {
   const text = normalize(question);
   if (!text) return null;
 
-  const tokens = text.split(" ").filter((token) => token.length >= NAME_MIN);
-  if (!tokens.length) return null;
+  const tokens = text
+    .split(" ")
+    .filter((token) => token.length >= NAME_MIN && !GENERIC_NAME_WORDS.has(token));
+  /* No early return when `tokens` is empty: a phrase can still name a project
+     with none of its words qualifying alone — "dry run", "erc 20", or "space
+     explorer", whose words are both generic. */
 
   let best: WorkCard | null = null;
   let bestScore = 0;
@@ -168,8 +184,12 @@ export function matchProject(question: string): WorkCard | null {
 
     for (const name of names) {
       if (name.length < NAME_MIN) continue;
-      // The whole name, said as a phrase. Strongest signal there is.
-      if (text.includes(name)) consider(card, 90);
+      /*
+       * The whole name, said as a phrase. Strongest signal there is, so it
+       * outscores any single word: "sushiflush token" has to beat the shared
+       * "sushiflush" that also names the dApp listed just above it.
+       */
+      if (text.includes(name)) consider(card, 110);
 
       /*
        * Each name also matches by its own words, so "food" finds Food Analyzer
@@ -178,7 +198,8 @@ export function matchProject(question: string): WorkCard | null {
        */
       const compact = name.replace(/\s+/g, "");
       const candidates = [compact, ...name.split(" ")].filter(
-        (candidate) => candidate.length >= NAME_MIN,
+        (candidate) =>
+          candidate.length >= NAME_MIN && !GENERIC_NAME_WORDS.has(candidate),
       );
 
       for (const candidate of candidates) {

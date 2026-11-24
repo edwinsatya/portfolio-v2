@@ -139,6 +139,85 @@ const CARDS: Omit<WorkCard, "no">[] = [
     source: "https://github.com/edwinsatya/llm-output-guard",
   },
   {
+    slug: "iron-arena",
+    category: "Game",
+    name: "Iron Arena",
+    blurb:
+      "A pixel-art duelling game for the browser — send a friend a link and fight over rollback netcode, so a match between two cities plays like the same couch.",
+    tags: ["Next.js", "WebRTC"],
+    image: "iron-arena.webp",
+    badge: "LIVE",
+    aliases: ["brawler", "rollback", "netcode"],
+    org: "personal",
+    fullstack: true,
+    live: "https://iron-arena.touchsimpledev.site",
+    source: "https://github.com/edwinsatya/iron-arena",
+  },
+  {
+    slug: "3d-spaceship",
+    category: "Game",
+    name: "Space Explorer 3D",
+    blurb:
+      "Fly your own ship around the solar system in the browser — warp to every planet, land on the Moon and Mars, race timed missions, and learn the real facts on the way.",
+    tags: ["Three.js", "Supabase"],
+    image: "3d-spaceship.webp",
+    badge: "LIVE",
+    /* "space explorer" carries the name when it's typed without the "3D":
+       "space" and "explorer" are too common to match by themselves (see
+       GENERIC_NAME_WORDS in nova-brain). Not "planets" or "solar system":
+       their words prefix-match "plan" and "system". */
+    aliases: ["space explorer", "spaceship"],
+    org: "personal",
+    live: "https://3d-spaceship.touchsimpledev.site",
+    source: "https://github.com/edwinsatya/3D-spaceship",
+  },
+  {
+    slug: "sushiflush-dapp",
+    category: "Web3",
+    name: "SushiFlush dApp",
+    blurb:
+      "A staking interface for the SFLUSH token on Sepolia — stake, watch rewards tick up, claim, and read your history back off the chain. No React, no wagmi.",
+    tags: ["Astro", "viem"],
+    image: "sushiflush-dapp.webp",
+    badge: "LIVE",
+    aliases: ["staking", "dapp"],
+    org: "personal",
+    live: "https://sushiflush-dapp.touchsimpledev.site",
+    source: "https://github.com/edwinsatya/sushiflush-dapp",
+  },
+  {
+    slug: "sushiflush-token",
+    category: "Smart contracts",
+    name: "SushiFlush Token",
+    blurb:
+      "A fixed-supply ERC-20 and the staking contract that pays out in it — written in Solidity, fuzz-tested, and verified on the Sepolia testnet.",
+    tags: ["Solidity", "Hardhat"],
+    image: "sushiflush-token.webp",
+    badge: "ON SEPOLIA",
+    /* Not "smart contract": "contract" is one typo from "contact", and that
+       word belongs to the CONTACT flow. Not "solidity" either — "solid" is a
+       prefix of it. */
+    aliases: ["erc20", "erc 20", "sflush"],
+    org: "personal",
+    live: "https://sepolia.etherscan.io/address/0xeB45F6b8Cbfe0B988a22a98C750CeFfe1f875b12#code",
+    liveLabel: "View on Etherscan",
+    source: "https://github.com/edwinsatya/sushiflush-token",
+  },
+  {
+    slug: "crypto-galaxy",
+    category: "Crypto",
+    name: "Crypto Galaxy",
+    blurb:
+      "The crypto market as a star map — every coin a star, placed by rank, sized by market cap, coloured by momentum — on top of every free CoinGecko endpoint.",
+    tags: ["Astro", "CoinGecko API"],
+    image: "crypto-galaxy.webp",
+    badge: "LIVE",
+    aliases: ["coingecko", "cryptocurrency"],
+    org: "personal",
+    live: "https://crypto-galaxy.touchsimpledev.site",
+    source: "https://github.com/edwinsatya/crypto-galaxy",
+  },
+  {
     slug: "weathernime",
     category: "Side project",
     name: "Weathernime",
@@ -405,6 +484,9 @@ export const stackInTheWild = [
   "GraphQL",
   "PostgreSQL",
   "Tailwind",
+  "Astro",
+  "Three.js",
+  "Solidity",
   "AWS",
   "Docker",
 ] as const;
