@@ -252,6 +252,65 @@ export const projects: Project[] = [
     source: "https://github.com/edwinsatya/llm-output-guard",
   },
   {
+    slug: "iron-arena",
+    image: "iron-arena.webp",
+    name: "Iron Arena",
+    blurb:
+      "A 1v1 pixel-art brawler in the browser — 27 heroes, online rooms over GGPO-style rollback netcode, versus CPU, local versus and training.",
+    stack: [
+      "Next.js",
+      "TypeScript",
+      "WebRTC",
+      "Rollback netcode",
+      "Cloudflare Workers",
+      "Canvas 2D",
+    ],
+    live: "https://iron-arena.touchsimpledev.site",
+    source: "https://github.com/edwinsatya/iron-arena",
+    fullstack: true,
+  },
+  {
+    slug: "3d-spaceship",
+    image: "3d-spaceship.webp",
+    name: "Space Explorer 3D",
+    blurb:
+      "A 3D space game in the browser — warp across the solar system, land on the Moon and Mars, fly timed missions, and post your best time to a server-checked leaderboard.",
+    stack: ["Next.js", "Three.js", "React Three Fiber", "Zustand", "Supabase"],
+    live: "https://3d-spaceship.touchsimpledev.site",
+    source: "https://github.com/edwinsatya/3D-spaceship",
+  },
+  {
+    slug: "sushiflush-dapp",
+    image: "sushiflush-dapp.webp",
+    name: "SushiFlush dApp",
+    blurb:
+      "Staking front end for the SFLUSH token on Sepolia — stake, claim, live rewards and on-chain activity history, with no UI framework.",
+    stack: ["Astro", "viem", "TypeScript", "Tailwind CSS"],
+    live: "https://sushiflush-dapp.touchsimpledev.site",
+    source: "https://github.com/edwinsatya/sushiflush-dapp",
+  },
+  {
+    slug: "sushiflush-token",
+    image: "sushiflush-token.webp",
+    name: "SushiFlush Token",
+    blurb:
+      "A fixed-supply ERC-20 plus a Synthetix-style staking contract, fuzz-tested in Solidity and verified on Sepolia. A testnet learning project.",
+    stack: ["Solidity", "Hardhat", "OpenZeppelin", "viem", "TypeScript"],
+    live: "https://sepolia.etherscan.io/address/0xeB45F6b8Cbfe0B988a22a98C750CeFfe1f875b12#code",
+    liveLabel: "View on Etherscan",
+    source: "https://github.com/edwinsatya/sushiflush-token",
+  },
+  {
+    slug: "crypto-galaxy",
+    image: "crypto-galaxy.webp",
+    name: "Crypto Galaxy",
+    blurb:
+      "A live star map of the crypto market, backed by all 61 free-plan CoinGecko endpoints and a four-layer cache that keeps it inside the rate limit.",
+    stack: ["Astro", "CoinGecko API", "Web Components", "Canvas 2D", "Tailwind CSS"],
+    live: "https://crypto-galaxy.touchsimpledev.site",
+    source: "https://github.com/edwinsatya/crypto-galaxy",
+  },
+  {
     slug: "weathernime",
     image: "weathernime.webp",
     name: "Weathernime",
